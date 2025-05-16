@@ -1,0 +1,98 @@
+<!-- Version: #2 (BUS Lærerrebus) -->
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUS Lærerrebus</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="rebus">Lærerrebus</button>
+            <button class="tab-button" data-tab="map">Kart</button>
+        </div>
+
+        <div id="rebus-content" class="tab-content visible">
+
+            <div id="intro-page" class="page visible">
+                <h1>BUS Lærerrebus</h1>
+                <p>Velkommen til en liten digital utfordring! Skriv inn gruppekoden for å starte.</p>
+                <input type="text" id="team-code-input" placeholder="Gruppekode (f.eks. TEAM1)">
+                <button id="start-with-team-code-button">Start Rebus</button>
+                <div class="feedback" id="team-code-feedback"></div>
+            </div>
+
+            <!-- Poengvisning - NYTT -->
+            <div id="score-display" style="text-align: center; margin-bottom: 15px; font-size: 1.1em; display: none;">
+                Poengsum: <span id="current-score">0</span>
+            </div>
+
+            <!-- POST 1 -->
+            <div id="post-1-page" class="page">
+                <div class="post-unlock-section">
+                    <h2 class="post-title-placeholder">Post 1: Ankomstkode</h2>
+                    <p class="post-intro-placeholder">Finn ankomstkoden på stedet for å låse opp oppgaven.</p>
+                    <input type="text" id="post-1-unlock-input" placeholder="Skriv ankomstkode">
+                    <button class="unlock-post-btn" data-post="1">Lås opp</button>
+                    <div class="feedback" id="feedback-unlock-1"></div>
+                </div>
+                <div class="post-task-section" style="display: none;">
+                    <h2 class="post-task-title-placeholder">Oppgave 1: Lokal Kunnskap</h2>
+                    <p>Hva heter skolesjefen i Gjøvik?</p>
+                    <input type="text" id="post-1-task-input" placeholder="Skriv fullt navn">
+                    <button class="check-task-btn" data-post="1">Sjekk Svar</button>
+                    <div class="feedback" id="feedback-task-1"></div>
+                    <div class="attempt-counter" id="attempts-1" style="font-size:0.9em; margin-top:5px;"></div>
+                </div>
+                <button class="dev-reset-button">Tilbake til Start</button>
+            </div>
+
+            <!-- POST 2 -->
+            <div id="post-2-page" class="page">
+                <div class="post-unlock-section">
+                    <h2 class="post-title-placeholder">Post 2: Ankomstkode</h2>
+                    <p class="post-intro-placeholder">Finn ankomstkoden for å få neste oppgave.</p>
+                    <input type="text" id="post-2-unlock-input" placeholder="Skriv ankomstkode">
+                    <button class="unlock-post-btn" data-post="2">Lås opp</button>
+                    <div class="feedback" id="feedback-unlock-2"></div>
+                </div>
+                <div class="post-task-section" style="display: none;">
+                    <h2 class="post-task-title-placeholder">Oppgave 2: Historisk Spørsmål</h2>
+                    <p>Hvem var rektor da nye Bjørnsveen ble bygd?</p>
+                    <input type="text" id="post-2-task-input" placeholder="Skriv fullt navn">
+                    <button class="check-task-btn" data-post="2">Sjekk Svar</button>
+                    <div class="feedback" id="feedback-task-2"></div>
+                    <div class="attempt-counter" id="attempts-2" style="font-size:0.9em; margin-top:5px;"></div>
+                </div>
+                <button class="dev-reset-button">Tilbake til Start</button>
+            </div>
+
+            <div id="finale-page" class="page">
+                <h1>Rebus Fullført!</h1>
+                <p>Godt jobbet! Alle oppgaver er løst.</p>
+                <p>Endelig poengsum: <span id="final-score">0</span></p>
+                <p>Nå går turen tilbake til <strong>Lærerværelset</strong>!</p>
+                <button class="dev-reset-button" style="margin-top: 30px;">Start På Nytt</button>
+            </div>
+        </div>
+
+        <div id="map-content" class="tab-content">
+            <h2>Kart over området</h2>
+            <p>Bruk kartet for å navigere. Neste post eller målet vil bli markert.</p>
+            <div id="dynamic-map-container"></div>
+            <p style="font-size: 0.9em; margin-top: 15px;">(Trykk på 'Lærerrebus'-fanen for å gå tilbake)</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script> 
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA5qUjSj9WyUKsZPljvHfp9RHd-dUjMblk&callback=initMap">
+    </script>
+
+</body>
+</html>
+<!-- Version: #2 (BUS Lærerrebus) -->

@@ -1,0 +1,114 @@
+/* Version: #2 (PoC Lærere - Uten Lyd) */
+/* === GENERELLE STILER - POC LÆRERE === */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    background-color: #e9ecef; 
+    color: #212529; 
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+
+.container {
+    background-color: #ffffff; 
+    padding: 30px 35px;
+    border-radius: 8px; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
+    max-width: 700px; 
+    width: 100%;
+    text-align: center;
+    border: 1px solid #dee2e6; 
+}
+
+/* === POENGVISNING === */
+#score-display {
+    text-align: right; /* Høyrejuster poengsum */
+    margin-bottom: 15px;
+    padding: 5px 10px;
+    font-size: 1.1em;
+    font-weight: 500;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    display: none; /* Starter skjult, vises av JS */
+}
+#current-score {
+    font-weight: bold;
+    color: #007bff;
+}
+.attempt-counter {
+    font-size: 0.85em;
+    color: #6c757d;
+    margin-top: 8px;
+    min-height: 1.2em; /* For å unngå hopp når tekst legges til */
+}
+
+
+/* === TAB NAVIGASJON - POC LÆRERE === */
+.tabs { margin-bottom: 25px; border-bottom: 2px solid #dee2e6; padding-bottom: 10px; }
+.tab-button { background-color: #f8f9fa; color: #495057; padding: 10px 20px; border: 1px solid #ced4da; border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 1em; font-weight: 600; margin: 0 3px -2px 0; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; position: relative; bottom: -2px; }
+.tab-button:hover { background-color: #e9ecef; color: #0056b3; }
+.tab-button.active { background-color: #ffffff; color: #007bff; border-color: #dee2e6 #dee2e6 #ffffff; border-bottom: 2px solid #ffffff; z-index: 1; }
+
+/* === TAB INNHOLD - POC LÆRERE === */
+.tab-content { display: none; animation: fadeInContentPoc 0.4s ease-in-out; }
+.tab-content.visible { display: block; }
+@keyframes fadeInContentPoc { from { opacity: 0; } to { opacity: 1; } }
+
+/* === REBUS SIDER (PAGES) - POC LÆRERE === */
+.page { display: none; }
+.page.visible { display: block; animation: fadeInPagePoc 0.3s ease-out; }
+@keyframes fadeInPagePoc { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* === TYPOGRAFI - POC LÆRERE === */
+h1 { color: #343a40; margin-bottom: 25px; font-size: 2em; font-weight: 600; }
+h2 { color: #007bff; margin-top: 30px; margin-bottom: 18px; font-size: 1.6em; border-bottom: 1px solid #e9ecef; padding-bottom: 10px; font-weight: 500; }
+p { line-height: 1.7; margin-bottom: 16px; font-size: 1rem; text-align: left; color: #495057; }
+#intro-page p, #finale-page p, #map-content p { text-align: center; }
+strong { color: #0056b3; font-weight: 600; }
+
+/* === INPUT-FELT - POC LÆRERE === */
+input[type="text"] { padding: 12px 15px; margin-top: 10px; border: 1px solid #ced4da; border-radius: 4px; width: calc(100% - 32px); font-size: 1rem; font-family: inherit; text-transform: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; background-color: #fff; color: #495057; }
+input[type="text"]:focus { border-color: #80bdff; outline: 0; box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); }
+input[type="text"].shake { animation: shakeInputPoc 0.4s; }
+@keyframes shakeInputPoc { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+
+/* === KNAPPER - POC LÆRERE === */
+button { background-color: #007bff; color: white; padding: 10px 20px; border: 1px solid #007bff; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 500; font-family: inherit; margin-top: 15px; transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; box-shadow: none; text-transform: none; letter-spacing: normal; }
+button:hover { background-color: #0056b3; border-color: #0056b3; }
+button:active { background-color: #004085; border-color: #004085; transform: translateY(1px); }
+button:disabled { background-color: #adb5bd; border-color: #adb5bd; color: #6c757d; cursor: not-allowed; }
+.tab-button { margin-top: 0; font-weight: 600; }
+.tab-button:hover { background-color: #e9ecef; color: #0056b3; border-color: #ced4da; transform: translateY(0); }
+.tab-button.active { background-color: #ffffff; color: #007bff; border-color: #dee2e6 #dee2e6 #ffffff; transform: translateY(0); }
+.tab-button.active:hover { background-color: #ffffff; color: #007bff; }
+#start-with-team-code-button { background-color: #28a745; border-color: #28a745; font-size: 1.1em; padding: 12px 25px; }
+#start-with-team-code-button:hover { background-color: #1e7e34; border-color: #1e7e34; }
+#start-with-team-code-button:active { background-color: #155724; border-color: #155724; }
+
+/* === TILBAKEMELDINGER (FEEDBACK) - POC LÆRERE === */
+.feedback { margin-top: 18px; font-weight: 500; min-height: 22px; padding: 10px 15px; border-radius: 4px; font-size: 0.95rem; border-width: 1px; border-style: solid; box-shadow: none; display: flex; align-items: center; justify-content: flex-start; text-align: left; }
+.feedback::before { font-size: 1.3em; margin-right: 8px; }
+.feedback.success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+.feedback.success::before { content: "✔️"; }
+.feedback.error { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+.feedback.error::before { content: "❗"; }
+.feedback.shake { animation: feedbackShakePoc 0.4s; }
+@keyframes feedbackShakePoc { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } }
+
+/* === KART SEKSJON - POC LÆRERE === */
+#map-content #dynamic-map-container { margin-top: 15px; margin-bottom: 15px; width: 100%; height: 450px; border: 1px solid #ced4da; border-radius: 6px; background-color: #f8f9fa; }
+#map-content p { font-style: normal; color: #6c757d; font-size: 0.9rem; }
+
+/* === UTVIKLER/TEST KNAPP - POC LÆRERE === */
+.dev-reset-button { background-color: #6c757d; border-color: #6c757d; color: white; font-size: 0.85rem; padding: 6px 12px; margin-top: 25px; border-radius: 4px; }
+.dev-reset-button:hover { background-color: #545b62; border-color: #545b62; }
+.dev-reset-button:active { background-color: #495057; border-color: #495057; }
+
+/* Ingen lyd-kontroller styling nødvendig */
+
+/* Slutt på filen */
+/* Version: #2 (PoC Lærere - Uten Lyd) */
