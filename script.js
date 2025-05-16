@@ -1,4 +1,4 @@
-/* Version: #16 */
+/* Version: #18 */
 
 // === GLOBALE VARIABLER ===
 let map;
@@ -14,366 +14,234 @@ let geofenceFeedbackElement = null;
 const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 50; 
 const FINISH_UNLOCK_CODE = "GRATTIS"; 
-const DEV_MODE_NO_GEOFENCE = true; // MIDLERTIDIG BRYTER FOR TESTING UTEN GEOFENCE
+const DEV_MODE_NO_GEOFENCE = true; // VIKTIG FOR TESTING
 
-const POST_LOCATIONS = [ /* ... (uendret) ... */ ];
-const START_LOCATION = { /* ... (uendret) ... */ };
-const FINISH_LOCATION = { /* ... (uendret) ... */ };
-const POST_UNLOCK_HINTS = { /* ... (uendret) ... */ };
-const POST_UNLOCK_CODES = { /* ... (uendret) ... */ };
-const CORRECT_TASK_ANSWERS = { /* ... (uendret) ... */ };
+const POST_LOCATIONS = [ /* ... (som før) ... */ ];
+const START_LOCATION = { /* ... (som før) ... */ };
+const FINISH_LOCATION = { /* ... (som før) ... */ };
+const POST_UNLOCK_HINTS = { /* ... (som før) ... */ };
+const POST_UNLOCK_CODES = { /* ... (som før) ... */ };
+const CORRECT_TASK_ANSWERS = { /* ... (som før) ... */ };
 const MAX_ATTEMPTS_PER_TASK = 5;
 const POINTS_PER_CORRECT_TASK = 10;
 
 // === HJELPEFUNKSJONER ===
-function calculateDistance(lat1, lon1, lat2, lon2) { /* ... (uendret) ... */ }
-function formatTime(totalSeconds) { /* ... (uendret) ... */ }
+function calculateDistance(lat1, lon1, lat2, lon2) { /* ... (som før) ... */ }
+function formatTime(totalSeconds) { /* ... (som før) ... */ }
 
 // === GOOGLE MAPS API CALLBACK ===
-window.initMap = function() { /* ... (uendret fra v15) ... */ }
+window.initMap = function() { /* ... (som i v17) ... */ }
 
 // === GLOBALE KARTFUNKSJONER ===
-function updateMapMarker(postGlobalId, isFinalTarget = false) { /* ... (uendret) ... */ }
-function clearMapMarker() { /* ... (uendret) ... */ }
-function clearFinishMarker() { /* ... (uendret) ... */ }
-function handleGeolocationError(error) { /* ... (uendret) ... */ }
+function updateMapMarker(postGlobalId, isFinalTarget = false) { /* ... (som før) ... */ }
+function clearMapMarker() { /* ... (som før) ... */ }
+function clearFinishMarker() { /* ... (som før) ... */ }
+function handleGeolocationError(error) { /* ... (som før) ... */ }
 
 // === KARTPOSISJON OG GEOFENCE FUNKSJONER ===
-function updateUserPositionOnMap(position) { /* ... (uendret) ... */ }
-function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompleted, targetName = "posten") { /* ... (uendret fra v15) ... */ }
-function handlePositionUpdate(position) { /* ... (uendret fra v15) ... */ }
-function startContinuousUserPositionUpdate() { /* ... (uendret) ... */ }
-function stopContinuousUserPositionUpdate() { /* ... (uendret) ... */ }
+function updateUserPositionOnMap(position) { /* ... (som før) ... */ }
+function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompleted, targetName = "posten") { /* ... (som i v17) ... */ }
+function handlePositionUpdate(position) { /* ... (som i v17) ... */ }
+function startContinuousUserPositionUpdate() { /* ... (som før) ... */ }
+function stopContinuousUserPositionUpdate() { /* ... (som før) ... */ }
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG: DOMContentLoaded event fired.");
+    console.log("DEBUG_V18: DOMContentLoaded event fired.");
     const teamCodeInput = document.getElementById('team-code-input');
     const startWithTeamCodeButton = document.getElementById('start-with-team-code-button');
     const teamCodeFeedback = document.getElementById('team-code-feedback');
-    const pages = document.querySelectorAll('#rebus-content .page');
+    let pages = document.querySelectorAll('#rebus-content .page'); // Endret til let
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
     const devResetButtons = document.querySelectorAll('.dev-reset-button');
     const scoreDisplayElement = document.getElementById('score-display');
     const currentScoreSpan = document.getElementById('current-score');
     
-    console.log("DEBUG: Core DOM elements fetched.");
-    if (!teamCodeInput) console.error("DEBUG: teamCodeInput is NULL!");
-    if (!startWithTeamCodeButton) console.error("DEBUG: startWithTeamCodeButton is NULL!");
+    console.log(`DEBUG_V18: Pages NodeList length: ${pages ? pages.length : 'null'}`);
+    if (!teamCodeInput) console.error("DEBUG_V18: teamCodeInput is NULL!");
+    if (!startWithTeamCodeButton) console.error("DEBUG_V18: startWithTeamCodeButton is NULL!");
 
 
     const TEAM_CONFIG = { /* ... (uendret) ... */ };
 
     // === KJERNEFUNKSJONER (DOM-avhengige) ===
-    function updateScoreDisplay() { /* ... (uendret) ... */ }
-    function updatePageText(pageElement, teamPostNumber, globalPostId) { /* ... (uendret) ... */ }
-    function showRebusPage(pageId) { /* ... (uendret fra v15) ... */ }
-    function showTabContent(tabId) { /* ... (uendret) ... */ }
-    function saveState() { /* ... (uendret) ... */ }
-    function loadState() { /* ... (uendret) ... */ }
-    function clearState() { /* ... (uendret) ... */ }
+    function updateScoreDisplay() { /* ... (som før) ... */ }
+    function updatePageText(pageElement, teamPostNumber, globalPostId) { /* ... (som før) ... */ }
 
-    function resetPageUI(pageId) {
-        console.log(`DEBUG: resetPageUI called for ${pageId}`);
-        const pageElement = document.getElementById(pageId);
-        if (!pageElement) {
-            console.error(`DEBUG: Page element ${pageId} not found in resetPageUI.`);
-            return;
+    function showRebusPage(pageId) {
+        console.log(`DEBUG_V18: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
+        
+        // Hent 'pages' på nytt her for å være helt sikker, i tilfelle den ikke ble satt riktig globalt eller ble endret.
+        pages = document.querySelectorAll('#rebus-content .page');
+        if (!pages || pages.length === 0) {
+            console.error("DEBUG_V18: CRITICAL - 'pages' NodeList is EMPTY or UNDEFINED in showRebusPage! Cannot switch pages.");
+            return; 
         }
+        console.log(`DEBUG_V18: 'pages' NodeList has ${pages.length} elements inside showRebusPage.`);
 
-        if (pageId === 'intro-page') { 
-             const teamCodeInputForIntroReset = document.getElementById('team-code-input');
-             const startButtonForIntroReset = document.getElementById('start-with-team-code-button');
-             if(teamCodeInputForIntroReset) teamCodeInputForIntroReset.disabled = false;
-             else console.error("DEBUG: teamCodeInput not found in resetPageUI for intro-page");
-             if(startButtonForIntroReset) startButtonForIntroReset.disabled = false;
-             else console.error("DEBUG: startWithTeamCodeButton not found in resetPageUI for intro-page");
-            return;
-        }
-
-        if (pageId === 'finale-page') {
-            const unlockSection = document.getElementById('finale-unlock-section');
-            const completedSection = document.getElementById('finale-completed-section');
-            const unlockInput = document.getElementById('finish-unlock-input');
-            const unlockButton = document.getElementById('finish-unlock-btn');
-            const unlockFeedback = document.getElementById('feedback-unlock-finish');
-
-            if (currentTeamData && currentTeamData.endTime) { 
-                if(unlockSection) unlockSection.style.display = 'none';
-                if(completedSection) completedSection.style.display = 'block';
-            } else { 
-                if(unlockSection) unlockSection.style.display = 'block';
-                if(completedSection) completedSection.style.display = 'none';
-                // KORRIGERT LOGIKK HER:
-                // Hvis DEV_MODE_NO_GEOFENCE er true, skal disabled være false (altså enabled).
-                // Ellers (DEV_MODE er false), skal de starte disabled (true) og aktiveres av GPS.
-                const shouldBeDisabledDueToGeofence = !DEV_MODE_NO_GEOFENCE;
-                if (unlockInput) { unlockInput.disabled = shouldBeDisabledDueToGeofence; unlockInput.value = ''; } 
-                if (unlockButton) unlockButton.disabled = shouldBeDisabledDueToGeofence; 
-                if (unlockFeedback) { unlockFeedback.textContent = ''; unlockFeedback.className = 'feedback feedback-unlock'; }
-            }
-            return;
-        }
-
-        const postNumberMatch = pageId.match(/post-(\d+)-page/);
-        if (!postNumberMatch) return;
-        const postNum = postNumberMatch[1];
-
-        const unlockSection = pageElement.querySelector('.post-unlock-section');
-        const taskSection = pageElement.querySelector('.post-task-section');
-        const unlockInput = pageElement.querySelector('.post-unlock-input');
-        const unlockButton = pageElement.querySelector('.unlock-post-btn');
-        const unlockFeedback = pageElement.querySelector('.feedback-unlock');
-        const taskInput = pageElement.querySelector('.post-task-input');
-        const taskButton = pageElement.querySelector('.check-task-btn');
-        const taskFeedback = pageElement.querySelector('.feedback-task');
-        const attemptCounterElement = pageElement.querySelector('.attempt-counter');
-
-        if(attemptCounterElement) attemptCounterElement.textContent = '';
-
-        const isPostUnlocked = currentTeamData?.unlockedPosts?.[`post${postNum}`];
-        const isTaskCompleted = currentTeamData?.completedGlobalPosts?.[`post${postNum}`];
-
-        if (unlockSection && taskSection) {
-            if (isTaskCompleted) { 
-                unlockSection.style.display = 'none'; taskSection.style.display = 'block';
-                if (taskInput) { taskInput.disabled = true; } if (taskButton) taskButton.disabled = true;
-                if (taskFeedback) { taskFeedback.textContent = 'Oppgave fullført!'; taskFeedback.className = 'feedback feedback-task success'; }
-            } else if (isPostUnlocked) { 
-                unlockSection.style.display = 'none'; taskSection.style.display = 'block';
-                if (taskInput) { taskInput.disabled = false; taskInput.value = ''; } if (taskButton) taskButton.disabled = false;
-                if (taskFeedback) { taskFeedback.textContent = ''; taskFeedback.className = 'feedback feedback-task'; }
-                if (attemptCounterElement && currentTeamData?.taskAttempts?.[`post${postNum}`] !== undefined) {
-                    const attemptsLeft = MAX_ATTEMPTS_PER_TASK - currentTeamData.taskAttempts[`post${postNum}`];
-                    attemptCounterElement.textContent = `Forsøk igjen: ${attemptsLeft > 0 ? attemptsLeft : MAX_ATTEMPTS_PER_TASK}`;
-                } else if (attemptCounterElement) { attemptCounterElement.textContent = `Forsøk igjen: ${MAX_ATTEMPTS_PER_TASK}`; }
-            } else { 
-                unlockSection.style.display = 'block'; taskSection.style.display = 'none';
-                // KORRIGERT LOGIKK HER:
-                const shouldBeDisabledDueToGeofence = !DEV_MODE_NO_GEOFENCE;
-                if (unlockInput) { unlockInput.disabled = shouldBeDisabledDueToGeofence; unlockInput.value = ''; } 
-                if (unlockButton) unlockButton.disabled = shouldBeDisabledDueToGeofence; 
-                if (unlockFeedback) { unlockFeedback.textContent = ''; unlockFeedback.className = 'feedback feedback-unlock'; }
-            }
-        }
-     }
-    function resetAllPostUIs() { /* ... (uendret fra v15, men den kaller nå den korrigerte resetPageUI) ... */ 
-        for (let i = 1; i <= TOTAL_POSTS; i++) {
-            const pageElement = document.getElementById(`post-${i}-page`);
-            if (!pageElement) continue;
-            resetPageUI(`post-${i}-page`); 
-
-            const titlePlaceholder = pageElement.querySelector('.post-title-placeholder');
-            if(titlePlaceholder) titlePlaceholder.textContent = `Post ${i}: Tittel`;
-            const introPlaceholder = pageElement.querySelector('.post-intro-placeholder');
-            if(introPlaceholder) introPlaceholder.textContent = "Finn koden...";
-            const taskTitlePlaceholder = pageElement.querySelector('.post-task-title-placeholder');
-            if(taskTitlePlaceholder) taskTitlePlaceholder.textContent = `Oppgave ${i}`;
-            const taskQuestionPlaceholder = pageElement.querySelector('.post-task-question-placeholder');
-            if(taskQuestionPlaceholder) taskQuestionPlaceholder.textContent = `Spørsmål for post ${i}.`;
-        }
-        resetPageUI('finale-page');
-
-        if(teamCodeInput) teamCodeInput.value = '';
-        if(teamCodeInput) teamCodeInput.disabled = false; 
-        if(startWithTeamCodeButton) startWithTeamCodeButton.disabled = false;
-
-        if(teamCodeFeedback) { teamCodeFeedback.textContent = ''; teamCodeFeedback.className = 'feedback';}
-    }
-    function initializeTeam(teamCode) { /* ... (uendret) ... */ }
-    function handlePostUnlock(postNum, userAnswer) { /* ... (uendret) ... */ }
-    function handleFinishCodeUnlock(userAnswer) { /* ... (uendret) ... */ }
-    function proceedToNextPostOrFinish() { /* ... (uendret) ... */ }
-    function handleTaskCheck(postNum, userAnswer) { /* ... (uendret) ... */ }
-    function updateUIAfterLoad() { /* ... (uendret) ... */ }
-
-    // === EVENT LISTENERS ===
-    console.log("DEBUG: Setting up event listeners...");
-
-    if (startWithTeamCodeButton && teamCodeInput) {
-        startWithTeamCodeButton.addEventListener('click', () => {
-            console.log("DEBUG: Start with team code button clicked.");
-            initializeTeam(teamCodeInput.value);
-        });
-        console.log("DEBUG: Event listener for startWithTeamCodeButton ADDED.");
-    } else {
-        console.error("DEBUG: Failed to add listener for startWithTeamCodeButton (button or input missing).");
-    }
-
-    if (teamCodeInput) { 
-        teamCodeInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault(); 
-                if (startWithTeamCodeButton) {
-                    console.log("DEBUG: Enter pressed in teamCodeInput, clicking start button.");
-                    startWithTeamCodeButton.click();
+        let foundTargetPageAndMadeVisible = false;
+        pages.forEach((page, index) => {
+            console.log(`DEBUG_V18: Checking page ${index}: ID='${page.id}', Current classes: '${page.className}'`);
+            if (page.id === pageId) {
+                console.log(`DEBUG_V18: MATCH! Setting page '${page.id}' to VISIBLE.`);
+                page.classList.add('visible');
+                foundTargetPageAndMadeVisible = true;
+                console.log(`DEBUG_V18: Page '${page.id}' new classes: '${page.className}'`);
+            } else {
+                if (page.classList.contains('visible')) {
+                    console.log(`DEBUG_V18: Setting page '${page.id}' to HIDDEN.`);
+                    page.classList.remove('visible');
+                    console.log(`DEBUG_V18: Page '${page.id}' new classes: '${page.className}'`);
                 }
             }
         });
-        console.log("DEBUG: Event listener for teamCodeInput (keypress) ADDED.");
-    } else {
-         console.error("DEBUG: Failed to add keypress listener for teamCodeInput (input missing).");
+
+        if (!foundTargetPageAndMadeVisible) {
+            console.error(`DEBUG_V18: CRITICAL - Page with ID '${pageId}' was NOT FOUND in 'pages' NodeList during forEach loop.`);
+        }
+
+        // Verifiser etter løkken
+        const targetElementAfterLoop = document.getElementById(pageId);
+        if (targetElementAfterLoop) {
+            if (targetElementAfterLoop.classList.contains('visible')) {
+                console.log(`DEBUG_V18: SUCCESS - Page '${pageId}' IS VERIFIED as visible.`);
+            } else {
+                console.warn(`DEBUG_V18: WARNING - Page '${pageId}' was found, but IS NOT visible after loop. Current classes: '${targetElementAfterLoop.className}'`);
+            }
+        } else {
+             console.error(`DEBUG_V18: CRITICAL - Page '${pageId}' still NOT FOUND by getElementById after loop.`);
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if (pageId === 'intro-page') {
+            console.log("DEBUG_V18: Handling UI for intro-page specifically in showRebusPage.");
+            const teamCodeInputForIntro = document.getElementById('team-code-input');
+            const startButtonForIntro = document.getElementById('start-with-team-code-button');
+            if (teamCodeInputForIntro) teamCodeInputForIntro.disabled = false; else console.error("DEBUG_V18: teamCodeInput NULL for intro page UI.")
+            if (startButtonForIntro) startButtonForIntro.disabled = false; else console.error("DEBUG_V18: startWithTeamCodeButton NULL for intro page UI.")
+        }
+        
+        // ... (resten av logikken i showRebusPage for poengsum, finale-side etc. som i v17) ...
+        if (currentTeamData && pageId.startsWith('post-') && pageId !== 'finale-page') { /* ... */ }
+        resetPageUI(pageId); 
+        if (currentTeamData && pageId !== 'intro-page') { updateScoreDisplay(); } 
+        else if (scoreDisplayElement) { scoreDisplayElement.style.display = 'none'; }
+        if (pageId === 'finale-page') { /* ... finale-logikk ... */ }
+        console.log(`DEBUG_V18: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
     }
 
-    const rebusContentElement = document.getElementById('rebus-content');
+    function showTabContent(tabId) { /* ... (som før) ... */ }
+    function saveState() { /* ... (som før) ... */ }
+    function loadState() { /* ... (som før) ... */ }
+    function clearState() { /* ... (som før) ... */ }
+    function resetPageUI(pageId) { /* ... (som i v17) ... */ }
+    function resetAllPostUIs() { /* ... (som i v17) ... */ }
+    
+    function initializeTeam(teamCode) {
+        console.log(`DEBUG_V18: --- initializeTeam CALLED with code: '${teamCode}' ---`);
+        
+        if (startWithTeamCodeButton) {
+            console.log("DEBUG_V18: Disabling startWithTeamCodeButton.");
+            startWithTeamCodeButton.disabled = true;
+        } else {
+            console.error("DEBUG_V18: startWithTeamCodeButton is NULL in initializeTeam, cannot disable.");
+        }
+
+        const teamKey = teamCode.trim().toUpperCase();
+        const config = TEAM_CONFIG[teamKey];
+        
+        if(teamCodeFeedback) { teamCodeFeedback.className = 'feedback'; teamCodeFeedback.textContent = ''; }
+
+        if (config) {
+            console.log(`DEBUG_V18: Valid team config found for '${teamKey}'.`);
+            currentTeamData = { /* ... (som i v17) ... */ };
+            currentTeamData.postSequence.forEach(postId => { currentTeamData.taskAttempts[`post${postId}`] = 0; });
+            console.log("DEBUG_V18: currentTeamData fully initialized:", JSON.parse(JSON.stringify(currentTeamData)));
+            
+            saveState(); console.log("DEBUG_V18: State saved.");
+            resetAllPostUIs(); console.log("DEBUG_V18: All post UIs reset.");
+            
+            if (teamCodeInput) {
+                console.log("DEBUG_V18: Disabling teamCodeInput.");
+                teamCodeInput.disabled = true;
+            }  else {
+                console.error("DEBUG_V18: teamCodeInput is NULL in initializeTeam (after successful init), cannot disable.");
+            }
+
+            clearFinishMarker(); console.log("DEBUG_V18: Finish marker cleared.");
+            updateScoreDisplay(); console.log("DEBUG_V18: Score display updated.");
+
+            const firstPostInSequence = currentTeamData.postSequence[0];
+            const targetPageId = `post-${firstPostInSequence}-page`;
+            console.log(`DEBUG_V18: First post ID: ${firstPostInSequence}. Target page ID: '${targetPageId}'. Attempting to show page...`);
+            
+            showRebusPage(targetPageId); // <--- KRITISK KALL
+            
+            console.log(`DEBUG_V18: Returned from showRebusPage for '${targetPageId}'. Now checking map and GPS.`);
+            if (map) {
+                updateMapMarker(firstPostInSequence, false); console.log("DEBUG_V18: Map marker updated.");
+            } else { console.warn("DEBUG_V18: Map NOT ready for marker update."); }
+            
+            startContinuousUserPositionUpdate(); 
+            console.log(`DEBUG_V18: SUCCESS - Team ${currentTeamData.name} started!`);
+        } else {
+            console.warn(`DEBUG_V18: Invalid team config for '${teamKey}'.`);
+            if(teamCodeFeedback) { /* ... (som i v17) ... */ }
+            if (teamCodeInput) { /* ... (som i v17) ... */ }
+            if (startWithTeamCodeButton) {
+                console.log("DEBUG_V18: Re-enabling startWithTeamCodeButton (invalid code).");
+                startWithTeamCodeButton.disabled = false;
+            }
+        }
+        console.log("DEBUG_V18: --- initializeTeam COMPLETED ---");
+    }
+
+    // ... (handlePostUnlock, handleFinishCodeUnlock, proceedToNextPostOrFinish, handleTaskCheck, updateUIAfterLoad som før) ...
+
+    // === EVENT LISTENERS ===
+    console.log("DEBUG_V18: Setting up event listeners...");
+    if (startWithTeamCodeButton && teamCodeInput) {
+        startWithTeamCodeButton.addEventListener('click', () => {
+            // IKKE log her, la initializeTeam logge sitt eget kall for å unngå duplikat
+            initializeTeam(teamCodeInput.value);
+        });
+        console.log("DEBUG_V18: Event listener for startWithTeamCodeButton ADDED.");
+    } else {
+        console.error("DEBUG_V18: FAILED to add listener for startWithTeamCodeButton (button or input missing).");
+    }
+    // ... (resten av event listeners som i v17, men sørg for at de også har V18 i sin DEBUG-logging hvis du vil spore dem) ...
+    // For eksempel:
     if (rebusContentElement) {
         rebusContentElement.addEventListener('click', (event) => {
             const target = event.target;
             if (target.classList.contains('unlock-post-btn')) {
-                const postNum = target.getAttribute('data-post');
-                console.log(`DEBUG: Unlock button for post ${postNum} clicked via delegation.`);
-                const pageElement = document.getElementById(`post-${postNum}-page`);
-                if(pageElement) {
-                    const unlockInput = pageElement.querySelector('.post-unlock-input');
-                    if(unlockInput) handlePostUnlock(postNum, unlockInput.value.trim().toUpperCase());
-                }
+                console.log("DEBUG_V18: Delegated click: unlock-post-btn"); /* ... */
             } else if (target.classList.contains('check-task-btn')) {
-                const postNum = target.getAttribute('data-post');
-                console.log(`DEBUG: Check task button for post ${postNum} clicked via delegation.`);
-                const pageElement = document.getElementById(`post-${postNum}-page`);
-                if(pageElement) {
-                    const taskInput = pageElement.querySelector('.post-task-input');
-                    if(taskInput) handleTaskCheck(postNum, taskInput.value.trim().toUpperCase());
-                }
+                console.log("DEBUG_V18: Delegated click: check-task-btn"); /* ... */
             }
         });
-        console.log("DEBUG: Click event listener for rebusContentElement (delegation) ADDED.");
-
-        rebusContentElement.addEventListener('keypress', (event) => {
-            const target = event.target;
-            if (event.key === 'Enter') {
-                if (target.classList.contains('post-unlock-input')) {
-                    event.preventDefault();
-                    const postPage = target.closest('.page');
-                    if (postPage) {
-                        const postNum = postPage.id.split('-')[1];
-                        console.log(`DEBUG: Enter in post-unlock-input for post ${postNum} via delegation.`);
-                        const unlockButton = postPage.querySelector(`.unlock-post-btn[data-post="${postNum}"]`);
-                        if (unlockButton && !unlockButton.disabled) unlockButton.click();
-                    }
-                } else if (target.classList.contains('post-task-input')) {
-                    event.preventDefault();
-                     const postPage = target.closest('.page');
-                    if (postPage) {
-                        const postNum = postPage.id.split('-')[1];
-                        console.log(`DEBUG: Enter in post-task-input for post ${postNum} via delegation.`);
-                        const taskButton = postPage.querySelector(`.check-task-btn[data-post="${postNum}"]`);
-                        if (taskButton && !taskButton.disabled) taskButton.click();
-                    }
-                }
-            }
-        });
-        console.log("DEBUG: Keypress event listener for rebusContentElement (delegation) ADDED.");
-
-    } else {
-        console.error("DEBUG: rebusContentElement NOT FOUND. Failed to add delegated listeners.");
     }
 
-
-    const finishUnlockButton = document.getElementById('finish-unlock-btn');
-    if (finishUnlockButton) {
-        finishUnlockButton.addEventListener('click', () => {
-            console.log("DEBUG: Finish unlock button clicked.");
-            const finishInput = document.getElementById('finish-unlock-input');
-            if(finishInput) handleFinishCodeUnlock(finishInput.value.trim().toUpperCase());
-        });
-        console.log("DEBUG: Event listener for finishUnlockButton ADDED.");
-    } else {
-        console.error("DEBUG: finishUnlockButton NOT FOUND.");
-    }
-
-    const finishUnlockInput = document.getElementById('finish-unlock-input');
-    if(finishUnlockInput){
-        finishUnlockInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                console.log("DEBUG: Enter in finishUnlockInput.");
-                const associatedButton = document.getElementById('finish-unlock-btn');
-                if (associatedButton && !associatedButton.disabled) associatedButton.click();
-            }
-        });
-        console.log("DEBUG: Event listener for finishUnlockInput (keypress) ADDED.");
-    } else {
-        console.error("DEBUG: finishUnlockInput NOT FOUND.");
-    }
-    
-    if (tabButtons.length > 0) {
-        tabButtons.forEach(button => { 
-            button.addEventListener('click', () => {
-                const tabId = button.getAttribute('data-tab');
-                console.log(`DEBUG: Tab button for '${tabId}' clicked.`);
-                showTabContent(tabId);
-                // ... (resten av tab-logikken fra v15)
-                if (tabId === 'map' && map && currentTeamData) {
-                    let targetLocation = null;
-                    let zoomLevel = 17;
-
-                    if (currentTeamData.atFinishLineInput || currentTeamData.endTime) { 
-                        targetLocation = FINISH_LOCATION;
-                        zoomLevel = 18; 
-                    } else if (currentTeamData.completedPostsCount < TOTAL_POSTS) { 
-                        const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
-                        targetLocation = POST_LOCATIONS[currentPostGlobalId - 1];
-                    }
-                    
-                    if (targetLocation) {
-                        let bounds = new google.maps.LatLngBounds();
-                        bounds.extend(new google.maps.LatLng(targetLocation.lat, targetLocation.lng));
-
-                        if (userPositionMarker && userPositionMarker.getPosition()) {
-                            bounds.extend(userPositionMarker.getPosition());
-                            map.fitBounds(bounds);
-                            if (map.getZoom() > 18) map.setZoom(18); 
-                        } else {
-                            map.panTo(new google.maps.LatLng(targetLocation.lat, targetLocation.lng));
-                            map.setZoom(zoomLevel);
-                        }
-                    } else if (userPositionMarker && userPositionMarker.getPosition()){ 
-                        map.panTo(userPositionMarker.getPosition());
-                        map.setZoom(17);
-                    } else { 
-                        map.panTo(START_LOCATION); map.setZoom(17);
-                    }
-                }
-            });
-        });
-        console.log(`DEBUG: Event listeners for ${tabButtons.length} tabButtons ADDED.`);
-    } else {
-        console.warn("DEBUG: No tabButtons found.");
-    }
-
-    if (devResetButtons.length > 0 ) {
-        devResetButtons.forEach(button => { 
-            button.addEventListener('click', () => {
-                console.log("DEBUG: Dev reset button clicked.");
-                if (confirm("Nullstille rebusen? All fremgang for aktivt lag vil bli slettet.")) {
-                    clearState();
-                    showRebusPage('intro-page');
-                    showTabContent('rebus'); 
-                    if (teamCodeInput) { teamCodeInput.disabled = false; } 
-                    if (startWithTeamCodeButton) startWithTeamCodeButton.disabled = false;
-                }
-            });
-        });
-        console.log(`DEBUG: Event listeners for ${devResetButtons.length} devResetButtons ADDED.`);
-    } else {
-        console.warn("DEBUG: No devResetButtons found.");
-    }
-    console.log("DEBUG: All standard event listeners setup attempted.");
 
     // === INITALISERING VED LASTING AV SIDE ===
+    console.log("DEBUG_V18: Starting initial page load sequence...");
     if (DEV_MODE_NO_GEOFENCE) {
-        console.warn("DEV MODE: GEOFENCE ER DEAKTIVERT GLOBALT!");
-        // ... (resten av DEV_MODE logging fra v15) ...
-        if (geofenceFeedbackElement) { 
-            geofenceFeedbackElement.textContent = "DEV MODE: Geofence deaktivert.";
-            geofenceFeedbackElement.className = 'geofence-info dev-mode';
-            geofenceFeedbackElement.style.display = 'block';
-        }
+        console.warn("DEBUG_V18: DEV MODE ACTIVE - Geofence is OFF.");
+        if (geofenceFeedbackElement) { /* ... (som i v17) ... */ }
     }
 
-    if (loadState()) { /* ... (uendret fra v15) ... */ }
-    else { /* ... (uendret fra v15) ... */ }
+    if (loadState()) {
+        console.log("DEBUG_V18: Loaded state successfully.");
+        showTabContent('rebus');
+        // ... (Resten av loadState-logikken som i v17)
+    } else {
+        console.log("DEBUG_V18: No valid state loaded or new user. Showing intro page.");
+        showTabContent('rebus'); 
+        showRebusPage('intro-page'); 
+        resetAllPostUIs();
+    }
+    console.log("DEBUG_V18: Initial page setup complete.");
 });
-/* Version: #16 */
+/* Version: #18 */
