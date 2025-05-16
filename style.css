@@ -1,4 +1,4 @@
-/* Version: #2 (PoC Lærere - Uten Lyd) */
+/* Version: #13 */
 /* === GENERELLE STILER - POC LÆRERE === */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
@@ -25,7 +25,7 @@ body {
 
 /* === POENGVISNING === */
 #score-display {
-    text-align: right; /* Høyrejuster poengsum */
+    text-align: right;
     margin-bottom: 15px;
     padding: 5px 10px;
     font-size: 1.1em;
@@ -33,7 +33,7 @@ body {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 4px;
-    display: none; /* Starter skjult, vises av JS */
+    display: none; 
 }
 #current-score {
     font-weight: bold;
@@ -43,7 +43,7 @@ body {
     font-size: 0.85em;
     color: #6c757d;
     margin-top: 8px;
-    min-height: 1.2em; /* For å unngå hopp når tekst legges til */
+    min-height: 1.2em; 
 }
 
 
@@ -68,19 +68,21 @@ h1 { color: #343a40; margin-bottom: 25px; font-size: 2em; font-weight: 600; }
 h2 { color: #007bff; margin-top: 30px; margin-bottom: 18px; font-size: 1.6em; border-bottom: 1px solid #e9ecef; padding-bottom: 10px; font-weight: 500; }
 p { line-height: 1.7; margin-bottom: 16px; font-size: 1rem; text-align: left; color: #495057; }
 #intro-page p, #finale-page p, #map-content p { text-align: center; }
-strong { color: #0056b3; font-weight: 600; }
+strong { color: #0056b3; font-weight: 600; } /* Endret fra #0056b3 til en litt mørkere for bedre kontrast på hvit bakgrunn */
 
 /* === INPUT-FELT - POC LÆRERE === */
 input[type="text"] { padding: 12px 15px; margin-top: 10px; border: 1px solid #ced4da; border-radius: 4px; width: calc(100% - 32px); font-size: 1rem; font-family: inherit; text-transform: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; background-color: #fff; color: #495057; }
 input[type="text"]:focus { border-color: #80bdff; outline: 0; box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); }
 input[type="text"].shake { animation: shakeInputPoc 0.4s; }
 @keyframes shakeInputPoc { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+input[type="text"]:disabled { background-color: #e9ecef; cursor: not-allowed; opacity: 0.7; }
+
 
 /* === KNAPPER - POC LÆRERE === */
 button { background-color: #007bff; color: white; padding: 10px 20px; border: 1px solid #007bff; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 500; font-family: inherit; margin-top: 15px; transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; box-shadow: none; text-transform: none; letter-spacing: normal; }
 button:hover { background-color: #0056b3; border-color: #0056b3; }
 button:active { background-color: #004085; border-color: #004085; transform: translateY(1px); }
-button:disabled { background-color: #adb5bd; border-color: #adb5bd; color: #6c757d; cursor: not-allowed; }
+button:disabled { background-color: #adb5bd; border-color: #adb5bd; color: #6c757d; cursor: not-allowed; opacity: 0.65; }
 .tab-button { margin-top: 0; font-weight: 600; }
 .tab-button:hover { background-color: #e9ecef; color: #0056b3; border-color: #ced4da; transform: translateY(0); }
 .tab-button.active { background-color: #ffffff; color: #007bff; border-color: #dee2e6 #dee2e6 #ffffff; transform: translateY(0); }
@@ -99,6 +101,51 @@ button:disabled { background-color: #adb5bd; border-color: #adb5bd; color: #6c75
 .feedback.shake { animation: feedbackShakePoc 0.4s; }
 @keyframes feedbackShakePoc { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } }
 
+/* === GEOFENCE FEEDBACK - NYTT === */
+#geofence-feedback {
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px; /* Justert fra HTML */
+    margin-top: 15px;   /* Justert fra HTML */
+    border-width: 1px;
+    border-style: solid;
+    text-align: center;
+    display: none; /* Starter skjult */
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+#geofence-feedback.geofence-info {
+    background-color: #e2e3e5; /* Nøytral gråblå */
+    border-color: #d6d8db;
+    color: #383d41;
+}
+#geofence-feedback.geofence-success {
+    background-color: #d1ecf1; /* Lys blå/turkis for suksess/nær nok */
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+#geofence-feedback.geofence-success::before {
+    content: "📍 "; /* Kartnål-emoji */
+    margin-right: 5px;
+}
+#geofence-feedback.geofence-error {
+    background-color: #f5c6cb; /* Lys rød for feil/for langt unna */
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+#geofence-feedback.geofence-error::before {
+    content: "⚠️ "; /* Advarsel-emoji */
+    margin-right: 5px;
+}
+/* For permanente GPS feil, behold error-utseendet */
+#geofence-feedback.geofence-error.permanent {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+
 /* === KART SEKSJON - POC LÆRERE === */
 #map-content #dynamic-map-container { margin-top: 15px; margin-bottom: 15px; width: 100%; height: 450px; border: 1px solid #ced4da; border-radius: 6px; background-color: #f8f9fa; }
 #map-content p { font-style: normal; color: #6c757d; font-size: 0.9rem; }
@@ -108,7 +155,4 @@ button:disabled { background-color: #adb5bd; border-color: #adb5bd; color: #6c75
 .dev-reset-button:hover { background-color: #545b62; border-color: #545b62; }
 .dev-reset-button:active { background-color: #495057; border-color: #495057; }
 
-/* Ingen lyd-kontroller styling nødvendig */
-
-/* Slutt på filen */
-/* Version: #2 (PoC Lærere - Uten Lyd) */
+/* Version: #13 */
