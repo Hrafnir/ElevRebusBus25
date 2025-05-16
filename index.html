@@ -1,33 +1,38 @@
-<!-- Version: #12 -->
+<!-- Version: #13 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skolerebus!</title> <!-- Oppdatert -->
-    <link rel="stylesheet" href="style.css"> 
+    <title>Skolerebus!</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container">
 
         <div class="tabs">
-            <button class="tab-button active" data-tab="rebus">Rebus</button> <!-- Oppdatert -->
+            <button class="tab-button active" data-tab="rebus">Rebus</button>
             <button class="tab-button" data-tab="map">Kart</button>
         </div>
 
         <div id="rebus-content" class="tab-content visible">
 
             <div id="intro-page" class="page visible">
-                <h1>Skolerebus!</h1> <!-- Oppdatert -->
-                <p>Velkommen! Skriv inn lagkoden deres for å starte spillet.</p> <!-- Oppdatert -->
-                <input type="text" id="team-code-input" placeholder="Lagkode (f.eks. LAG1)"> <!-- Oppdatert -->
-                <button id="start-with-team-code-button">Start Spillet!</button> <!-- Oppdatert -->
+                <h1>Skolerebus!</h1>
+                <p>Velkommen! Skriv inn lagkoden deres for å starte spillet.</p>
+                <input type="text" id="team-code-input" placeholder="Lagkode (f.eks. LAG1)">
+                <button id="start-with-team-code-button">Start Spillet!</button>
                 <div class="feedback" id="team-code-feedback"></div>
             </div>
 
+            <!-- Geofence Feedback - NYTT -->
+            <div id="geofence-feedback" style="display: none; margin-top: 15px; margin-bottom:10px; padding: 10px; border-radius: 4px; text-align: center; font-weight: 500;">
+                Laster posisjonsdata...
+            </div>
+
             <div id="score-display" style="text-align: center; margin-bottom: 15px; font-size: 1.1em; display: none;">
-                Poeng: <span id="current-score">0</span> <!-- Oppdatert -->
+                Poeng: <span id="current-score">0</span>
             </div>
 
             <!-- POST 1 -->
@@ -35,8 +40,8 @@
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 1: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn ankomstkoden på stedet for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-1-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="1">Lås opp post</button> <!-- Oppdatert -->
+                    <input type="text" class="post-unlock-input" id="post-1-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="1" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-1"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -47,7 +52,7 @@
                     <div class="feedback feedback-task" id="feedback-task-1"></div>
                     <div class="attempt-counter" id="attempts-1"></div>
                 </div>
-                <button class="dev-reset-button">Reset Spill</button> <!-- Oppdatert -->
+                <button class="dev-reset-button">Reset Spill</button>
             </div>
 
             <!-- POST 2 -->
@@ -55,8 +60,8 @@
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 2: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn ankomstkoden for å få neste oppgave.</p>
-                    <input type="text" class="post-unlock-input" id="post-2-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="2">Lås opp post</button> <!-- Oppdatert -->
+                    <input type="text" class="post-unlock-input" id="post-2-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="2" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-2"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -67,16 +72,16 @@
                     <div class="feedback feedback-task" id="feedback-task-2"></div>
                     <div class="attempt-counter" id="attempts-2"></div>
                 </div>
-                <button class="dev-reset-button">Reset Spill</button> <!-- Oppdatert -->
+                <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 3 (NY) -->
+            <!-- POST 3 -->
             <div id="post-3-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 3: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-3-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="3">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-3-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="3" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-3"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -90,13 +95,13 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 4 (NY) -->
+            <!-- POST 4 -->
             <div id="post-4-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 4: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-4-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="4">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-4-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="4" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-4"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -110,13 +115,13 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 5 (NY) -->
+            <!-- POST 5 -->
             <div id="post-5-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 5: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-5-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="5">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-5-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="5" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-5"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -130,13 +135,13 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 6 (NY) -->
+            <!-- POST 6 -->
             <div id="post-6-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 6: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-6-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="6">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-6-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="6" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-6"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -150,13 +155,13 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 7 (NY) -->
+            <!-- POST 7 -->
             <div id="post-7-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 7: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-7-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="7">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-7-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="7" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-7"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -170,13 +175,13 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 8 (NY) -->
+            <!-- POST 8 -->
             <div id="post-8-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 8: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-8-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="8">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-8-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="8" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-8"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -190,13 +195,13 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 9 (NY) -->
+            <!-- POST 9 -->
             <div id="post-9-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 9: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-9-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="9">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-9-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="9" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-9"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -210,13 +215,13 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 10 (NY) -->
+            <!-- POST 10 -->
             <div id="post-10-page" class="page">
                 <div class="post-unlock-section">
                     <h2 class="post-title-placeholder">Post 10: Ankomstkode</h2>
                     <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-10-unlock-input" placeholder="Skriv ankomstkode">
-                    <button class="unlock-post-btn" data-post="10">Lås opp post</button>
+                    <input type="text" class="post-unlock-input" id="post-10-unlock-input" placeholder="Skriv ankomstkode" disabled>
+                    <button class="unlock-post-btn" data-post="10" disabled>Lås opp post</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-10"></div>
                 </div>
                 <div class="post-task-section" style="display: none;">
@@ -230,29 +235,44 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
+            <!-- Finale-side med to tilstander: Målkode-input og Fullført-visning -->
             <div id="finale-page" class="page">
-                <h1>Spillet er Fullført!</h1> <!-- Oppdatert -->
-                <p>Kjempebra jobba, laget! Alle postene er løst.</p> <!-- Oppdatert -->
-                <p>Poengsummen deres ble: <strong id="final-score">0</strong></p> <!-- Oppdatert -->
-                <p>Møt opp ved <strong>[DEFINER SAMLINGSPUNKT HER, f.eks. Kantina eller Aulaen]</strong> for feiring og premier!</p> <!-- Oppdatert -->
-                <button class="dev-reset-button" style="margin-top: 30px;">Spill Igjen?</button> <!-- Oppdatert -->
+                <!-- Seksjon for å taste inn målkode -->
+                <div id="finale-unlock-section" style="display: none;">
+                    <h1>Nesten i Mål!</h1>
+                    <p>Dere har fullført alle postene! Nå gjenstår det bare å komme seg til målområdet og taste inn den siste målkoden for å stoppe tiden.</p>
+                    <p>Bruk kartet for å finne <strong>[DEFINER SAMLINGSPUNKT HER, f.eks. Kantina]</strong>.</p>
+                    <input type="text" id="finish-unlock-input" placeholder="Skriv målkoden her" disabled>
+                    <button id="finish-unlock-btn" disabled>Registrer Målgang</button>
+                    <div class="feedback feedback-unlock" id="feedback-unlock-finish"></div>
+                </div>
+
+                <!-- Seksjon som vises etter korrekt målkode -->
+                <div id="finale-completed-section" style="display: none;">
+                    <h1>Spillet er Fullført!</h1>
+                    <p>Kjempebra jobba, laget! Alle postene er løst og dere er i mål!</p>
+                    <p>Poengsummen deres ble: <strong id="final-score">0</strong></p>
+                    <p>Total tid brukt: <strong id="total-time">00:00</strong></p>
+                    <p>Møt opp ved <strong>[DEFINER SAMLINGSPUNKT HER, f.eks. Kantina]</strong> for feiring og premier!</p>
+                    <button class="dev-reset-button" style="margin-top: 30px;">Spill Igjen?</button>
+                </div>
             </div>
         </div>
 
         <div id="map-content" class="tab-content">
-            <h2>Kart over Skoleområdet</h2> <!-- Oppdatert -->
-            <p>Bruk kartet for å finne neste post. Lykke til!</p> <!-- Oppdatert -->
+            <h2>Kart over Skoleområdet</h2>
+            <p>Bruk kartet for å finne neste post. Lykke til!</p>
             <div id="dynamic-map-container"></div>
-            <p style="font-size: 0.9em; margin-top: 15px;">(Trykk på 'Rebus'-fanen for å se oppgavene)</p> <!-- Oppdatert -->
+            <p style="font-size: 0.9em; margin-top: 15px;">(Trykk på 'Rebus'-fanen for å se oppgavene)</p>
         </div>
     </div>
 
-    <script src="script.js"></script> 
+    <script src="script.js"></script>
     <script async defer
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA5qUjSj9WyUKsZPljvHfp9RHd-dUjMblk&callback=initMap">
-        <!-- Erstatt AIzaSyA5qUjSj9WyUKsZPljvHfp9RHd-dUjMblk med din egen API-nøkkel -->
+        <!-- Erstatt med din egen API-nøkkel -->
     </script>
 
 </body>
 </html>
-<!-- Version: #12 -->
+<!-- Version: #13 -->
