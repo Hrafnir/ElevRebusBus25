@@ -1,4 +1,4 @@
-/* Version: #22 */
+/* Version: #23 */
 
 // === GLOBALE VARIABLER ===
 let map;
@@ -16,6 +16,12 @@ const GEOFENCE_RADIUS = 25;
 const DEV_MODE_NO_GEOFENCE = false; 
 const FINISH_UNLOCK_CODE = "FASTLAND24"; 
 
+const MANNED_POST_PASSWORDS = {
+    post1: "GOLFMESTER", 
+    post8: "PYRAMIDEBYGGER" 
+};
+const MAX_PLAYERS_PER_TEAM = 6; 
+
 const START_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Start: Fastland", name: "Start: Fastland" };
 const FINISH_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Mål: Fastland", name: "Mål: Fastland" };
 
@@ -32,13 +38,21 @@ const POST_LOCATIONS = [
     { lat: 60.793880419179715, lng: 10.678003145501888, title: "Post 10", name: "Hovdetoppen Restaurant"}
 ];
 
-const CORRECT_TASK_ANSWERS = {
-    post1: "SVARPOST1", post2: "SVARPOST2", post3: "SVARPOST3", post4: "SVARPOST4", post5: "SVARPOST5",
-    post6: "SVARPOST6", post7: "SVARPOST7", post8: "SVARPOST8", post9: "SVARPOST9", post10: "SVARPOST10"
+const CORRECT_TASK_ANSWERS = { // post1 og post8 vil ikke bruke dette direkte for poeng, men kan ha et "fasit" for oppgaven.
+    post1: "MINIGOLF FULLFØRT", // Eller et annet passende "svar" hvis nødvendig for logikken
+    post2: "SVARPOST2", 
+    post3: "SVARPOST3", 
+    post4: "SVARPOST4", 
+    post5: "SVARPOST5",
+    post6: "SVARPOST6", 
+    post7: "SVARPOST7", 
+    post8: "PYRAMIDE FULLFØRT", // Eller et annet passende "svar"
+    post9: "SVARPOST9", 
+    post10: "SVARPOST10"
 };
 
-const MAX_ATTEMPTS_PER_TASK = 5;
-const POINTS_PER_CORRECT_TASK = 10;
+const MAX_ATTEMPTS_PER_TASK = 5; 
+const POINTS_PER_CORRECT_TASK = 10; 
 
 // === HJELPEFUNKSJONER ===
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -151,7 +165,7 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
         if (canInteractWithTarget) {
              geofenceFeedbackElement.textContent = targetName.toLowerCase().includes("mål") 
                 ? `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). Tast inn målkoden!`
-                : `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). Her er oppgaven!`;
+                : `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). Lærer må taste passord eller oppgaven vises.`;
         } else { 
             geofenceFeedbackElement.textContent = `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m).`;
         }
@@ -194,9 +208,9 @@ function handlePositionUpdate(position) {
     let canCurrentlyInteract = false; 
 
     if (isCurrentTargetTheFinishLine) {
+        currentTeamData.canEnterFinishCode = isEffectivelyWithinRange; 
         const finishUnlockInput = document.getElementById('finish-unlock-input');
         const finishUnlockButton = document.getElementById('finish-unlock-btn');
-        currentTeamData.canEnterFinishCode = isEffectivelyWithinRange; 
         if(finishUnlockInput) finishUnlockInput.disabled = !isEffectivelyWithinRange;
         if(finishUnlockButton) finishUnlockButton.disabled = !isEffectivelyWithinRange;
         canCurrentlyInteract = isEffectivelyWithinRange;
@@ -209,8 +223,12 @@ function handlePositionUpdate(position) {
             saveState();
             resetPageUI(targetLocationDetails.pageId); 
             canCurrentlyInteract = true; 
-        } else if (isPostAlreadyUnlocked) {
-            canCurrentlyInteract = false; 
+        } else if (isPostAlreadyUnlocked) { 
+            if (postGlobalId === 1 || postGlobalId === 8) { // For bemannede poster
+                 canCurrentlyInteract = !currentTeamData.mannedPostTeacherVerified[`post${postGlobalId}`]; // Kan interagere hvis lærer ikke har verifisert
+            } else {
+                canCurrentlyInteract = false; // Vanlig post, allerede "unlocked" (oppgave vist)
+            }
         }
     }
     updateGeofenceFeedback(distance, isEffectivelyWithinRange, false, targetLocationDetails.name, canCurrentlyInteract);
@@ -234,9 +252,8 @@ function stopContinuousUserPositionUpdate() {
     }
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG_V22: DOMContentLoaded event fired."); // Endret versjonsnummer i logg
+    console.log("DEBUG_V23: DOMContentLoaded event fired.");
     const teamCodeInput = document.getElementById('team-code-input');
     const startWithTeamCodeButton = document.getElementById('start-with-team-code-button');
     const teamCodeFeedback = document.getElementById('team-code-feedback');
@@ -248,13 +265,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentScoreSpan = document.getElementById('current-score');
     const rebusContentElement = document.getElementById('rebus-content'); 
 
-    if (!rebusContentElement) console.error("DEBUG_V22: rebusContentElement is NULL!");
+    if (!rebusContentElement) console.error("DEBUG_V23: rebusContentElement is NULL!");
 
     const TEAM_CONFIG = {
         "LAG1": { name: "Lag 1", postSequence: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
         "LAG2": { name: "Lag 2", postSequence: [2, 3, 4, 5, 6, 7, 8, 9, 10, 1] },
-        "LAG3": { name: "Lag 3", postSequence: [3, 4, 2, 5, 6, 7, 8, 9, 10, 1] }, // OPPDATERT
-        "LAG4": { name: "Lag 4", postSequence: [4, 3, 2, 5, 6, 7, 8, 9, 10, 1] }, // OPPDATERT
+        "LAG3": { name: "Lag 3", postSequence: [3, 4, 2, 5, 6, 7, 8, 9, 10, 1] }, 
+        "LAG4": { name: "Lag 4", postSequence: [4, 3, 2, 5, 6, 7, 8, 9, 10, 1] }, 
         "LAG5": { name: "Lag 5", postSequence: [5, 6, 7, 8, 9, 10, 1, 2, 3, 4] },
         "LAG6": { name: "Lag 6", postSequence: [6, 7, 8, 9, 10, 1, 2, 3, 4, 5] },
         "LAG7": { name: "Lag 7", postSequence: [7, 8, 9, 10, 1, 2, 3, 4, 5, 6] },
@@ -270,26 +287,38 @@ document.addEventListener('DOMContentLoaded', () => {
             scoreDisplayElement.style.display = 'block';
         }
     }
+
     function updatePageText(pageElement, teamPostNumber, globalPostId) { 
         const titleElement = pageElement.querySelector('.post-title-placeholder');
-        const taskTitleElement = pageElement.querySelector('.post-task-title-placeholder');
-        const taskQuestionElement = pageElement.querySelector('.post-task-question-placeholder');
-        const postInfoElement = pageElement.querySelector('.post-info-placeholder');
+        const taskTitleElement = pageElement.querySelector('.post-task-title-placeholder'); 
+        const taskQuestionElement = pageElement.querySelector('.post-task-question-placeholder'); 
+        const postInfoElement = pageElement.querySelector('.post-info-placeholder'); 
+        const mannedPostTitleElement = pageElement.querySelector('.manned-post-title-placeholder'); 
+        const mannedPostInstructionElement = pageElement.querySelector('.manned-post-instruction-placeholder');
 
         if (globalPostId === null || globalPostId === undefined || globalPostId === 'finish') return;
         const postDetails = POST_LOCATIONS[globalPostId - 1];
         let postName = postDetails ? postDetails.name : `Post ${globalPostId}`;
 
         if (titleElement) titleElement.textContent = `Post ${teamPostNumber}/${TOTAL_POSTS}: ${postName}`;
-        if (postInfoElement) postInfoElement.textContent = `Bruk kartet for å finne ${postName}. Når du er nær nok, vil oppgaven vises her.`;
+        if (postInfoElement) postInfoElement.textContent = `Bruk kartet for å finne ${postName}.`;
+
         if (taskTitleElement) taskTitleElement.textContent = `Oppgave: ${postName}`;
         if (taskQuestionElement) {
             taskQuestionElement.textContent = `Her kommer oppgaven for ${postName}. (Svar med fasit: ${CORRECT_TASK_ANSWERS['post'+globalPostId]})`;
         }
+        if (mannedPostTitleElement) mannedPostTitleElement.textContent = `Bemannet Post: ${postName}`;
+        if (mannedPostInstructionElement) {
+            if (globalPostId === 1) {
+                mannedPostInstructionElement.textContent = "Velkommen til Minigolf! Læreren vil guide dere og taste inn et passord når dere er klare.";
+            } else if (globalPostId === 8) {
+                mannedPostInstructionElement.textContent = "Velkommen til Pyramidebygging! Læreren vil guide dere og taste inn et passord.";
+            }
+        }
     }
 
     function displayFinalResults() {
-        console.log("DEBUG_V22: Displaying final results.");
+        console.log("DEBUG_V23: Displaying final results.");
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -351,9 +380,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showRebusPage(pageId) {
-        console.log(`DEBUG_V22: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V23: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
         pages = document.querySelectorAll('#rebus-content .page');
-        if (!pages || pages.length === 0) { console.error("DEBUG_V22: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
+        if (!pages || pages.length === 0) { console.error("DEBUG_V23: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
 
         pages.forEach((page) => {
             if (page.id === pageId) { page.classList.add('visible'); } 
@@ -401,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pageId === 'finale-page' && !currentTeamData) { clearState(); showRebusPage('intro-page'); return; }
             }
         }
-        console.log(`DEBUG_V22: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V23: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
     }
 
     function showTabContent(tabId) { 
@@ -428,10 +457,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentTeamData.postSequence.length !== TOTAL_POSTS ||
                     typeof currentTeamData.startTime === 'undefined' ||
                     typeof currentTeamData.taskCompletionTimes === 'undefined' || 
-                    typeof currentTeamData.canEnterFinishCode === 'undefined' 
+                    typeof currentTeamData.canEnterFinishCode === 'undefined' ||
+                    typeof currentTeamData.mannedPostTeacherVerified === 'undefined' || 
+                    (currentTeamData.mannedPostTeacherVerified && (typeof currentTeamData.mannedPostTeacherVerified.post1 === 'undefined' || typeof currentTeamData.mannedPostTeacherVerified.post8 === 'undefined'))
                 ) { clearState(); return false; }
                 if (typeof currentTeamData.startTime === 'string') currentTeamData.startTime = parseInt(currentTeamData.startTime,10);
                 if (currentTeamData.startTime && isNaN(currentTeamData.startTime)) currentTeamData.startTime = null; 
+                
+                if (!currentTeamData.minigolfScores) currentTeamData.minigolfScores = { post1: {} };
+                if (!currentTeamData.pyramidPoints) currentTeamData.pyramidPoints = {};
+
                 return true;
             } catch (e) { console.warn("Feil ved parsing av lagret data:", e); clearState(); return false; }
         }
@@ -473,40 +508,92 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const postNumberMatch = pageId.match(/post-(\d+)-page/);
         if (!postNumberMatch) return;
-        const postNum = postNumberMatch[1];
+        const postNum = parseInt(postNumberMatch[1]); 
 
         const postInfoSection = pageElement.querySelector('.post-info-section'); 
-        const taskSection = pageElement.querySelector('.post-task-section');
-        const taskInput = pageElement.querySelector('.post-task-input');
-        const taskButton = pageElement.querySelector('.check-task-btn');
-        const taskFeedback = pageElement.querySelector('.feedback-task');
-        const attemptCounterElement = pageElement.querySelector('.attempt-counter');
+        const taskSection = pageElement.querySelector('.post-task-section'); 
+        const teacherPasswordSection = pageElement.querySelector('.teacher-password-section'); 
+        const minigolfFormSection = pageElement.querySelector('.minigolf-form-section'); 
+        const pyramidPointsSection = pageElement.querySelector('.pyramid-points-section'); 
 
-        if(attemptCounterElement) attemptCounterElement.textContent = '';
         const isPostUnlocked = currentTeamData?.unlockedPosts?.[`post${postNum}`]; 
         const isTaskCompleted = currentTeamData?.completedGlobalPosts?.[`post${postNum}`];
+        const isMannedPost = (postNum === 1 || postNum === 8);
+        const isTeacherVerified = isMannedPost && currentTeamData?.mannedPostTeacherVerified?.[`post${postNum}`];
 
-        if (postInfoSection && taskSection) {
-            if (isTaskCompleted) { 
-                if(postInfoSection) postInfoSection.style.display = 'none';
+        if(postInfoSection) postInfoSection.style.display = 'none';
+        if(taskSection) taskSection.style.display = 'none';
+        if(teacherPasswordSection) teacherPasswordSection.style.display = 'none';
+        if(minigolfFormSection) minigolfFormSection.style.display = 'none';
+        if(pyramidPointsSection) pyramidPointsSection.style.display = 'none';
+        
+        const teacherPassInput = pageElement.querySelector('.teacher-password-input');
+        if (teacherPassInput) { teacherPassInput.value = ''; teacherPassInput.disabled = false; }
+        const teacherPassButton = pageElement.querySelector('.submit-teacher-password-btn');
+        if (teacherPassButton) teacherPassButton.disabled = false;
+        const teacherPassFeedback = pageElement.querySelector('.feedback-teacher-password');
+        if (teacherPassFeedback) { teacherPassFeedback.textContent = ''; teacherPassFeedback.className = 'feedback feedback-teacher-password'; }
+
+        if (isTaskCompleted) { 
+            if (isMannedPost) { 
+                 if (postNum === 1 && minigolfFormSection) { 
+                    minigolfFormSection.style.display = 'block'; 
+                    minigolfFormSection.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                    const mgFeedback = document.getElementById('minigolf-results-feedback');
+                    if(mgFeedback) { mgFeedback.textContent = "Minigolf fullført! Poeng registrert."; mgFeedback.className = "feedback success";}
+                } else if (postNum === 8 && pyramidPointsSection) { 
+                    pyramidPointsSection.style.display = 'block';
+                    pyramidPointsSection.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                     const ppFeedback = document.getElementById('pyramid-results-feedback');
+                    if(ppFeedback) { ppFeedback.textContent = "Pyramidepoeng registrert!"; ppFeedback.className = "feedback success";}
+                }
+            } else if (taskSection) { 
                 taskSection.style.display = 'block';
-                if (taskInput) { taskInput.disabled = true; } 
-                if (taskButton) taskButton.disabled = true;
-                if (taskFeedback) { taskFeedback.textContent = 'Oppgave fullført!'; taskFeedback.className = 'feedback feedback-task success'; }
-            } else if (isPostUnlocked) { 
-                if(postInfoSection) postInfoSection.style.display = 'none';
+                taskSection.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                const taskFeedback = taskSection.querySelector('.feedback-task');
+                if(taskFeedback) {taskFeedback.textContent = 'Oppgave fullført!'; taskFeedback.className = 'feedback feedback-task success';}
+            }
+        } else if (isPostUnlocked) { 
+            if (isMannedPost) {
+                if (isTeacherVerified) { 
+                    if (postNum === 1 && minigolfFormSection) {
+                        minigolfFormSection.style.display = 'block';
+                        for (let i = 1; i <= MAX_PLAYERS_PER_TEAM; i++) {
+                            const scoreInput = document.getElementById(`player-${i}-score-post1`);
+                            if (scoreInput) { scoreInput.value = ''; scoreInput.disabled = false;}
+                        }
+                        const submitGolfBtn = document.getElementById('submit-minigolf-post1');
+                        if(submitGolfBtn) submitGolfBtn.disabled = false;
+                        const mgFeedback = document.getElementById('minigolf-results-feedback');
+                        if(mgFeedback) { mgFeedback.textContent = ""; mgFeedback.className = "feedback";}
+                    } else if (postNum === 8 && pyramidPointsSection) {
+                        pyramidPointsSection.style.display = 'block';
+                        const pointsInput = document.getElementById('pyramid-points-input-post8');
+                        if(pointsInput) {pointsInput.value = ''; pointsInput.disabled = false;}
+                        const submitPyramidBtn = document.getElementById('submit-pyramid-points-post8');
+                        if(submitPyramidBtn) submitPyramidBtn.disabled = false;
+                        const ppFeedback = document.getElementById('pyramid-results-feedback');
+                        if(ppFeedback) { ppFeedback.textContent = ""; ppFeedback.className = "feedback";}
+                    }
+                } else if (teacherPasswordSection) { 
+                    teacherPasswordSection.style.display = 'block';
+                }
+            } else if (taskSection) { 
                 taskSection.style.display = 'block';
-                if (taskInput) { taskInput.disabled = false; taskInput.value = ''; } 
-                if (taskButton) taskButton.disabled = false;
-                if (taskFeedback) { taskFeedback.textContent = ''; taskFeedback.className = 'feedback feedback-task'; }
+                const taskInput = taskSection.querySelector('.post-task-input');
+                const taskButton = taskSection.querySelector('.check-task-btn');
+                const taskFeedback = taskSection.querySelector('.feedback-task');
+                const attemptCounterElement = taskSection.querySelector('.attempt-counter');
+                if(taskInput) {taskInput.value = ''; taskInput.disabled = false;}
+                if(taskButton) taskButton.disabled = false;
+                if(taskFeedback) {taskFeedback.textContent = ''; taskFeedback.className = 'feedback feedback-task';}
                 if (attemptCounterElement && currentTeamData?.taskAttempts?.[`post${postNum}`] !== undefined) {
                     const attemptsLeft = MAX_ATTEMPTS_PER_TASK - currentTeamData.taskAttempts[`post${postNum}`];
                     attemptCounterElement.textContent = `Forsøk igjen: ${attemptsLeft > 0 ? attemptsLeft : MAX_ATTEMPTS_PER_TASK}`;
                 } else if (attemptCounterElement) { attemptCounterElement.textContent = `Forsøk igjen: ${MAX_ATTEMPTS_PER_TASK}`; }
-            } else { 
-                if(postInfoSection) postInfoSection.style.display = 'block';
-                taskSection.style.display = 'none';
             }
+        } else if (postInfoSection) { 
+            postInfoSection.style.display = 'block';
         }
      }
     function resetAllPostUIs() { 
@@ -540,7 +627,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 completedGlobalPosts: {}, unlockedPosts: {}, score: 0, taskAttempts: {},
                 startTime: Date.now(), endTime: null, totalTimeSeconds: null,
                 taskCompletionTimes: {}, 
-                canEnterFinishCode: false 
+                canEnterFinishCode: false,
+                mannedPostTeacherVerified: { post1: false, post8: false }, 
+                minigolfScores: { post1: {} }, 
+                pyramidPoints: {} 
             };
             currentTeamData.postSequence.forEach(postId => { currentTeamData.taskAttempts[`post${postId}`] = 0; });
             
@@ -558,7 +648,135 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function handleTeacherPassword(postNum, password) {
+        const pageElement = document.getElementById(`post-${postNum}-page`);
+        if (!pageElement || !currentTeamData) return;
+
+        const feedbackElement = pageElement.querySelector('.feedback-teacher-password');
+        const passInput = pageElement.querySelector('.teacher-password-input');
+        const passButton = pageElement.querySelector('.submit-teacher-password-btn');
+
+        if (!password) {
+            if(feedbackElement) {feedbackElement.textContent = "Lærerpassord mangler!"; feedbackElement.className = "feedback feedback-teacher-password error shake";}
+            if(passInput) {passInput.classList.add('shake'); setTimeout(()=>passInput.classList.remove('shake'), 400);}
+            return;
+        }
+
+        if (MANNED_POST_PASSWORDS[`post${postNum}`] && password.toUpperCase() === MANNED_POST_PASSWORDS[`post${postNum}`].toUpperCase()) {
+            if(feedbackElement) {feedbackElement.textContent = "Passord godkjent! Fortsett med oppgaven."; feedbackElement.className = "feedback feedback-teacher-password success";}
+            if(passInput) passInput.disabled = true;
+            if(passButton) passButton.disabled = true;
+            
+            currentTeamData.mannedPostTeacherVerified[`post${postNum}`] = true;
+            saveState();
+            setTimeout(() => resetPageUI(`post-${postNum}-page`), 800); 
+        } else {
+            if(feedbackElement) {feedbackElement.textContent = "Feil lærerpassord."; feedbackElement.className = "feedback feedback-teacher-password error shake";}
+            if(passInput) {passInput.value=''; passInput.classList.add('shake'); setTimeout(()=>passInput.classList.remove('shake'), 400); passInput.focus();}
+            setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400);
+        }
+    }
+
+    function handleMinigolfSubmit(postNum) {
+        if (!currentTeamData || postNum !== 1) return;
+        const pageElement = document.getElementById(`post-${postNum}-page`);
+        const feedbackElement = document.getElementById('minigolf-results-feedback'); 
+        
+        let totalScore = 0; let playerCount = 0; let scoresValid = true;
+
+        for (let i = 1; i <= MAX_PLAYERS_PER_TEAM; i++) {
+            const scoreInput = document.getElementById(`player-${i}-score-post${postNum}`);
+            if (scoreInput && scoreInput.value !== '') {
+                const score = parseInt(scoreInput.value, 10);
+                if (isNaN(score) || score < 3) { 
+                    scoresValid = false;
+                    if(feedbackElement) {feedbackElement.textContent = `Ugyldig score for Spiller ${i}. Minimum 3 slag.`; feedbackElement.className = "feedback error";}
+                    scoreInput.classList.add('shake'); setTimeout(()=>scoreInput.classList.remove('shake'), 400);
+                    break;
+                }
+                currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = score;
+                totalScore += score; playerCount++;
+            } else if (scoreInput && scoreInput.value === '' && playerCount > 0 && i <= playerCount+1) {
+                currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = null;
+            } else if (scoreInput && scoreInput.value === '' && i === 1) { 
+                scoresValid = false;
+                if(feedbackElement) {feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error";}
+                break;
+            }
+        }
+
+        if (!scoresValid || playerCount === 0) {
+            if (playerCount === 0 && scoresValid && feedbackElement) {
+                 feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error";
+            }
+            return;
+        }
+
+        const averageScore = totalScore / playerCount;
+        currentTeamData.minigolfScores[`post${postNum}`].average = averageScore;
+
+        let pointsAwarded = 0;
+        if (averageScore <= 8) pointsAwarded = 10;
+        else if (averageScore <= 9) pointsAwarded = 9;
+        else if (averageScore <= 10) pointsAwarded = 8;
+        else if (averageScore <= 11) pointsAwarded = 7;
+        else if (averageScore <= 12) pointsAwarded = 6;
+        else if (averageScore <= 13) pointsAwarded = 5;
+        else if (averageScore <= 14) pointsAwarded = 4;
+        else if (averageScore <= 15) pointsAwarded = 3;
+        else if (averageScore <= 16) pointsAwarded = 2;
+        else pointsAwarded = 1; 
+
+        currentTeamData.minigolfScores[`post${postNum}`].pointsAwarded = pointsAwarded;
+        currentTeamData.score += pointsAwarded;
+        updateScoreDisplay();
+
+        if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) {
+            currentTeamData.completedGlobalPosts[`post${postNum}`] = true;
+            currentTeamData.completedPostsCount++;
+            currentTeamData.taskCompletionTimes['post' + postNum] = Date.now();
+        }
+        saveState();
+        if(feedbackElement) {feedbackElement.textContent = `Snitt: ${averageScore.toFixed(2)}. Poeng: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
+        
+        pageElement.querySelectorAll('.minigolf-form-section input, .minigolf-form-section button').forEach(el => el.disabled = true);
+        setTimeout(() => proceedToNextPostOrFinish(), 1500);
+    }
+
+    function handlePyramidPointsSubmit(postNum, points) {
+        if (!currentTeamData || postNum !== 8) return;
+        const pageElement = document.getElementById(`post-${postNum}-page`);
+        const feedbackElement = document.getElementById('pyramid-results-feedback'); 
+        const pointsInput = document.getElementById(`pyramid-points-input-post${postNum}`);
+
+        const pointsAwarded = parseInt(points, 10);
+        if (isNaN(pointsAwarded) || pointsAwarded < 0 || pointsAwarded > 10) {
+            if(feedbackElement) {feedbackElement.textContent = "Ugyldig poengsum (0-10)."; feedbackElement.className = "feedback error";}
+            if(pointsInput) {pointsInput.classList.add('shake'); setTimeout(()=>pointsInput.classList.remove('shake'), 400); pointsInput.focus();}
+            return;
+        }
+
+        currentTeamData.pyramidPoints[`post${postNum}`] = pointsAwarded;
+        currentTeamData.score += pointsAwarded;
+        updateScoreDisplay();
+
+        if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) {
+            currentTeamData.completedGlobalPosts[`post${postNum}`] = true;
+            currentTeamData.completedPostsCount++;
+            currentTeamData.taskCompletionTimes['post' + postNum] = Date.now();
+        }
+        saveState();
+        if(feedbackElement) {feedbackElement.textContent = `Poeng registrert: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
+
+        if(pointsInput) pointsInput.disabled = true;
+        const submitBtn = document.getElementById(`submit-pyramid-points-post${postNum}`);
+        if(submitBtn) submitBtn.disabled = true;
+        setTimeout(() => proceedToNextPostOrFinish(), 1500);
+    }
+
     function handleTaskCheck(postNum, userAnswer) { 
+        if (postNum === 1 || postNum === 8) { console.warn(`DEBUG_V23: handleTaskCheck kalt for bemannet post ${postNum}.`); return; }
+        
         const pageElement = document.getElementById(`post-${postNum}-page`);
         if(!pageElement) return;
         const taskInput = pageElement.querySelector('.post-task-input');
@@ -624,7 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nextPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
                 setTimeout(() => { showRebusPage(`post-${nextPostGlobalId}-page`); if (map) updateMapMarker(nextPostGlobalId, false); }, 1200);
             } else { 
-                console.error("DEBUG_V22: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
+                console.error("DEBUG_V23: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
                 setTimeout(() => { showRebusPage('finale-page'); if (map) updateMapMarker(null, true); }, 1200);
             }
         } else { 
@@ -639,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleFinishCodeInput(userAnswer) {
-        console.log("DEBUG_V22: handleFinishCodeInput called with:", userAnswer);
+        console.log("DEBUG_V23: handleFinishCodeInput called with:", userAnswer);
         const feedbackElement = document.getElementById('feedback-unlock-finish');
         const finishCodeInput = document.getElementById('finish-unlock-input');
         const finishUnlockButton = document.getElementById('finish-unlock-btn');
@@ -688,17 +906,43 @@ document.addEventListener('DOMContentLoaded', () => {
         rebusContentElement.addEventListener('click', (event) => {
             const target = event.target;
             if (target.classList.contains('check-task-btn') && !target.disabled) { 
-                const postNum = target.getAttribute('data-post');
+                const postNum = parseInt(target.getAttribute('data-post'));
+                if (postNum !== 1 && postNum !== 8) { 
+                    const pageElement = document.getElementById(`post-${postNum}-page`);
+                    if(pageElement) { const taskInput = pageElement.querySelector('.post-task-input'); if(taskInput) handleTaskCheck(postNum, taskInput.value.trim().toUpperCase()); }
+                }
+            } else if (target.classList.contains('submit-teacher-password-btn') && !target.disabled) { 
+                const postNum = parseInt(target.getAttribute('data-post'));
                 const pageElement = document.getElementById(`post-${postNum}-page`);
-                if(pageElement) { const taskInput = pageElement.querySelector('.post-task-input'); if(taskInput) handleTaskCheck(postNum, taskInput.value.trim().toUpperCase()); }
+                if(pageElement) { const passInput = pageElement.querySelector('.teacher-password-input'); if(passInput) handleTeacherPassword(postNum, passInput.value.trim()); }
+            } else if (target.id === 'submit-minigolf-post1' && !target.disabled) { 
+                handleMinigolfSubmit(1);
+            } else if (target.id === 'submit-pyramid-points-post8' && !target.disabled) { 
+                const pointsInput = document.getElementById('pyramid-points-input-post8');
+                if(pointsInput) handlePyramidPointsSubmit(8, pointsInput.value.trim());
             }
         });
         rebusContentElement.addEventListener('keypress', (event) => {
             const target = event.target;
             if (event.key === 'Enter') {
                 if (target.classList.contains('post-task-input') && !target.disabled) { 
-                    event.preventDefault(); const postPage = target.closest('.page');
-                    if (postPage) { const postNum = postPage.id.split('-')[1]; const taskButton = postPage.querySelector(`.check-task-btn[data-post="${postNum}"]`); if (taskButton && !taskButton.disabled) taskButton.click(); }
+                    const postPage = target.closest('.page');
+                    if (postPage) { 
+                        const postNum = parseInt(postPage.id.split('-')[1]);
+                        if (postNum !== 1 && postNum !== 8) { 
+                            event.preventDefault(); 
+                            const taskButton = postPage.querySelector(`.check-task-btn[data-post="${postNum}"]`); 
+                            if (taskButton && !taskButton.disabled) taskButton.click(); 
+                        }
+                    }
+                } else if (target.classList.contains('teacher-password-input') && !target.disabled) { 
+                     const postPage = target.closest('.page');
+                     if(postPage) {
+                        event.preventDefault();
+                        const postNum = parseInt(postPage.id.split('-')[1]);
+                        const passButton = postPage.querySelector('.submit-teacher-password-btn');
+                        if(passButton && !passButton.disabled) passButton.click();
+                     }
                 }
             }
         });
@@ -755,6 +999,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { clearState(); showRebusPage('intro-page'); }
         updateUIAfterLoad();
     } else { showTabContent('rebus'); showRebusPage('intro-page'); resetAllPostUIs(); }
-    console.log("DEBUG_V22: Initial page setup complete."); // Endret versjonsnummer i logg
+    console.log("DEBUG_V23: Initial page setup complete.");
 });
-/* Version: #22 */
+/* Version: #23 */
