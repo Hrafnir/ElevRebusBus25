@@ -1,4 +1,4 @@
-/* Version: #26 */
+/* Version: #27 */
 /* === GENERELLE STILER - NYTT DESIGN === */
 
 /* Importer font fra Google Fonts */
@@ -9,12 +9,12 @@
     --secondary-color: #2ecc71; /* Frisk grønn */
     --accent-color: #f1c40f;    /* Varm gul */
     --error-color: #e74c3c;     /* Tydelig rød */
-    --success-color: var(--secondary-color); /* Bruk sekundærfarge for suksess */
+    --success-color: var(--secondary-color); 
     
-    --text-color: #2c3e50;      /* Mørkere blågrå for bedre lesbarhet */
-    --text-light: #7f8c8d;    /* Lysere grå for mindre viktig tekst */
+    --text-color: #2c3e50;      
+    --text-light: #7f8c8d;    
     
-    --light-bg: #f4f6f8;        /* Veldig lys gråblå for body */
+    --light-bg: #f4f6f8;        
     --container-bg: #ffffff;
     --input-border-color: #dce4ec;
     --input-focus-color: var(--primary-color);
@@ -23,11 +23,22 @@
     --shadow-color: rgba(0, 0, 0, 0.1);
     --border-radius-sm: 4px;
     --border-radius-md: 8px;
+
+    /* For RGBA i box-shadow, --primary-color: #3498db; -> R:52, G:152, B:219 */
+    --primary-color-rgb: 52, 152, 219; 
 }
 
 body {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--light-bg); 
+    background-image: 
+        repeating-linear-gradient(
+            45deg, 
+            transparent, 
+            transparent 35px, 
+            rgba(0,0,0,0.02) 35px, 
+            rgba(0,0,0,0.02) 70px
+        );
     color: var(--text-color); 
     margin: 0;
     padding: 20px;
@@ -47,16 +58,18 @@ body {
     width: 100%;
     text-align: center;
     border: 1px solid #e0e6ed; 
+    position: relative; 
+    z-index: 1; 
 }
 
 /* === POENGVISNING === */
 #score-display {
     text-align: right;
-    margin-bottom: 20px; /* Økt margin */
-    padding: 8px 12px; /* Litt mer padding */
+    margin-bottom: 20px; 
+    padding: 8px 12px; 
     font-size: 1.1em;
-    font-weight: 600; /* Litt tykkere */
-    background-color: #f8f9fa; /* Kan også bruke en variant av --light-bg */
+    font-weight: 600; 
+    background-color: #f8f9fa; 
     border: 1px solid var(--input-border-color);
     border-radius: var(--border-radius-sm);
     display: none; 
@@ -66,7 +79,7 @@ body {
     color: var(--primary-color);
 }
 .attempt-counter {
-    font-size: 0.9em; /* Litt større */
+    font-size: 0.9em; 
     color: var(--text-light);
     margin-top: 10px;
     min-height: 1.2em; 
@@ -75,22 +88,22 @@ body {
 
 /* === TAB NAVIGASJON === */
 .tabs { 
-    margin-bottom: 30px; /* Økt margin */
+    margin-bottom: 30px; 
     border-bottom: 2px solid var(--input-border-color); 
-    padding-bottom: 0; /* Fjerner padding, lar knappene definere høyden */
-    display: flex; /* For bedre justering av knapper */
+    padding-bottom: 0; 
+    display: flex; 
 }
 .tab-button { 
-    background-color: transparent; /* Gjennomsiktig bakgrunn */
+    background-color: transparent; 
     color: var(--text-light); 
-    padding: 12px 22px; /* Justert padding */
-    border: none; /* Fjerner default border */
-    border-bottom: 3px solid transparent; /* For aktiv indikator */
-    border-radius: 0; /* Ingen avrunding for tabs */
+    padding: 12px 22px; 
+    border: none; 
+    border-bottom: 3px solid transparent; 
+    border-radius: 0; 
     cursor: pointer; 
-    font-size: 1.05em; /* Litt større */
+    font-size: 1.05em; 
     font-weight: 600; 
-    margin: 0 5px -2px 0; /* Justert margin for å overlappe border-bottom */
+    margin: 0 5px -2px 0; 
     transition: color 0.2s ease, border-bottom-color 0.2s ease; 
     position: relative; 
 }
@@ -100,8 +113,6 @@ body {
 .tab-button.active { 
     color: var(--primary-color); 
     border-bottom-color: var(--primary-color);
-    /* background-color: var(--container-bg); // Fjernet, unødvendig med transparent */
-    /* z-index: 1; // Kan fjernes hvis ikke overlappingsproblemer */
 }
 
 /* === TAB INNHOLD === */
@@ -118,19 +129,19 @@ body {
 h1 { 
     color: var(--primary-color); 
     margin-bottom: 30px; 
-    font-size: 2.2em; /* Litt større */
-    font-weight: 700; /* Tykkere */
+    font-size: 2.2em; 
+    font-weight: 700; 
 }
 h2 { 
     color: var(--primary-color); 
-    margin-top: 35px; /* Økt margin */
+    margin-top: 35px; 
     margin-bottom: 20px; 
-    font-size: 1.7em; /* Litt større */
+    font-size: 1.7em; 
     border-bottom: 1px solid #e9ecef; 
     padding-bottom: 12px; 
     font-weight: 600; 
 }
-h3 { /* Ny for underseksjoner */
+h3 {
     color: var(--text-color);
     font-weight: 600;
     font-size: 1.3em;
@@ -146,7 +157,7 @@ p {
 }
 #intro-page p, #finale-page p, #map-content p { text-align: center; }
 strong { color: var(--primary-color); font-weight: 600; }
-label { /* Styling for labels */
+label { 
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
@@ -158,8 +169,8 @@ label { /* Styling for labels */
 /* === INPUT-FELT === */
 input[type="text"], input[type="password"], input[type="number"] { 
     padding: 12px 15px; 
-    margin-top: 8px; /* Litt mindre margin over */
-    margin-bottom: 15px; /* Mer margin under */
+    margin-top: 8px; 
+    margin-bottom: 15px; 
     border: 1px solid var(--input-border-color); 
     border-radius: var(--border-radius-sm); 
     width: calc(100% - 32px); 
@@ -173,7 +184,7 @@ input[type="text"], input[type="password"], input[type="number"] {
 input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus { 
     border-color: var(--input-focus-color); 
     outline: 0; 
-    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb, 52, 152, 219), 0.25); /* Trenger RGB for primærfarge for RGBA */
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25); 
 }
 input[type="text"].shake, input[type="password"].shake, input[type="number"].shake { animation: shakeInputPoc 0.4s; }
 @keyframes shakeInputPoc { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
@@ -187,27 +198,27 @@ input[type="text"]:disabled, input[type="password"]:disabled, input[type="number
 button { 
     background-color: var(--primary-color); 
     color: white; 
-    padding: 12px 25px; /* Litt mer padding */
-    border: none; /* Fjerner border for flatere look */
+    padding: 12px 25px; 
+    border: none; 
     border-radius: var(--border-radius-sm); 
     cursor: pointer; 
     font-size: 1rem; 
-    font-weight: 600; /* Tykkere tekst */
+    font-weight: 600; 
     font-family: inherit; 
-    margin-top: 20px; /* Økt margin */
+    margin-top: 20px; 
     transition: background-color 0.2s ease-in-out, transform 0.1s ease; 
     text-transform: none; 
-    letter-spacing: 0.5px; /* Litt mer luft */
+    letter-spacing: 0.5px; 
 }
 button:hover { 
-    background-color: #2980b9; /* Mørkere nyanse av primærfargen */
+    background-color: #2980b9; 
 }
 button:active { 
-    background-color: #1f638f; /* Enda mørkere */
+    background-color: #1f638f; 
     transform: translateY(1px); 
 }
 button:disabled { 
-    background-color: #bdc3c7; /* Nøytral grå for disabled */
+    background-color: #bdc3c7; 
     border-color: #bdc3c7; 
     color: #7f8c8d; 
     cursor: not-allowed; 
@@ -218,16 +229,16 @@ button:disabled {
 #start-with-team-code-button { 
     background-color: var(--secondary-color); 
     font-size: 1.1em; 
-    padding: 14px 30px; /* Større */
+    padding: 14px 30px; 
 }
-#start-with-team-code-button:hover { background-color: #27ae60; } /* Mørkere grønn */
+#start-with-team-code-button:hover { background-color: #27ae60; } 
 #start-with-team-code-button:active { background-color: #1e8449; }
 
 .dev-reset-button { 
     background-color: var(--text-light); 
     font-size: 0.85rem; 
-    padding: 8px 15px; /* Litt mer padding */
-    margin-top: 30px; /* Mer margin */
+    padding: 8px 15px; 
+    margin-top: 30px; 
 }
 .dev-reset-button:hover { background-color: #707b7c; }
 .dev-reset-button:active { background-color: #5d6d7e; }
@@ -237,8 +248,8 @@ button:disabled {
 .feedback { 
     margin-top: 20px; 
     font-weight: 500; 
-    min-height: 24px; /* Litt høyere */
-    padding: 12px 18px; /* Mer padding */
+    min-height: 24px; 
+    padding: 12px 18px; 
     border-radius: var(--border-radius-sm); 
     font-size: 0.95rem; 
     border-width: 1px; 
@@ -248,28 +259,28 @@ button:disabled {
     justify-content: flex-start; 
     text-align: left; 
 }
-.feedback::before { font-size: 1.4em; margin-right: 10px; } /* Større ikon */
+.feedback::before { font-size: 1.4em; margin-right: 10px; } 
 
 .feedback.success { 
-    color: #1D6F42; /* Mørkere grønn for tekst */
+    color: #1D6F42; 
     background-color: #d4edda; 
     border-color: #c3e6cb; 
 }
-.feedback.success::before { content: "🎉"; } /* Endret ikon */
+.feedback.success::before { content: "🎉"; } 
 
 .feedback.error { 
     color: #721c24; 
     background-color: #f8d7da; 
     border-color: #f5c6cb; 
 }
-.feedback.error::before { content: "⚠️"; } /* Endret ikon */
+.feedback.error::before { content: "⚠️"; } 
 
 .feedback.shake { animation: feedbackShakePoc 0.4s; }
 @keyframes feedbackShakePoc { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } }
 
 /* === GEOFENCE FEEDBACK === */
 #geofence-feedback {
-    font-size: 0.95rem; /* Litt større */
+    font-size: 0.95rem; 
     font-weight: 500;
     padding: 12px 18px;
     border-radius: var(--border-radius-sm);
@@ -286,15 +297,15 @@ button:disabled {
     border-color: #d6d8db;
     color: #383d41;
 }
-#geofence-feedback.geofence-info.dev-mode { /* Spesifikk for dev mode */
+#geofence-feedback.geofence-info.dev-mode { 
     background-color: var(--accent-color);
     border-color: #dab10d;
     color: #333;
 }
 #geofence-feedback.geofence-success {
-    background-color: #d1e7dd; /* Lysere, mykere grønn */
+    background-color: #d1e7dd; 
     border-color: #badbcc;
-    color: #0f5132; /* Mørkere grønn for tekst */
+    color: #0f5132; 
 }
 #geofence-feedback.geofence-success::before { content: "📍 "; margin-right: 5px; }
 
@@ -331,19 +342,19 @@ button:disabled {
     padding: 20px;
     border: 1px solid var(--input-border-color);
     border-radius: var(--border-radius-md);
-    background-color: #fbfcfd; /* Veldig lys bakgrunn */
+    background-color: #fbfcfd; 
 }
 .minigolf-form-section h3, .pyramid-points-section h3, .teacher-password-section h3 {
-    margin-top: 0; /* Fjerner toppmargen for h3 inni disse boksene */
+    margin-top: 0; 
     color: var(--primary-color);
 }
 #minigolf-player-inputs-post1 label {
-    margin-right: 10px; /* Litt avstand mellom label og input */
+    margin-right: 10px; 
 }
 #minigolf-player-inputs-post1 input[type="number"] {
-    width: 70px; /* Litt bredere */
+    width: 70px; 
     padding: 8px;
-    margin-right: 15px; /* Mer avstand mellom inputs om de var inline */
+    margin-right: 15px; 
     margin-bottom: 10px;
 }
 #stage-times-list li {
@@ -354,5 +365,4 @@ button:disabled {
     border-bottom: none;
 }
 
-
-/* Version: #26 */
+/* Version: #27 */
