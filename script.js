@@ -13,7 +13,7 @@ let geofenceFeedbackElement = null;
 // === GLOBAL KONFIGURASJON ===
 const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25; 
-const DEV_MODE_NO_GEOFENCE = false; 
+const DEV_MODE_NO_GEOFENCE = true; 
 const FINISH_UNLOCK_CODE = "FASTLAND24"; 
 
 const MANNED_POST_PASSWORDS = {
