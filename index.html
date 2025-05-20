@@ -1,4 +1,4 @@
-<!-- Version: #13 -->
+<!-- Version: #21 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -26,7 +26,6 @@
                 <div class="feedback" id="team-code-feedback"></div>
             </div>
 
-            <!-- Geofence Feedback - NYTT -->
             <div id="geofence-feedback" style="display: none; margin-top: 15px; margin-bottom:10px; padding: 10px; border-radius: 4px; text-align: center; font-weight: 500;">
                 Laster posisjonsdata...
             </div>
@@ -37,15 +36,12 @@
 
             <!-- POST 1 -->
             <div id="post-1-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 1: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn ankomstkoden på stedet for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-1-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="1" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-1"></div>
+                <h2 class="post-title-placeholder">Post 1: Tittel</h2>
+                <div class="post-info-section"> <!-- Vises før posten er nådd -->
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
-                <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 1</h2>
+                <div class="post-task-section" style="display: none;"> <!-- Vises når posten er nådd -->
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 1</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 1.</p>
                     <input type="text" class="post-task-input" id="post-1-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="1">Sjekk Svar</button>
@@ -57,15 +53,12 @@
 
             <!-- POST 2 -->
             <div id="post-2-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 2: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn ankomstkoden for å få neste oppgave.</p>
-                    <input type="text" class="post-unlock-input" id="post-2-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="2" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-2"></div>
+                <h2 class="post-title-placeholder">Post 2: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 2</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 2</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 2.</p>
                     <input type="text" class="post-task-input" id="post-2-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="2">Sjekk Svar</button>
@@ -77,15 +70,12 @@
 
             <!-- POST 3 -->
             <div id="post-3-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 3: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-3-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="3" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-3"></div>
+                <h2 class="post-title-placeholder">Post 3: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 3</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 3</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 3.</p>
                     <input type="text" class="post-task-input" id="post-3-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="3">Sjekk Svar</button>
@@ -97,15 +87,12 @@
 
             <!-- POST 4 -->
             <div id="post-4-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 4: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-4-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="4" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-4"></div>
+                <h2 class="post-title-placeholder">Post 4: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 4</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 4</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 4.</p>
                     <input type="text" class="post-task-input" id="post-4-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="4">Sjekk Svar</button>
@@ -117,15 +104,12 @@
 
             <!-- POST 5 -->
             <div id="post-5-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 5: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-5-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="5" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-5"></div>
+                <h2 class="post-title-placeholder">Post 5: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 5</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 5</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 5.</p>
                     <input type="text" class="post-task-input" id="post-5-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="5">Sjekk Svar</button>
@@ -137,15 +121,12 @@
 
             <!-- POST 6 -->
             <div id="post-6-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 6: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-6-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="6" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-6"></div>
+                <h2 class="post-title-placeholder">Post 6: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 6</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 6</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 6.</p>
                     <input type="text" class="post-task-input" id="post-6-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="6">Sjekk Svar</button>
@@ -157,15 +138,12 @@
 
             <!-- POST 7 -->
             <div id="post-7-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 7: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-7-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="7" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-7"></div>
+                <h2 class="post-title-placeholder">Post 7: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 7</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 7</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 7.</p>
                     <input type="text" class="post-task-input" id="post-7-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="7">Sjekk Svar</button>
@@ -177,15 +155,12 @@
 
             <!-- POST 8 -->
             <div id="post-8-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 8: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-8-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="8" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-8"></div>
+                <h2 class="post-title-placeholder">Post 8: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 8</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 8</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 8.</p>
                     <input type="text" class="post-task-input" id="post-8-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="8">Sjekk Svar</button>
@@ -197,15 +172,12 @@
 
             <!-- POST 9 -->
             <div id="post-9-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 9: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-9-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="9" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-9"></div>
+                <h2 class="post-title-placeholder">Post 9: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 9</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 9</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 9.</p>
                     <input type="text" class="post-task-input" id="post-9-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="9">Sjekk Svar</button>
@@ -217,15 +189,12 @@
 
             <!-- POST 10 -->
             <div id="post-10-page" class="page">
-                <div class="post-unlock-section">
-                    <h2 class="post-title-placeholder">Post 10: Ankomstkode</h2>
-                    <p class="post-intro-placeholder">Finn koden for å låse opp oppgaven.</p>
-                    <input type="text" class="post-unlock-input" id="post-10-unlock-input" placeholder="Skriv ankomstkode" disabled>
-                    <button class="unlock-post-btn" data-post="10" disabled>Lås opp post</button>
-                    <div class="feedback feedback-unlock" id="feedback-unlock-10"></div>
+                <h2 class="post-title-placeholder">Post 10: Tittel</h2>
+                <div class="post-info-section">
+                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
                 </div>
                 <div class="post-task-section" style="display: none;">
-                    <h2 class="post-task-title-placeholder">Oppgave for Post 10</h2>
+                    <h3 class="post-task-title-placeholder">Oppgave for Post 10</h3>
                     <p class="post-task-question-placeholder">Her kommer spørsmålet for post 10.</p>
                     <input type="text" class="post-task-input" id="post-10-task-input" placeholder="Skriv svaret ditt her">
                     <button class="check-task-btn" data-post="10">Sjekk Svar</button>
@@ -235,33 +204,44 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- Finale-side med to tilstander: Målkode-input og Fullført-visning -->
+            <!-- Finale-side med tre tilstander -->
             <div id="finale-page" class="page">
-                <!-- Seksjon for å taste inn målkode -->
+                <!-- 1. Info: Vises når alle poster er fullført, før målområdet er nådd -->
+                <div id="finale-info-section" style="display: none;">
+                    <h1>Alle Poster Fullført!</h1>
+                    <p>Bra jobbet! Nå gjenstår det bare å komme seg til målområdet på <strong>Fastland</strong>.</p>
+                    <p>Kartet viser veien til mål.</p>
+                </div>
+
+                <!-- 2. Unlock: Vises når i målområdet, før korrekt målkode -->
                 <div id="finale-unlock-section" style="display: none;">
-                    <h1>Nesten i Mål!</h1>
-                    <p>Dere har fullført alle postene! Nå gjenstår det bare å komme seg til målområdet og taste inn den siste målkoden for å stoppe tiden.</p>
-                    <p>Bruk kartet for å finne <strong>[DEFINER SAMLINGSPUNKT HER, f.eks. Kantina]</strong>.</p>
+                    <h1>Du er i Målområdet!</h1>
+                    <p>Tast inn målkoden du får av læreren for å avslutte spillet og se resultatene.</p>
                     <input type="text" id="finish-unlock-input" placeholder="Skriv målkoden her" disabled>
                     <button id="finish-unlock-btn" disabled>Registrer Målgang</button>
                     <div class="feedback feedback-unlock" id="feedback-unlock-finish"></div>
                 </div>
 
-                <!-- Seksjon som vises etter korrekt målkode -->
+                <!-- 3. Completed: Vises etter korrekt målkode -->
                 <div id="finale-completed-section" style="display: none;">
                     <h1>Spillet er Fullført!</h1>
-                    <p>Kjempebra jobba, laget! Alle postene er løst og dere er i mål!</p>
-                    <p>Poengsummen deres ble: <strong id="final-score">0</strong></p>
-                    <p>Total tid brukt: <strong id="total-time">00:00</strong></p>
-                    <p>Møt opp ved <strong>[DEFINER SAMLINGSPUNKT HER, f.eks. Kantina]</strong> for feiring og premier!</p>
+                    <p>Kjempebra jobba, laget! Dere er i mål!</p>
+                    <h3>Resultater:</h3>
+                    <p>Total Poengsum: <strong id="final-score">0</strong></p>
+                    <p>Total Tid Brukt: <strong id="total-time">00:00</strong></p>
+                    <h4>Etappetider:</h4>
+                    <ul id="stage-times-list" style="list-style-type: none; padding-left: 0; text-align: left; max-width: 300px; margin: 10px auto;">
+                        <!-- Etappe-tider fylles inn av JavaScript -->
+                    </ul>
+                    <p style="margin-top: 20px;">Meld dere hos læreren på <strong>Fastland</strong>!</p>
                     <button class="dev-reset-button" style="margin-top: 30px;">Spill Igjen?</button>
                 </div>
             </div>
         </div>
 
         <div id="map-content" class="tab-content">
-            <h2>Kart over Skoleområdet</h2>
-            <p>Bruk kartet for å finne neste post. Lykke til!</p>
+            <h2>Kart over Området</h2>
+            <p>Bruk kartet for å finne neste post eller målet. Lykke til!</p>
             <div id="dynamic-map-container"></div>
             <p style="font-size: 0.9em; margin-top: 15px;">(Trykk på 'Rebus'-fanen for å se oppgavene)</p>
         </div>
@@ -275,4 +255,4 @@
 
 </body>
 </html>
-<!-- Version: #13 -->
+<!-- Version: #21 -->
