@@ -1,4 +1,4 @@
-<!-- Version: #22 -->
+<!-- Version: #23 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -53,23 +53,23 @@
                     <h3>Minigolf Challenge!</h3>
                     <p>Spill 3 hull minigolf. Læreren noterer antall slag for hver spiller på laget (inntil 6 spillere).</p>
                     <p>Fyll inn totalt antall slag per spiller nedenfor. La felt stå tomt hvis færre enn 6 spillere.</p>
-                    <div id="minigolf-player-inputs-post1">
-                        <!-- Inputfelt genereres av JS eller er hardkodet her -->
+                    <div id="minigolf-player-inputs-post1" style="text-align: left; max-width: 300px; margin: 15px auto;">
                         <label for="player-1-score-post1">Spiller 1 Totalt Antall Slag:</label>
-                        <input type="number" id="player-1-score-post1" min="3" style="width: 60px; margin-bottom: 5px;"><br>
+                        <input type="number" id="player-1-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
                         <label for="player-2-score-post1">Spiller 2 Totalt Antall Slag:</label>
-                        <input type="number" id="player-2-score-post1" min="3" style="width: 60px; margin-bottom: 5px;"><br>
+                        <input type="number" id="player-2-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
                         <label for="player-3-score-post1">Spiller 3 Totalt Antall Slag:</label>
-                        <input type="number" id="player-3-score-post1" min="3" style="width: 60px; margin-bottom: 5px;"><br>
+                        <input type="number" id="player-3-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
                         <label for="player-4-score-post1">Spiller 4 Totalt Antall Slag:</label>
-                        <input type="number" id="player-4-score-post1" min="3" style="width: 60px; margin-bottom: 5px;"><br>
+                        <input type="number" id="player-4-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
                         <label for="player-5-score-post1">Spiller 5 Totalt Antall Slag:</label>
-                        <input type="number" id="player-5-score-post1" min="3" style="width: 60px; margin-bottom: 5px;"><br>
+                        <input type="number" id="player-5-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
                         <label for="player-6-score-post1">Spiller 6 Totalt Antall Slag:</label>
-                        <input type="number" id="player-6-score-post1" min="3" style="width: 60px; margin-bottom: 5px;"><br>
+                        <input type="number" id="player-6-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
                     </div>
                     <button id="submit-minigolf-post1">Registrer Golfresultater</button>
                     <div class="feedback" id="minigolf-results-feedback"></div>
+                    <button id="minigolf-proceed-btn-post1" style="display: none; margin-top: 10px; background-color: #28a745;">Gå Videre til Neste Post</button> 
                 </div>
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
@@ -198,6 +198,7 @@
                     <input type="number" id="pyramid-points-input-post8" min="0" max="10" style="width: 60px;">
                     <button id="submit-pyramid-points-post8">Registrer Pyramidepoeng</button>
                     <div class="feedback" id="pyramid-results-feedback"></div>
+                    <!-- Vurder en "Gå Videre"-knapp her også hvis ønskelig -->
                 </div>
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
@@ -279,4 +280,4 @@
 
 </body>
 </html>
-<!-- Version: #22 -->
+<!-- Version: #23 -->
