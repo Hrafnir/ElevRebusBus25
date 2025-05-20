@@ -1,4 +1,4 @@
-/* Version: #24 */
+/* Version: #25 */
 
 // === GLOBALE VARIABLER ===
 let map;
@@ -13,7 +13,7 @@ let geofenceFeedbackElement = null;
 // === GLOBAL KONFIGURASJON ===
 const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25; 
-const DEV_MODE_NO_GEOFENCE = true; // FOR TESTING
+const DEV_MODE_NO_GEOFENCE = true; 
 const FINISH_UNLOCK_CODE = "FASTLAND24"; 
 
 const MANNED_POST_PASSWORDS = {
@@ -84,18 +84,12 @@ function formatTimeFromMs(ms) {
 function saveState() { 
     if (currentTeamData) {
         localStorage.setItem('activeTeamData_Skolerebus', JSON.stringify(currentTeamData));
-        console.log("DEBUG_V24: State saved.");
+        console.log("DEBUG_V25: State saved.");
     } else {
         localStorage.removeItem('activeTeamData_Skolerebus');
-        console.log("DEBUG_V24: State cleared (no team data).");
+        console.log("DEBUG_V25: State cleared (no team data).");
     }
 }
-
-// loadState og clearState vil bli definert inne i DOMContentLoaded fordi de manipulerer
-// UI-elementer direkte som hentes der, og kaller andre funksjoner som er definert der.
-// Dette er en avveining. Hvis de *kun* manipulerte localStorage og currentTeamData,
-// kunne de vært globale.
-
 
 // === GOOGLE MAPS API CALLBACK ===
 window.initMap = function() { 
@@ -112,7 +106,7 @@ window.initMap = function() {
             mapTypeIds: [google.maps.MapTypeId.SATELLITE, google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.HYBRID]
         }
     });
-    if (currentTeamData) { // currentTeamData settes av loadState inni DOMContentLoaded
+    if (currentTeamData) { 
         if (currentTeamData.completedPostsCount >= TOTAL_POSTS && !currentTeamData.endTime) { 
             updateMapMarker(null, true);
         } else if (currentTeamData.completedPostsCount < TOTAL_POSTS) {
@@ -193,14 +187,6 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
     }
 }
 
-// Denne funksjonen trenger tilgang til resetPageUI som er definert i DOMContentLoaded.
-// Vi må enten gjøre resetPageUI global (komplekst pga DOM-avhengigheter),
-// eller sende en melding/event, eller la resetPageUI bli kalt ved neste naturlige UI-oppdatering.
-// For nå: Kaller saveState() (som nå er global), men UI-oppdateringen for posten
-// vil skje når showRebusPage() kalles ved progresjon, eller ved manuell tab-bytte.
-// Dette er ikke ideelt for umiddelbar feedback når en post er nådd via geofence.
-// En bedre løsning ville vært å ha en global event bus eller en måte for globale funksjoner
-// å trygt kalle funksjoner som manipulerer DOM definert i DOMContentLoaded.
 function handlePositionUpdate(position) {
     updateUserPositionOnMap(position);
 
@@ -234,8 +220,6 @@ function handlePositionUpdate(position) {
 
     if (isCurrentTargetTheFinishLine) {
         currentTeamData.canEnterFinishCode = isEffectivelyWithinRange; 
-        // UI for finish-knapp/input styres av resetPageUI som kalles av showRebusPage
-        // eller ved manuell refresh/loadState. For umiddelbar effekt:
         const finishUnlockInput = document.getElementById('finish-unlock-input');
         const finishUnlockButton = document.getElementById('finish-unlock-btn');
         if(finishUnlockInput) finishUnlockInput.disabled = !isEffectivelyWithinRange;
@@ -246,21 +230,10 @@ function handlePositionUpdate(position) {
         const isPostAlreadyUnlocked = currentTeamData.unlockedPosts[`post${postGlobalId}`];
 
         if (isEffectivelyWithinRange && !isPostAlreadyUnlocked) {
-            console.log(`DEBUG_V24: Post ${postGlobalId} reached (or DEV_MODE). Unlocking (setting flag).`);
+            console.log(`DEBUG_V25: Post ${postGlobalId} reached (or DEV_MODE). Unlocking (setting flag).`);
             currentTeamData.unlockedPosts[`post${postGlobalId}`] = true;
-            saveState(); // Kaller den globale saveState
-            
-            // For å oppdatere UI umiddelbart, må vi kunne kalle resetPageUI.
-            // Siden resetPageUI er definert i DOMContentLoaded, kan vi ikke direkte kalle den herfra.
-            // En løsning er å la neste showRebusPage() håndtere UI-oppdateringen,
-            // eller hvis brukeren bytter fane.
-            // For umiddelbar effekt, kunne man dispatch'e en custom event.
-            // For nå, vil UI for posten oppdateres når man navigerer til den,
-            // eller hvis resetPageUI kalles av en annen grunn.
-            // Hvis DEV_MODE er på, vil resetPageUI kalt fra showRebusPage vise oppgaven direkte.
+            saveState(); 
             document.dispatchEvent(new CustomEvent('postReached', { detail: { pageId: targetLocationDetails.pageId } }));
-
-
             canCurrentlyInteract = true; 
         } else if (isPostAlreadyUnlocked) { 
             if (postGlobalId === 1 || postGlobalId === 8) { 
@@ -293,7 +266,7 @@ function stopContinuousUserPositionUpdate() {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG_V24: DOMContentLoaded event fired.");
+    console.log("DEBUG_V25: DOMContentLoaded event fired.");
     const teamCodeInput = document.getElementById('team-code-input');
     const startWithTeamCodeButton = document.getElementById('start-with-team-code-button');
     const teamCodeFeedback = document.getElementById('team-code-feedback');
@@ -305,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentScoreSpan = document.getElementById('current-score');
     const rebusContentElement = document.getElementById('rebus-content'); 
 
-    if (!rebusContentElement) console.error("DEBUG_V24: rebusContentElement is NULL!");
+    if (!rebusContentElement) console.error("DEBUG_V25: rebusContentElement is NULL!");
 
     const TEAM_CONFIG = {
         "LAG1": { name: "Lag 1", postSequence: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
@@ -358,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        console.log("DEBUG_V24: Displaying final results.");
+        console.log("DEBUG_V25: Displaying final results.");
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -420,9 +393,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showRebusPage(pageId) {
-        console.log(`DEBUG_V24: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V25: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
         pages = document.querySelectorAll('#rebus-content .page');
-        if (!pages || pages.length === 0) { console.error("DEBUG_V24: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
+        if (!pages || pages.length === 0) { console.error("DEBUG_V25: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
 
         pages.forEach((page) => {
             if (page.id === pageId) { page.classList.add('visible'); } 
@@ -470,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pageId === 'finale-page' && !currentTeamData) { clearState(); showRebusPage('intro-page'); return; }
             }
         }
-        console.log(`DEBUG_V24: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V25: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
     }
 
     function showTabContent(tabId) { 
@@ -497,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     typeof currentTeamData.canEnterFinishCode === 'undefined' ||
                     typeof currentTeamData.mannedPostTeacherVerified === 'undefined' || 
                     (currentTeamData.mannedPostTeacherVerified && (typeof currentTeamData.mannedPostTeacherVerified.post1 === 'undefined' || typeof currentTeamData.mannedPostTeacherVerified.post8 === 'undefined'))
-                ) { clearState(); return false; } // clearState er nå definert nedenfor
+                ) { clearState(); return false; } 
                 if (typeof currentTeamData.startTime === 'string') currentTeamData.startTime = parseInt(currentTeamData.startTime,10);
                 if (currentTeamData.startTime && isNaN(currentTeamData.startTime)) currentTeamData.startTime = null; 
                 
@@ -512,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function clearState() { 
         localStorage.removeItem('activeTeamData_Skolerebus'); currentTeamData = null;
-        resetAllPostUIs(); // resetAllPostUIs er definert nedenfor
+        resetAllPostUIs(); 
         clearMapMarker(); clearFinishMarker();
         if (userPositionMarker) { userPositionMarker.setMap(null); userPositionMarker = null; }
         stopContinuousUserPositionUpdate(); 
@@ -520,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(teamCodeInput) teamCodeInput.value = '';
         if(teamCodeFeedback) { teamCodeFeedback.textContent = ''; teamCodeFeedback.className = 'feedback';}
         if (geofenceFeedbackElement) { geofenceFeedbackElement.style.display = 'none'; geofenceFeedbackElement.textContent = ''; geofenceFeedbackElement.className = ''; }
-        console.log("DEBUG_V24: State cleared by clearState().");
+        console.log("DEBUG_V25: State cleared by clearState().");
     }
 
     function resetPageUI(pageId) {
@@ -567,6 +540,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(minigolfFormSection) minigolfFormSection.style.display = 'none';
         if(pyramidPointsSection) pyramidPointsSection.style.display = 'none';
         
+        if (postNum === 1) {
+            const minigolfProceedButton = document.getElementById('minigolf-proceed-btn-post1');
+            if (minigolfProceedButton) minigolfProceedButton.style.display = 'none';
+        }
+        
         const teacherPassInput = pageElement.querySelector('.teacher-password-input');
         if (teacherPassInput) { teacherPassInput.value = ''; teacherPassInput.disabled = false; }
         const teacherPassButton = pageElement.querySelector('.submit-teacher-password-btn');
@@ -578,14 +556,36 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isMannedPost) { 
                  if (postNum === 1 && minigolfFormSection) { 
                     minigolfFormSection.style.display = 'block'; 
-                    minigolfFormSection.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                    minigolfFormSection.querySelectorAll('input, button:not(#minigolf-proceed-btn-post1)').forEach(el => el.disabled = true); 
                     const mgFeedback = document.getElementById('minigolf-results-feedback');
-                    if(mgFeedback) { mgFeedback.textContent = "Minigolf fullført! Poeng registrert."; mgFeedback.className = "feedback success";}
+                    if(mgFeedback) { 
+                        const savedGolfPoints = currentTeamData?.minigolfScores?.post1?.pointsAwarded;
+                        const savedGolfAverage = currentTeamData?.minigolfScores?.post1?.average;
+                        if (savedGolfPoints !== undefined && savedGolfAverage !== undefined) {
+                            mgFeedback.textContent = `Snitt: ${savedGolfAverage.toFixed(2)}. Poeng: ${savedGolfPoints}!`;
+                        } else {
+                            mgFeedback.textContent = "Minigolf fullført! Poeng registrert.";
+                        }
+                        mgFeedback.className = "feedback success";
+                    }
+                    const minigolfProceedButton = document.getElementById('minigolf-proceed-btn-post1'); 
+                    if (minigolfProceedButton) {
+                        minigolfProceedButton.style.display = 'inline-block';
+                        minigolfProceedButton.disabled = false;
+                    }
                 } else if (postNum === 8 && pyramidPointsSection) { 
                     pyramidPointsSection.style.display = 'block';
-                    pyramidPointsSection.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                    pyramidPointsSection.querySelectorAll('input, button').forEach(el => el.disabled = true); 
                      const ppFeedback = document.getElementById('pyramid-results-feedback');
-                    if(ppFeedback) { ppFeedback.textContent = "Pyramidepoeng registrert!"; ppFeedback.className = "feedback success";}
+                    if(ppFeedback) { 
+                        const savedPyramidPoints = currentTeamData?.pyramidPoints?.post8;
+                        if (savedPyramidPoints !== undefined) {
+                            ppFeedback.textContent = `Poeng registrert: ${savedPyramidPoints}!`;
+                        } else {
+                             ppFeedback.textContent = "Pyramidepoeng registrert!";
+                        }
+                        ppFeedback.className = "feedback success";
+                    }
                 }
             } else if (taskSection) { 
                 taskSection.style.display = 'block';
@@ -606,6 +606,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if(submitGolfBtn) submitGolfBtn.disabled = false;
                         const mgFeedback = document.getElementById('minigolf-results-feedback');
                         if(mgFeedback) { mgFeedback.textContent = ""; mgFeedback.className = "feedback";}
+                        const minigolfProceedButton = document.getElementById('minigolf-proceed-btn-post1'); 
+                        if (minigolfProceedButton) minigolfProceedButton.style.display = 'none';
                     } else if (postNum === 8 && pyramidPointsSection) {
                         pyramidPointsSection.style.display = 'block';
                         const pointsInput = document.getElementById('pyramid-points-input-post8');
@@ -779,8 +781,13 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
         if(feedbackElement) {feedbackElement.textContent = `Snitt: ${averageScore.toFixed(2)}. Poeng: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
         
-        pageElement.querySelectorAll('.minigolf-form-section input, .minigolf-form-section button').forEach(el => el.disabled = true);
-        setTimeout(() => proceedToNextPostOrFinish(), 1500);
+        pageElement.querySelectorAll('.minigolf-form-section input, #submit-minigolf-post1').forEach(el => el.disabled = true);
+        
+        const proceedButton = document.getElementById('minigolf-proceed-btn-post1');
+        if (proceedButton) {
+            proceedButton.style.display = 'inline-block'; 
+            proceedButton.disabled = false;
+        }
     }
 
     function handlePyramidPointsSubmit(postNum, points) {
@@ -811,11 +818,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(pointsInput) pointsInput.disabled = true;
         const submitBtn = document.getElementById(`submit-pyramid-points-post${postNum}`);
         if(submitBtn) submitBtn.disabled = true;
+        // Vurder en "Gå Videre"-knapp her også, eller automatisk progresjon
         setTimeout(() => proceedToNextPostOrFinish(), 1500);
     }
 
     function handleTaskCheck(postNum, userAnswer) { 
-        if (postNum === 1 || postNum === 8) { console.warn(`DEBUG_V24: handleTaskCheck kalt for bemannet post ${postNum}.`); return; }
+        if (postNum === 1 || postNum === 8) { console.warn(`DEBUG_V25: handleTaskCheck kalt for bemannet post ${postNum}.`); return; }
         
         const pageElement = document.getElementById(`post-${postNum}-page`);
         if(!pageElement) return;
@@ -882,7 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nextPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
                 setTimeout(() => { showRebusPage(`post-${nextPostGlobalId}-page`); if (map) updateMapMarker(nextPostGlobalId, false); }, 1200);
             } else { 
-                console.error("DEBUG_V24: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
+                console.error("DEBUG_V25: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
                 setTimeout(() => { showRebusPage('finale-page'); if (map) updateMapMarker(null, true); }, 1200);
             }
         } else { 
@@ -897,7 +905,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleFinishCodeInput(userAnswer) {
-        console.log("DEBUG_V24: handleFinishCodeInput called with:", userAnswer);
+        console.log("DEBUG_V25: handleFinishCodeInput called with:", userAnswer);
         const feedbackElement = document.getElementById('feedback-unlock-finish');
         const finishCodeInput = document.getElementById('finish-unlock-input');
         const finishUnlockButton = document.getElementById('finish-unlock-btn');
@@ -957,7 +965,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(pageElement) { const passInput = pageElement.querySelector('.teacher-password-input'); if(passInput) handleTeacherPassword(postNum, passInput.value.trim()); }
             } else if (target.id === 'submit-minigolf-post1' && !target.disabled) { 
                 handleMinigolfSubmit(1);
-            } else if (target.id === 'submit-pyramid-points-post8' && !target.disabled) { 
+            } else if (target.id === 'minigolf-proceed-btn-post1' && !target.disabled) { 
+                console.log("DEBUG_V25: Minigolf proceed button clicked.");
+                proceedToNextPostOrFinish();
+            }
+             else if (target.id === 'submit-pyramid-points-post8' && !target.disabled) { 
                 const pointsInput = document.getElementById('pyramid-points-input-post8');
                 if(pointsInput) handlePyramidPointsSubmit(8, pointsInput.value.trim());
             }
@@ -984,8 +996,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if(passButton && !passButton.disabled) passButton.click();
                      }
                 }
-                // Man kan legge til Enter-håndtering for minigolf og pyramide her hvis ønskelig,
-                // men det blir fort komplekst med mange inputfelt (minigolf).
             }
         });
     }
@@ -1030,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.addEventListener('postReached', function(event) {
         if (event.detail && event.detail.pageId) {
-            console.log(`DEBUG_V24: Custom event 'postReached' for pageId: ${event.detail.pageId}. Calling resetPageUI.`);
+            console.log(`DEBUG_V25: Custom event 'postReached' for pageId: ${event.detail.pageId}. Calling resetPageUI.`);
             resetPageUI(event.detail.pageId);
         }
     });
@@ -1048,6 +1058,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { clearState(); showRebusPage('intro-page'); }
         updateUIAfterLoad();
     } else { showTabContent('rebus'); showRebusPage('intro-page'); resetAllPostUIs(); }
-    console.log("DEBUG_V24: Initial page setup complete.");
+    console.log("DEBUG_V25: Initial page setup complete.");
 });
-/* Version: #24 */
+/* Version: #25 */
