@@ -1,4 +1,4 @@
-/* Version: #21 */
+/* Version: #22 */
 
 // === GLOBALE VARIABLER ===
 let map;
@@ -109,7 +109,7 @@ function updateMapMarker(postGlobalId, isFinalTarget = false) {
         markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
         currentMapMarker = new google.maps.Marker({ position: { lat: location.lat, lng: location.lng }, map: map, title: markerTitle, animation: google.maps.Animation.DROP, icon: { url: markerIconUrl } });
     }
-    if(location) { map.panTo({ lat: location.lat, lng: location.lng }); if (map.getZoom() < 15) map.setZoom(15); } // Justert zoom
+    if(location) { map.panTo({ lat: location.lat, lng: location.lng }); if (map.getZoom() < 15) map.setZoom(15); }
 }
 function clearMapMarker() { if (currentMapMarker) { currentMapMarker.setMap(null); currentMapMarker = null; } }
 function clearFinishMarker() { if (finishMarker) { finishMarker.setMap(null); finishMarker = null; } }
@@ -236,7 +236,7 @@ function stopContinuousUserPositionUpdate() {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG_V21: DOMContentLoaded event fired.");
+    console.log("DEBUG_V22: DOMContentLoaded event fired."); // Endret versjonsnummer i logg
     const teamCodeInput = document.getElementById('team-code-input');
     const startWithTeamCodeButton = document.getElementById('start-with-team-code-button');
     const teamCodeFeedback = document.getElementById('team-code-feedback');
@@ -248,13 +248,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentScoreSpan = document.getElementById('current-score');
     const rebusContentElement = document.getElementById('rebus-content'); 
 
-    if (!rebusContentElement) console.error("DEBUG_V21: rebusContentElement is NULL!");
+    if (!rebusContentElement) console.error("DEBUG_V22: rebusContentElement is NULL!");
 
     const TEAM_CONFIG = {
         "LAG1": { name: "Lag 1", postSequence: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
         "LAG2": { name: "Lag 2", postSequence: [2, 3, 4, 5, 6, 7, 8, 9, 10, 1] },
-        "LAG3": { name: "Lag 3", postSequence: [3, 4, 5, 6, 7, 8, 9, 10, 1, 2] },
-        "LAG4": { name: "Lag 4", postSequence: [4, 5, 6, 7, 8, 9, 10, 1, 2, 3] },
+        "LAG3": { name: "Lag 3", postSequence: [3, 4, 2, 5, 6, 7, 8, 9, 10, 1] }, // OPPDATERT
+        "LAG4": { name: "Lag 4", postSequence: [4, 3, 2, 5, 6, 7, 8, 9, 10, 1] }, // OPPDATERT
         "LAG5": { name: "Lag 5", postSequence: [5, 6, 7, 8, 9, 10, 1, 2, 3, 4] },
         "LAG6": { name: "Lag 6", postSequence: [6, 7, 8, 9, 10, 1, 2, 3, 4, 5] },
         "LAG7": { name: "Lag 7", postSequence: [7, 8, 9, 10, 1, 2, 3, 4, 5, 6] },
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        console.log("DEBUG_V21: Displaying final results.");
+        console.log("DEBUG_V22: Displaying final results.");
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -351,9 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showRebusPage(pageId) {
-        console.log(`DEBUG_V21: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V22: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
         pages = document.querySelectorAll('#rebus-content .page');
-        if (!pages || pages.length === 0) { console.error("DEBUG_V21: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
+        if (!pages || pages.length === 0) { console.error("DEBUG_V22: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
 
         pages.forEach((page) => {
             if (page.id === pageId) { page.classList.add('visible'); } 
@@ -401,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pageId === 'finale-page' && !currentTeamData) { clearState(); showRebusPage('intro-page'); return; }
             }
         }
-        console.log(`DEBUG_V21: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V22: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
     }
 
     function showTabContent(tabId) { 
@@ -427,8 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     typeof currentTeamData.score === 'undefined' || !currentTeamData.taskAttempts ||
                     currentTeamData.postSequence.length !== TOTAL_POSTS ||
                     typeof currentTeamData.startTime === 'undefined' ||
-                    typeof currentTeamData.taskCompletionTimes === 'undefined' || // Sjekk for nytt felt
-                    typeof currentTeamData.canEnterFinishCode === 'undefined' // Sjekk for nytt felt
+                    typeof currentTeamData.taskCompletionTimes === 'undefined' || 
+                    typeof currentTeamData.canEnterFinishCode === 'undefined' 
                 ) { clearState(); return false; }
                 if (typeof currentTeamData.startTime === 'string') currentTeamData.startTime = parseInt(currentTeamData.startTime,10);
                 if (currentTeamData.startTime && isNaN(currentTeamData.startTime)) currentTeamData.startTime = null; 
@@ -624,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nextPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
                 setTimeout(() => { showRebusPage(`post-${nextPostGlobalId}-page`); if (map) updateMapMarker(nextPostGlobalId, false); }, 1200);
             } else { 
-                console.error("DEBUG_V21: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
+                console.error("DEBUG_V22: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
                 setTimeout(() => { showRebusPage('finale-page'); if (map) updateMapMarker(null, true); }, 1200);
             }
         } else { 
@@ -639,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleFinishCodeInput(userAnswer) {
-        console.log("DEBUG_V21: handleFinishCodeInput called with:", userAnswer);
+        console.log("DEBUG_V22: handleFinishCodeInput called with:", userAnswer);
         const feedbackElement = document.getElementById('feedback-unlock-finish');
         const finishCodeInput = document.getElementById('finish-unlock-input');
         const finishUnlockButton = document.getElementById('finish-unlock-btn');
@@ -755,6 +755,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { clearState(); showRebusPage('intro-page'); }
         updateUIAfterLoad();
     } else { showTabContent('rebus'); showRebusPage('intro-page'); resetAllPostUIs(); }
-    console.log("DEBUG_V21: Initial page setup complete.");
+    console.log("DEBUG_V22: Initial page setup complete."); // Endret versjonsnummer i logg
 });
-/* Version: #21 */
+/* Version: #22 */
