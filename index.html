@@ -1,4 +1,4 @@
-<!-- Version: #25 -->
+<!-- Version: #26 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -160,22 +160,19 @@
             <!-- POST 7 (Geo-løp) -->
             <div id="post-7-page" class="page">
                 <h2 class="post-title-placeholder">Post 7: Geo-Løp</h2>
-                <div class="post-info-section" style="display: block;"> <!-- Start synlig -->
+                <div class="post-info-section" style="display: block;">
                     <p class="post-info-placeholder">Bruk kartet for å finne startpunktet for Geo-løpet.</p>
                 </div>
-
                 <div class="geo-run-setup-section" style="display: none;">
                     <h3>Klar for Geo-Løp!</h3>
-                    <p>Du er ved startpunktet. Løpet starter om <span class="geo-run-countdown">10</span> sekunder!</p>
+                    <p>Du er ved startpunktet. <span class="geo-run-pre-pip-info"></span> Løpet starter om <span class="geo-run-countdown">10</span> sekunder!</p>
                     <p>Instruksjoner: Løp til Vendepunkt 2 når du hører startsignalet. Ved ankomst Vendepunkt 2, vil du høre et nytt signal. Snu og løp tilbake til Startpunkt 1. Gjenta dette til du har krysset banen 5 ganger (2.5 runder frem og tilbake).</p>
                 </div>
-
                 <div class="geo-run-active-section" style="display: none;">
                     <h3>Geo-Løp Pågår!</h3>
                     <p>Runde (kryssing): <span class="geo-run-current-lap">1</span> av 5.</p>
                     <p>Løp til: <strong class="geo-run-next-target">Vendepunkt 2 (Geo-løp)</strong>!</p>
                 </div>
-
                 <div class="geo-run-results-section" style="display: none;">
                     <h3>Geo-Løp Fullført!</h3>
                     <p>Din totale tid: <strong class="geo-run-total-time">00:00</strong></p>
@@ -184,7 +181,6 @@
                 </div>
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
-
 
             <!-- POST 8 (Bemannet - Pyramide) -->
             <div id="post-8-page" class="page">
@@ -278,6 +274,21 @@
             <div id="dynamic-map-container"></div>
             <p style="font-size: 0.9em; margin-top: 15px;">(Trykk på 'Rebus'-fanen for å se oppgavene)</p>
         </div>
+
+        <!-- NYTT: Mobil Logg Container -->
+        <div id="mobile-log-container" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0;">Debug Logg (Mobil)</h4>
+                <div>
+                    <button id="toggle-log-visibility" style="margin-top:0; margin-right: 5px; padding: 5px 10px; font-size:0.8em;">Vis/Skjul</button>
+                    <button id="clear-mobile-log" style="margin-top:0; padding: 5px 10px; font-size:0.8em; background-color: #e74c3c;">Tøm Logg</button>
+                </div>
+            </div>
+            <div id="mobile-log-output" style="max-height: 200px; overflow-y: auto; background-color: #fff; padding: 8px; font-size: 0.8em; text-align: left; display: none;">
+                <!-- Loggmeldinger legges til her av script.js -->
+            </div>
+        </div>
+
     </div>
 
     <script src="script.js"></script>
@@ -287,4 +298,4 @@
 
 </body>
 </html>
-<!-- Version: #25 --> 
+<!-- Version: #26 -->
