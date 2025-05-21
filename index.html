@@ -1,4 +1,4 @@
-<!-- Version: #23 -->
+<!-- Version: #24 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -40,7 +40,6 @@
                 <div class="post-info-section">
                     <p class="post-info-placeholder">Gå til posten for instruksjoner.</p>
                 </div>
-
                 <div class="teacher-password-section" style="display: none;">
                     <h3 class="manned-post-title-placeholder">Bemannet Post: Minigolf</h3>
                     <p class="manned-post-instruction-placeholder">Lærer: Tast inn passord for å starte oppgaven.</p>
@@ -48,7 +47,6 @@
                     <button class="submit-teacher-password-btn" data-post="1">Lås opp Oppgave</button>
                     <div class="feedback feedback-teacher-password" id="feedback-teacher-password-post1"></div>
                 </div>
-
                 <div class="minigolf-form-section" style="display: none;">
                     <h3>Minigolf Challenge!</h3>
                     <p>Spill 3 hull minigolf. Læreren noterer antall slag for hver spiller på laget (inntil 6 spillere).</p>
@@ -159,22 +157,34 @@
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
 
-            <!-- POST 7 (Vanlig oppgave) -->
+            <!-- POST 7 (Geo-løp) -->
             <div id="post-7-page" class="page">
-                <h2 class="post-title-placeholder">Post 7: Tittel</h2>
-                <div class="post-info-section">
-                    <p class="post-info-placeholder">Gå til posten for å se oppgaven.</p>
+                <h2 class="post-title-placeholder">Post 7: Geo-Løp</h2>
+                <div class="post-info-section"> <!-- Vises før ankomst til startpunkt Geo-løp -->
+                    <p class="post-info-placeholder">Gå til startpunktet for Geo-løpet (se kart).</p>
                 </div>
-                <div class="post-task-section" style="display: none;">
-                    <h3 class="post-task-title-placeholder">Oppgave for Post 7</h3>
-                    <p class="post-task-question-placeholder">Her kommer spørsmålet for post 7.</p>
-                    <input type="text" class="post-task-input" id="post-7-task-input" placeholder="Skriv svaret ditt her">
-                    <button class="check-task-btn" data-post="7">Sjekk Svar</button>
-                    <div class="feedback feedback-task" id="feedback-task-7"></div>
-                    <div class="attempt-counter" id="attempts-7"></div>
+
+                <div class="geo-run-setup-section" style="display: none;"> <!-- Vises ved ankomst startpunkt, før løpet starter -->
+                    <h3>Klar for Geo-Løp!</h3>
+                    <p>Du er ved startpunktet. Løpet starter om <span class="geo-run-countdown">10</span> sekunder!</p>
+                    <p>Instruksjoner: Løp til Vendepunkt 2 når du hører startsignalet. Ved ankomst Vendepunkt 2, vil du høre et nytt signal. Snu og løp tilbake til Startpunkt 1. Gjenta dette til du har krysset banen 5 ganger (2.5 runder).</p>
+                </div>
+
+                <div class="geo-run-active-section" style="display: none;"> <!-- Vises mens løpet pågår -->
+                    <h3>Geo-Løp Pågår!</h3>
+                    <p>Runde: <span class="geo-run-current-lap">1</span> av 5 kryssinger.</p>
+                    <p>Løp til: <strong class="geo-run-next-target">Vendepunkt 2</strong>!</p>
+                </div>
+
+                <div class="geo-run-results-section" style="display: none;"> <!-- Vises etter løpet er fullført -->
+                    <h3>Geo-Løp Fullført!</h3>
+                    <p>Total tid: <strong class="geo-run-total-time">00:00</strong></p>
+                    <p>Poeng tildelt: <strong class="geo-run-points-awarded">0</strong></p>
+                    <button id="geo-run-proceed-btn-post7" style="margin-top: 10px; background-color: #28a745;">Gå Videre til Neste Post</button>
                 </div>
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
+
 
             <!-- POST 8 (Bemannet - Pyramide) -->
             <div id="post-8-page" class="page">
@@ -182,7 +192,6 @@
                 <div class="post-info-section">
                     <p class="post-info-placeholder">Gå til posten for instruksjoner.</p>
                 </div>
-
                 <div class="teacher-password-section" style="display: none;">
                     <h3 class="manned-post-title-placeholder">Bemannet Post: Pyramide</h3>
                     <p class="manned-post-instruction-placeholder">Lærer: Tast inn passord for å starte poengregistrering.</p>
@@ -190,7 +199,6 @@
                     <button class="submit-teacher-password-btn" data-post="8">Lås opp Poeng</button>
                     <div class="feedback feedback-teacher-password" id="feedback-teacher-password-post8"></div>
                 </div>
-
                 <div class="pyramid-points-section" style="display: none;">
                     <h3>Menneskelig Pyramide!</h3>
                     <p>Bygg den høyeste mulige pyramiden med laget! Læreren vurderer og gir poeng (0-10).</p>
@@ -198,7 +206,6 @@
                     <input type="number" id="pyramid-points-input-post8" min="0" max="10" style="width: 60px;">
                     <button id="submit-pyramid-points-post8">Registrer Pyramidepoeng</button>
                     <div class="feedback" id="pyramid-results-feedback"></div>
-                    <!-- Vurder en "Gå Videre"-knapp her også hvis ønskelig -->
                 </div>
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
@@ -280,4 +287,4 @@
 
 </body>
 </html>
-<!-- Version: #23 -->
+<!-- Version: #24 -->
