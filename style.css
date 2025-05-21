@@ -1,14 +1,15 @@
-/* Version: #27 */
+/* Version: #28 */
 /* === GENERELLE STILER - NYTT DESIGN === */
 
 /* Importer font fra Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 :root {
-    --primary-color: #3498db;   /* Klar blå */
-    --secondary-color: #2ecc71; /* Frisk grønn */
-    --accent-color: #f1c40f;    /* Varm gul */
-    --error-color: #e74c3c;     /* Tydelig rød */
+    --primary-color: #3498db;   
+    --primary-color-darker: #2980b9; /* For gradient og hover */
+    --secondary-color: #2ecc71; 
+    --accent-color: #f1c40f;    
+    --error-color: #e74c3c;     
     --success-color: var(--secondary-color); 
     
     --text-color: #2c3e50;      
@@ -24,7 +25,6 @@
     --border-radius-sm: 4px;
     --border-radius-md: 8px;
 
-    /* For RGBA i box-shadow, --primary-color: #3498db; -> R:52, G:152, B:219 */
     --primary-color-rgb: 52, 152, 219; 
 }
 
@@ -127,20 +127,57 @@ body {
 
 /* === TYPOGRAFI === */
 h1 { 
-    color: var(--primary-color); 
+    /* NYTT: Tekstgradient for h1 */
+    background: linear-gradient(45deg, var(--primary-color), var(--primary-color-darker));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text; /* Standard property */
+    text-fill-color: transparent; /* Standard property */
+
     margin-bottom: 30px; 
-    font-size: 2.2em; 
+    font-size: 2.4em; /* Litt større for effekt */
     font-weight: 700; 
+    padding-bottom: 5px; /* Litt pusterom for gradienten */
 }
 h2 { 
     color: var(--primary-color); 
     margin-top: 35px; 
-    margin-bottom: 20px; 
-    font-size: 1.7em; 
-    border-bottom: 1px solid #e9ecef; 
-    padding-bottom: 12px; 
+    margin-bottom: 25px; /* Økt bunnmargin for bølgen */ 
+    font-size: 1.8em; /* Litt større */
+    /* border-bottom: 1px solid #e9ecef; FJERNET, erstattes av bølge */
+    padding-bottom: 15px; /* Økt padding for bølgen */ 
     font-weight: 600; 
+    position: relative; /* For ::after pseudo-element */
 }
+
+/* NYTT: Bølgende linje under h2 */
+h2::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px; /* Bredde på bølgen */
+    height: 4px; /* Høyde på "bølgetoppene" */
+    background-image: 
+        radial-gradient(circle at 10px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px),
+        radial-gradient(circle at 30px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px),
+        radial-gradient(circle at 50px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px),
+        radial-gradient(circle at 70px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px);
+    background-size: 20px 10px; /* Størrelse på hver "bølgeenhet" */
+    background-repeat: repeat-x; /* Gjentatt for å danne en linje */
+    opacity: 0.8;
+}
+/* Unntak for h2 i kartfanen, der vil vi kanskje ikke ha bølge */
+#map-content h2::after {
+    display: none;
+}
+#map-content h2 { /* Gjenopprett enkel border for kart-tittel */
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 12px; 
+}
+
+
 h3 {
     color: var(--text-color);
     font-weight: 600;
@@ -211,10 +248,10 @@ button {
     letter-spacing: 0.5px; 
 }
 button:hover { 
-    background-color: #2980b9; 
+    background-color: var(--primary-color-darker); /* Bruker ny variabel */
 }
 button:active { 
-    background-color: #1f638f; 
+    background-color: #1f638f; /* Kan justeres videre */
     transform: translateY(1px); 
 }
 button:disabled { 
@@ -365,4 +402,4 @@ button:disabled {
     border-bottom: none;
 }
 
-/* Version: #27 */
+/* Version: #28 */
