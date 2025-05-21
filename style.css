@@ -1,4 +1,4 @@
-/* Version: #28 */
+/* Version: #29 */
 /* === GENERELLE STILER - NYTT DESIGN === */
 
 /* Importer font fra Google Fonts */
@@ -6,7 +6,7 @@
 
 :root {
     --primary-color: #3498db;   
-    --primary-color-darker: #2980b9; /* For gradient og hover */
+    --primary-color-darker: #2980b9; 
     --secondary-color: #2ecc71; 
     --accent-color: #f1c40f;    
     --error-color: #e74c3c;     
@@ -127,56 +127,44 @@ body {
 
 /* === TYPOGRAFI === */
 h1 { 
-    /* NYTT: Tekstgradient for h1 */
     background: linear-gradient(45deg, var(--primary-color), var(--primary-color-darker));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text; /* Standard property */
-    text-fill-color: transparent; /* Standard property */
-
+    background-clip: text; 
+    text-fill-color: transparent; 
     margin-bottom: 30px; 
-    font-size: 2.4em; /* Litt større for effekt */
+    font-size: 2.4em; 
     font-weight: 700; 
-    padding-bottom: 5px; /* Litt pusterom for gradienten */
+    padding-bottom: 5px; 
 }
 h2 { 
     color: var(--primary-color); 
     margin-top: 35px; 
-    margin-bottom: 25px; /* Økt bunnmargin for bølgen */ 
-    font-size: 1.8em; /* Litt større */
-    /* border-bottom: 1px solid #e9ecef; FJERNET, erstattes av bølge */
-    padding-bottom: 15px; /* Økt padding for bølgen */ 
+    margin-bottom: 25px;  
+    font-size: 1.8em; 
+    padding-bottom: 15px;  
     font-weight: 600; 
-    position: relative; /* For ::after pseudo-element */
+    position: relative; 
 }
-
-/* NYTT: Bølgende linje under h2 */
 h2::after {
     content: "";
     position: absolute;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 80px; /* Bredde på bølgen */
-    height: 4px; /* Høyde på "bølgetoppene" */
+    width: 80px; 
+    height: 4px; 
     background-image: 
         radial-gradient(circle at 10px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px),
         radial-gradient(circle at 30px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px),
         radial-gradient(circle at 50px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px),
         radial-gradient(circle at 70px -2px, transparent 8px, var(--secondary-color) 9px, transparent 10px);
-    background-size: 20px 10px; /* Størrelse på hver "bølgeenhet" */
-    background-repeat: repeat-x; /* Gjentatt for å danne en linje */
+    background-size: 20px 10px; 
+    background-repeat: repeat-x; 
     opacity: 0.8;
 }
-/* Unntak for h2 i kartfanen, der vil vi kanskje ikke ha bølge */
-#map-content h2::after {
-    display: none;
-}
-#map-content h2 { /* Gjenopprett enkel border for kart-tittel */
-    border-bottom: 1px solid #e9ecef;
-    padding-bottom: 12px; 
-}
-
+#map-content h2::after { display: none; }
+#map-content h2 { border-bottom: 1px solid #e9ecef; padding-bottom: 12px; }
 
 h3 {
     color: var(--text-color);
@@ -248,10 +236,10 @@ button {
     letter-spacing: 0.5px; 
 }
 button:hover { 
-    background-color: var(--primary-color-darker); /* Bruker ny variabel */
+    background-color: var(--primary-color-darker); 
 }
 button:active { 
-    background-color: #1f638f; /* Kan justeres videre */
+    background-color: #1f638f; 
     transform: translateY(1px); 
 }
 button:disabled { 
@@ -402,4 +390,65 @@ button:disabled {
     border-bottom: none;
 }
 
-/* Version: #28 */
+/* === MOBIL DEBUG LOGG - NYTT === */
+#mobile-log-container {
+    margin-top: 25px;
+    padding: 15px;
+    border: 1px solid var(--input-border-color);
+    background-color: #f0f2f5; /* Litt mørkere enn body for kontrast */
+    border-radius: var(--border-radius-md);
+}
+#mobile-log-container h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    font-weight: 600;
+}
+#mobile-log-container button { /* Generell styling for logg-knapper */
+    margin-top: 0;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+#toggle-log-visibility {
+    background-color: var(--primary-color);
+}
+#toggle-log-visibility:hover {
+    background-color: var(--primary-color-darker);
+}
+#clear-mobile-log {
+    background-color: var(--error-color);
+}
+#clear-mobile-log:hover {
+    background-color: #c0392b; /* Mørkere rød */
+}
+
+#mobile-log-output {
+    max-height: 150px; /* Begrenset høyde */
+    overflow-y: auto;
+    background-color: var(--container-bg);
+    border: 1px solid var(--input-border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 10px;
+    font-size: 0.75em; /* Mindre font for logg */
+    line-height: 1.4;
+    text-align: left;
+    display: block; /* Starter synlig, kan endres av JS hvis ønskelig */
+    white-space: pre-wrap; /* Bevarer linjeskift og mellomrom */
+    word-break: break-all; /* Bryt lange ord */
+}
+.log-entry {
+    padding: 2px 0;
+    border-bottom: 1px dotted #eee;
+    font-family: 'Courier New', Courier, monospace; /* Monospace for logg */
+}
+.log-entry:last-child {
+    border-bottom: none;
+}
+.log-level-info { color: #31708f; }
+.log-level-warn { color: #8a6d3b; font-weight: bold; }
+.log-level-error { color: #a94442; font-weight: bold; }
+.log-level-debug { color: #777; }
+
+
+/* Version: #29 */
