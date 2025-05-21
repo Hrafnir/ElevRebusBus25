@@ -1,4 +1,4 @@
-<!-- Version: #24 -->
+<!-- Version: #25 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -160,27 +160,27 @@
             <!-- POST 7 (Geo-løp) -->
             <div id="post-7-page" class="page">
                 <h2 class="post-title-placeholder">Post 7: Geo-Løp</h2>
-                <div class="post-info-section"> <!-- Vises før ankomst til startpunkt Geo-løp -->
-                    <p class="post-info-placeholder">Gå til startpunktet for Geo-løpet (se kart).</p>
+                <div class="post-info-section" style="display: block;"> <!-- Start synlig -->
+                    <p class="post-info-placeholder">Bruk kartet for å finne startpunktet for Geo-løpet.</p>
                 </div>
 
-                <div class="geo-run-setup-section" style="display: none;"> <!-- Vises ved ankomst startpunkt, før løpet starter -->
+                <div class="geo-run-setup-section" style="display: none;">
                     <h3>Klar for Geo-Løp!</h3>
                     <p>Du er ved startpunktet. Løpet starter om <span class="geo-run-countdown">10</span> sekunder!</p>
-                    <p>Instruksjoner: Løp til Vendepunkt 2 når du hører startsignalet. Ved ankomst Vendepunkt 2, vil du høre et nytt signal. Snu og løp tilbake til Startpunkt 1. Gjenta dette til du har krysset banen 5 ganger (2.5 runder).</p>
+                    <p>Instruksjoner: Løp til Vendepunkt 2 når du hører startsignalet. Ved ankomst Vendepunkt 2, vil du høre et nytt signal. Snu og løp tilbake til Startpunkt 1. Gjenta dette til du har krysset banen 5 ganger (2.5 runder frem og tilbake).</p>
                 </div>
 
-                <div class="geo-run-active-section" style="display: none;"> <!-- Vises mens løpet pågår -->
+                <div class="geo-run-active-section" style="display: none;">
                     <h3>Geo-Løp Pågår!</h3>
-                    <p>Runde: <span class="geo-run-current-lap">1</span> av 5 kryssinger.</p>
-                    <p>Løp til: <strong class="geo-run-next-target">Vendepunkt 2</strong>!</p>
+                    <p>Runde (kryssing): <span class="geo-run-current-lap">1</span> av 5.</p>
+                    <p>Løp til: <strong class="geo-run-next-target">Vendepunkt 2 (Geo-løp)</strong>!</p>
                 </div>
 
-                <div class="geo-run-results-section" style="display: none;"> <!-- Vises etter løpet er fullført -->
+                <div class="geo-run-results-section" style="display: none;">
                     <h3>Geo-Løp Fullført!</h3>
-                    <p>Total tid: <strong class="geo-run-total-time">00:00</strong></p>
+                    <p>Din totale tid: <strong class="geo-run-total-time">00:00</strong></p>
                     <p>Poeng tildelt: <strong class="geo-run-points-awarded">0</strong></p>
-                    <button id="geo-run-proceed-btn-post7" style="margin-top: 10px; background-color: #28a745;">Gå Videre til Neste Post</button>
+                    <button id="geo-run-proceed-btn-post7" style="display: none; margin-top: 10px; background-color: #28a745;">Gå Videre til Neste Post</button>
                 </div>
                 <button class="dev-reset-button">Reset Spill</button>
             </div>
@@ -287,4 +287,4 @@
 
 </body>
 </html>
-<!-- Version: #24 -->
+<!-- Version: #25 --> 
