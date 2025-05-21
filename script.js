@@ -1,4 +1,4 @@
-/* Version: #25 */
+/* Version: #29 */
 
 // === GLOBALE VARIABLER ===
 let map;
@@ -9,6 +9,9 @@ let currentTeamData = null;
 let mapPositionWatchId = null;
 let finishMarker = null;
 let geofenceFeedbackElement = null; 
+let generalArrivalAudio = null; 
+let geoRunStartAudio = []; 
+let geoRunTurnAudio = null; 
 
 // === GLOBAL KONFIGURASJON ===
 const TOTAL_POSTS = 10;
@@ -16,15 +19,20 @@ const GEOFENCE_RADIUS = 25;
 const DEV_MODE_NO_GEOFENCE = true; 
 const FINISH_UNLOCK_CODE = "FASTLAND24"; 
 
-const MANNED_POST_PASSWORDS = {
-    post1: "GOLFMESTER", 
-    post8: "PYRAMIDEBYGGER" 
-};
+const MANNED_POST_PASSWORDS = { post1: "GOLFMESTER", post8: "PYRAMIDEBYGGER" };
 const MAX_PLAYERS_PER_TEAM = 6; 
+
+const GEO_RUN_POST_ID = 7;
+const GEO_RUN_LAPS = 5; 
+const GEO_RUN_COUNTDOWN_SECONDS = 10;
+const GEO_RUN_POINT1 = { lat: 60.8006280021653, lng: 10.683461472668988, name: "Start/Vendepunkt 1 (Geo-løp)" };
+const GEO_RUN_POINT2 = { lat: 60.79971947637134, lng: 10.683614899042398, name: "Vendepunkt 2 (Geo-løp)" };
+const GEO_RUN_POINTS_SCALE = {
+    60: 10, 75: 9, 90: 8, 105: 7, 120: 6, 150: 5, 180: 4, 210: 3, 240: 2, Infinity: 1 
+};
 
 const START_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Start: Fastland", name: "Start: Fastland" };
 const FINISH_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Mål: Fastland", name: "Mål: Fastland" };
-
 const POST_LOCATIONS = [
     { lat: 60.7962307499199, lng: 10.667771549607588, title: "Post 1", name: "Bassengparken"},
     { lat: 60.7941862597763, lng: 10.656946793729826, title: "Post 2", name: "Hunn Kirke"},
@@ -32,241 +40,92 @@ const POST_LOCATIONS = [
     { lat: 60.80469643634315, lng: 10.646298022954033, title: "Post 4", name: "Åttekanten på Eiktunet"},
     { lat: 60.803527350299944, lng: 10.66552015165931, title: "Post 5", name: "Krysset Øverbyvegen/Prost Bloms Gate"},
     { lat: 60.80202682020165, lng: 10.673687047853834, title: "Post 6", name: "Hunn Gravlund"},
-    { lat: 60.79987829729577, lng: 10.684058486843965, title: "Post 7", name: "Kunstgresset Gjøvik Stadion"},
+    { lat: 60.79987829729577, lng: 10.684058486843965, title: "Post 7", name: "Kunstgresset Gjøvik Stadion"}, // Dette er GEO_RUN_POST_ID
     { lat: 60.794004447513956, lng: 10.692558505369421, title: "Post 8", name: "Scenen Gjøvik Gård"},
     { lat: 60.793249975246106, lng: 10.685006947085599, title: "Post 9", name: "Gjøvik Olympiske Fjellhall"},
     { lat: 60.793880419179715, lng: 10.678003145501888, title: "Post 10", name: "Hovdetoppen Restaurant"}
 ];
-
 const CORRECT_TASK_ANSWERS = {
-    post1: "MINIGOLF FULLFØRT", 
-    post2: "SVARPOST2", 
-    post3: "SVARPOST3", 
-    post4: "SVARPOST4", 
-    post5: "SVARPOST5",
-    post6: "SVARPOST6", 
-    post7: "SVARPOST7", 
-    post8: "PYRAMIDE FULLFØRT", 
-    post9: "SVARPOST9", 
-    post10: "SVARPOST10"
+    post1: "MINIGOLF FULLFØRT", post2: "SVARPOST2", post3: "SVARPOST3", post4: "SVARPOST4", post5: "SVARPOST5",
+    post6: "SVARPOST6", post7: "GEOLØP FULLFØRT", post8: "PYRAMIDE FULLFØRT", post9: "SVARPOST9", post10: "SVARPOST10"
 };
-
 const MAX_ATTEMPTS_PER_TASK = 5; 
 const POINTS_PER_CORRECT_TASK = 10; 
 
 // === HJELPEFUNKSJONER (Globale) ===
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; 
-    const φ1 = lat1 * Math.PI / 180; const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180; const Δλ = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; 
-}
-
-function formatTime(totalSeconds) {
-    if (totalSeconds === null || totalSeconds === undefined) return "00:00";
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const paddedHours = String(hours).padStart(2, '0');
-    const paddedMinutes = String(minutes).padStart(2, '0');
-    const paddedSeconds = String(seconds).padStart(2, '0');
-    if (hours > 0) return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`;
-    else return `${paddedMinutes}:${paddedSeconds}`;
-}
-function formatTimeFromMs(ms) {
-    if (ms === null || ms === undefined || ms < 0) return "00:00";
-    return formatTime(Math.round(ms / 1000));
-}
+function calculateDistance(lat1, lon1, lat2, lon2) { const R = 6371e3; const φ1 = lat1 * Math.PI / 180; const φ2 = lat2 * Math.PI / 180; const Δφ = (lat2 - lat1) * Math.PI / 180; const Δλ = (lon2 - lon1) * Math.PI / 180; const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2); const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); return R * c; }
+function formatTime(totalSeconds) { if (totalSeconds === null || totalSeconds === undefined) return "00:00"; const hours = Math.floor(totalSeconds / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const seconds = totalSeconds % 60; const paddedHours = String(hours).padStart(2, '0'); const paddedMinutes = String(minutes).padStart(2, '0'); const paddedSeconds = String(seconds).padStart(2, '0'); if (hours > 0) return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`; else return `${paddedMinutes}:${paddedSeconds}`; }
+function formatTimeFromMs(ms) { if (ms === null || ms === undefined || ms < 0) return "00:00"; return formatTime(Math.round(ms / 1000)); }
 
 // === Globale State Management Funksjoner ===
-function saveState() { 
-    if (currentTeamData) {
-        localStorage.setItem('activeTeamData_Skolerebus', JSON.stringify(currentTeamData));
-        console.log("DEBUG_V25: State saved.");
-    } else {
-        localStorage.removeItem('activeTeamData_Skolerebus');
-        console.log("DEBUG_V25: State cleared (no team data).");
-    }
-}
+function saveState() { if (currentTeamData) { localStorage.setItem('activeTeamData_Skolerebus', JSON.stringify(currentTeamData)); console.log("DEBUG_V29: State saved."); } else { localStorage.removeItem('activeTeamData_Skolerebus'); console.log("DEBUG_V29: State cleared (no team data)."); } }
+
+// === LYDFUNKSJONER (Plassholdere) ===
+function initializeSounds() { try { console.log("Lyd-placeholdere initialisert (ingen faktiske lyder lastet)."); } catch (e) { console.warn("Kunne ikke initialisere lyder:", e); } }
+function playArrivalSound() { console.log("AUDIO: *Ankomstlyd spilles*"); }
+function playGeoRunStartSoundSequence() { console.log("AUDIO: Pip, Pip, Pip, PIIIIIP (Geo-løp start)!"); }
+function playGeoRunTurnSound() { console.log("AUDIO: PIIIP (Geo-løp vending)!"); }
 
 // === GOOGLE MAPS API CALLBACK ===
-window.initMap = function() { 
-    mapElement = document.getElementById('dynamic-map-container');
-    if (!mapElement) { setTimeout(window.initMap, 500); return; }
-    geofenceFeedbackElement = document.getElementById('geofence-feedback');
-    const mapStyles = [ { featureType: "all", elementType: "labels", stylers: [{ visibility: "off" }] } ];
-    map = new google.maps.Map(mapElement, {
-        center: START_LOCATION, zoom: 15, 
-        mapTypeId: google.maps.MapTypeId.HYBRID, 
-        styles: mapStyles, disableDefaultUI: false, streetViewControl: false, fullscreenControl: true,
-        mapTypeControlOptions: {
-            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-            mapTypeIds: [google.maps.MapTypeId.SATELLITE, google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.HYBRID]
-        }
-    });
-    if (currentTeamData) { 
-        if (currentTeamData.completedPostsCount >= TOTAL_POSTS && !currentTeamData.endTime) { 
-            updateMapMarker(null, true);
-        } else if (currentTeamData.completedPostsCount < TOTAL_POSTS) {
-            const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
-            updateMapMarker(currentPostGlobalId, false);
-        } else { updateMapMarker(null, true); }
-        startContinuousUserPositionUpdate(); 
-    }
-    console.log("Skolerebus Kart initialisert");
-}
+window.initMap = function() { mapElement = document.getElementById('dynamic-map-container'); if (!mapElement) { setTimeout(window.initMap, 500); return; } geofenceFeedbackElement = document.getElementById('geofence-feedback'); const mapStyles = [ { featureType: "all", elementType: "labels", stylers: [{ visibility: "off" }] } ]; map = new google.maps.Map(mapElement, { center: START_LOCATION, zoom: 15, mapTypeId: google.maps.MapTypeId.HYBRID, styles: mapStyles, disableDefaultUI: false, streetViewControl: false, fullscreenControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: [google.maps.MapTypeId.SATELLITE, google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.HYBRID] } }); if (currentTeamData) { if (currentTeamData.completedPostsCount >= TOTAL_POSTS && !currentTeamData.endTime) { updateMapMarker(null, true); } else if (currentTeamData.completedPostsCount < TOTAL_POSTS) { const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]; updateMapMarker(currentPostGlobalId, false); } else { updateMapMarker(null, true); } startContinuousUserPositionUpdate(); } console.log("Skolerebus Kart initialisert"); }
 
 // === GLOBALE KARTFUNKSJONER ===
-function updateMapMarker(postGlobalId, isFinalTarget = false) { 
-    if (!map) { console.warn("Kart ikke initialisert for updateMapMarker."); return; }
-    clearMapMarker(); clearFinishMarker();
-    let location, markerTitle, markerIconUrl;
-    if (isFinalTarget) {
-        location = FINISH_LOCATION; markerTitle = FINISH_LOCATION.title;
-        markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-        finishMarker = new google.maps.Marker({ position: { lat: location.lat, lng: location.lng }, map: map, title: markerTitle, animation: google.maps.Animation.DROP, icon: { url: markerIconUrl } });
-    } else {
-        if (!postGlobalId || postGlobalId < 1 || postGlobalId > POST_LOCATIONS.length) { console.warn("Ugyldig postGlobalId for updateMapMarker:", postGlobalId); return; }
-        location = POST_LOCATIONS[postGlobalId - 1];
-        markerTitle = `Neste: ${location.name || location.title}`;
-        markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
-        currentMapMarker = new google.maps.Marker({ position: { lat: location.lat, lng: location.lng }, map: map, title: markerTitle, animation: google.maps.Animation.DROP, icon: { url: markerIconUrl } });
-    }
-    if(location) { map.panTo({ lat: location.lat, lng: location.lng }); if (map.getZoom() < 15) map.setZoom(15); }
-}
+function updateMapMarker(postGlobalId, isFinalTarget = false, customLocation = null) { if (!map) { console.warn("Kart ikke initialisert for updateMapMarker."); return; } clearMapMarker(); if (!customLocation) clearFinishMarker(); let locationDetails, markerTitle, markerIconUrl; if (customLocation) { locationDetails = customLocation; markerTitle = customLocation.name || "Geo-løp Punkt"; markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'; } else if (isFinalTarget) { locationDetails = FINISH_LOCATION; markerTitle = FINISH_LOCATION.title; markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'; if (finishMarker) finishMarker.setMap(null); finishMarker = new google.maps.Marker({ position: { lat: locationDetails.lat, lng: locationDetails.lng }, map: map, title: markerTitle, animation: google.maps.Animation.DROP, icon: { url: markerIconUrl } }); if(locationDetails) { map.panTo({ lat: locationDetails.lat, lng: locationDetails.lng }); if (map.getZoom() < 16) map.setZoom(16); } return; } else { if (!postGlobalId || postGlobalId < 1 || postGlobalId > POST_LOCATIONS.length) { console.warn("Ugyldig postGlobalId for updateMapMarker:", postGlobalId); return; } locationDetails = POST_LOCATIONS[postGlobalId - 1]; markerTitle = `Neste: ${locationDetails.name || locationDetails.title}`; markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'; } currentMapMarker = new google.maps.Marker({ position: { lat: locationDetails.lat, lng: locationDetails.lng }, map: map, title: markerTitle, animation: google.maps.Animation.DROP, icon: { url: markerIconUrl } }); if(locationDetails) { map.panTo({ lat: locationDetails.lat, lng: locationDetails.lng }); if (map.getZoom() < (customLocation ? 18 : 15) ) map.setZoom((customLocation ? 18 : 15)); } }
 function clearMapMarker() { if (currentMapMarker) { currentMapMarker.setMap(null); currentMapMarker = null; } }
 function clearFinishMarker() { if (finishMarker) { finishMarker.setMap(null); finishMarker = null; } }
-function handleGeolocationError(error) { 
-    let msg = "Posisjonsfeil: ";
-    switch (error.code) {
-        case error.PERMISSION_DENIED: msg += "Du må tillate posisjonstilgang."; break;
-        case error.POSITION_UNAVAILABLE: msg += "Posisjonen din er utilgjengelig."; break;
-        case error.TIMEOUT: msg += "Tok for lang tid å hente posisjonen."; break;
-        default: msg += "Ukjent GPS-feil.";
-    }
-    console.warn(msg);
-    if (geofenceFeedbackElement) { geofenceFeedbackElement.textContent = msg; geofenceFeedbackElement.className = 'geofence-error permanent'; geofenceFeedbackElement.style.display = 'block'; }
-}
+function handleGeolocationError(error) { let msg = "Posisjonsfeil: "; switch (error.code) { case error.PERMISSION_DENIED: msg += "Du må tillate posisjonstilgang."; break; case error.POSITION_UNAVAILABLE: msg += "Posisjonen din er utilgjengelig."; break; case error.TIMEOUT: msg += "Tok for lang tid å hente posisjonen."; break; default: msg += "Ukjent GPS-feil."; } console.warn(msg); if (geofenceFeedbackElement) { geofenceFeedbackElement.textContent = msg; geofenceFeedbackElement.className = 'geofence-error permanent'; geofenceFeedbackElement.style.display = 'block'; } }
 
 // === KARTPOSISJON OG GEOFENCE FUNKSJONER (Globale) ===
-function updateUserPositionOnMap(position) { 
-    if (!map) return;
-    const userPos = { lat: position.coords.latitude, lng: position.coords.longitude };
-    if (userPositionMarker) { userPositionMarker.setPosition(userPos); } 
-    else { userPositionMarker = new google.maps.Marker({ position: userPos, map: map, title: "Din Posisjon", icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white" } }); }
-}
-
-function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompleted, targetName = "posten", canInteractWithTarget = false) {
-    if (!geofenceFeedbackElement) return;
-    if (isFullyCompleted || (!currentTeamData)) { geofenceFeedbackElement.style.display = 'none'; return; }
-    
-    geofenceFeedbackElement.style.display = 'block';
-    geofenceFeedbackElement.classList.remove('permanent'); 
-
-    if (DEV_MODE_NO_GEOFENCE) { 
-        geofenceFeedbackElement.textContent = `DEV MODE: Geofence deaktivert. (Reell avstand: ${distance !== null ? Math.round(distance) + 'm' : 'ukjent'})`;
-        geofenceFeedbackElement.className = 'geofence-info dev-mode'; return; 
-    }
-    if (distance === null) { geofenceFeedbackElement.textContent = `Leter etter ${targetName.toLowerCase()}...`; geofenceFeedbackElement.className = 'geofence-info'; return; }
-
-    const distanceFormatted = Math.round(distance);
-    if (isEffectivelyWithinRange) {
-        if (canInteractWithTarget) {
-             geofenceFeedbackElement.textContent = targetName.toLowerCase().includes("mål") 
-                ? `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). Tast inn målkoden!`
-                : `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). Lærer må taste passord eller oppgaven vises.`;
-        } else { 
-            geofenceFeedbackElement.textContent = `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m).`;
-        }
-        geofenceFeedbackElement.className = 'geofence-success';
-    } else {
-        geofenceFeedbackElement.textContent = `Gå til ${targetName.toLowerCase()}. Avstand: ${distanceFormatted}m. (Krever < ${GEOFENCE_RADIUS}m)`;
-        geofenceFeedbackElement.className = 'geofence-error';
-    }
-}
+function updateUserPositionOnMap(position) { if (!map) return; const userPos = { lat: position.coords.latitude, lng: position.coords.longitude }; if (userPositionMarker) { userPositionMarker.setPosition(userPos); } else { userPositionMarker = new google.maps.Marker({ position: userPos, map: map, title: "Din Posisjon", icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white" } }); } }
+function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompleted, targetName = "posten", canInteractWithTarget = false) { if (!geofenceFeedbackElement) return; if (isFullyCompleted || (!currentTeamData)) { geofenceFeedbackElement.style.display = 'none'; return; } geofenceFeedbackElement.style.display = 'block'; geofenceFeedbackElement.classList.remove('permanent'); if (DEV_MODE_NO_GEOFENCE) { geofenceFeedbackElement.textContent = `DEV MODE: Geofence deaktivert. (Reell avstand: ${distance !== null ? Math.round(distance) + 'm' : 'ukjent'})`; geofenceFeedbackElement.className = 'geofence-info dev-mode'; return; } if (distance === null) { geofenceFeedbackElement.textContent = `Leter etter ${targetName.toLowerCase()}...`; geofenceFeedbackElement.className = 'geofence-info'; return; } const distanceFormatted = Math.round(distance); if (isEffectivelyWithinRange) { if (canInteractWithTarget) { geofenceFeedbackElement.textContent = targetName.toLowerCase().includes("mål") ? `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). Tast inn målkoden!` : `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). Lærer må taste passord eller oppgaven vises.`; } else { geofenceFeedbackElement.textContent = `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m).`; } geofenceFeedbackElement.className = 'geofence-success'; } else { geofenceFeedbackElement.textContent = `Gå til ${targetName.toLowerCase()}. Avstand: ${distanceFormatted}m. (Krever < ${GEOFENCE_RADIUS}m)`; geofenceFeedbackElement.className = 'geofence-error'; } }
 
 function handlePositionUpdate(position) {
     updateUserPositionOnMap(position);
+    if (!currentTeamData || !currentTeamData.postSequence || currentTeamData.endTime) { updateGeofenceFeedback(null, false, true, null, false); return; }
+    let targetLocationDetails = null; let isCurrentTargetTheFinishLine = false; let isGeoRunActiveForCurrentPost = false;
+    const currentGlobalIdOriginal = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
 
-    if (!currentTeamData || !currentTeamData.postSequence || currentTeamData.endTime) { 
-        updateGeofenceFeedback(null, false, true, null, false); return;
+    if (currentGlobalIdOriginal === GEO_RUN_POST_ID && currentTeamData.geoRunState && currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]) {
+        const runState = currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]; isGeoRunActiveForCurrentPost = true;
+        if (!runState.active && !runState.finished) { targetLocationDetails = { location: GEO_RUN_POINT1, pageId: `post-${GEO_RUN_POST_ID}-page`, globalId: `geoRunStart`, name: GEO_RUN_POINT1.name }; }
+        else if (runState.active && !runState.finished) { if (runState.lap % 2 !== 0) { targetLocationDetails = { location: GEO_RUN_POINT2, pageId: `post-${GEO_RUN_POST_ID}-page`, globalId: `geoRunPoint2`, name: GEO_RUN_POINT2.name }; } else { targetLocationDetails = { location: GEO_RUN_POINT1, pageId: `post-${GEO_RUN_POST_ID}-page`, globalId: `geoRunPoint1`, name: GEO_RUN_POINT1.name }; } }
     }
-
-    let targetLocationDetails = null; 
-    let isCurrentTargetTheFinishLine = false;
-
-    if (currentTeamData.completedPostsCount >= TOTAL_POSTS) {
-        targetLocationDetails = { location: FINISH_LOCATION, pageId: 'finale-page', globalId: 'finish', name: FINISH_LOCATION.name };
-        isCurrentTargetTheFinishLine = true;
-    } else { 
-        const currentGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
-        if (currentGlobalId && POST_LOCATIONS[currentGlobalId - 1]) {
-            const postData = POST_LOCATIONS[currentGlobalId - 1];
-            targetLocationDetails = { location: postData, pageId: `post-${currentGlobalId}-page`, globalId: currentGlobalId, name: postData.name || `Post ${currentGlobalId}` };
-        }
+    if (!isGeoRunActiveForCurrentPost || (isGeoRunActiveForCurrentPost && currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]?.finished)) {
+        if (currentTeamData.completedPostsCount >= TOTAL_POSTS) { targetLocationDetails = { location: FINISH_LOCATION, pageId: 'finale-page', globalId: 'finish', name: FINISH_LOCATION.name }; isCurrentTargetTheFinishLine = true; }
+        else { const currentGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]; if (currentGlobalId && POST_LOCATIONS[currentGlobalId - 1]) { const postData = POST_LOCATIONS[currentGlobalId - 1]; targetLocationDetails = { location: postData, pageId: `post-${currentGlobalId}-page`, globalId: currentGlobalId, name: postData.name || `Post ${currentGlobalId}` }; } }
     }
-
     if (!targetLocationDetails) { updateGeofenceFeedback(null, false, false, null, false); return; }
-
-    const userLat = position.coords.latitude;
-    const userLng = position.coords.longitude;
+    const userLat = position.coords.latitude; const userLng = position.coords.longitude;
     const distance = calculateDistance(userLat, userLng, targetLocationDetails.location.lat, targetLocationDetails.location.lng);
-    const isWithinRange = distance <= GEOFENCE_RADIUS;
-    const isEffectivelyWithinRange = DEV_MODE_NO_GEOFENCE || isWithinRange; 
-    
+    const isWithinRange = distance <= GEOFENCE_RADIUS; const isEffectivelyWithinRange = DEV_MODE_NO_GEOFENCE || isWithinRange; 
     let canCurrentlyInteract = false; 
-
     if (isCurrentTargetTheFinishLine) {
         currentTeamData.canEnterFinishCode = isEffectivelyWithinRange; 
-        const finishUnlockInput = document.getElementById('finish-unlock-input');
-        const finishUnlockButton = document.getElementById('finish-unlock-btn');
-        if(finishUnlockInput) finishUnlockInput.disabled = !isEffectivelyWithinRange;
-        if(finishUnlockButton) finishUnlockButton.disabled = !isEffectivelyWithinRange;
+        const finishUnlockInput = document.getElementById('finish-unlock-input'); const finishUnlockButton = document.getElementById('finish-unlock-btn');
+        if(finishUnlockInput) finishUnlockInput.disabled = !isEffectivelyWithinRange; if(finishUnlockButton) finishUnlockButton.disabled = !isEffectivelyWithinRange;
+        if (isEffectivelyWithinRange && !currentTeamData.arrivalSoundPlayed.finish) { playArrivalSound(); currentTeamData.arrivalSoundPlayed.finish = true; saveState(); }
         canCurrentlyInteract = isEffectivelyWithinRange;
+    } else if (isGeoRunActiveForCurrentPost && currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`] && !currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`].finished) {
+        handleGeoRunLogic(isEffectivelyWithinRange, targetLocationDetails.globalId); // Denne defineres i DOMContentLoaded
     } else { 
-        const postGlobalId = targetLocationDetails.globalId;
-        const isPostAlreadyUnlocked = currentTeamData.unlockedPosts[`post${postGlobalId}`];
-
+        const postGlobalId = targetLocationDetails.globalId; const isPostAlreadyUnlocked = currentTeamData.unlockedPosts[`post${postGlobalId}`];
         if (isEffectivelyWithinRange && !isPostAlreadyUnlocked) {
-            console.log(`DEBUG_V25: Post ${postGlobalId} reached (or DEV_MODE). Unlocking (setting flag).`);
-            currentTeamData.unlockedPosts[`post${postGlobalId}`] = true;
-            saveState(); 
-            document.dispatchEvent(new CustomEvent('postReached', { detail: { pageId: targetLocationDetails.pageId } }));
+            console.log(`DEBUG_V29: Post ${postGlobalId} reached. Unlocking.`); currentTeamData.unlockedPosts[`post${postGlobalId}`] = true;
+            if (!currentTeamData.arrivalSoundPlayed[`post${postGlobalId}`]) { playArrivalSound(); currentTeamData.arrivalSoundPlayed[`post${postGlobalId}`] = true; }
+            saveState(); document.dispatchEvent(new CustomEvent('postReached', { detail: { pageId: targetLocationDetails.pageId } }));
             canCurrentlyInteract = true; 
-        } else if (isPostAlreadyUnlocked) { 
-            if (postGlobalId === 1 || postGlobalId === 8) { 
-                 canCurrentlyInteract = !currentTeamData.mannedPostTeacherVerified[`post${postGlobalId}`]; 
-            } else {
-                canCurrentlyInteract = false; 
-            }
-        }
+        } else if (isPostAlreadyUnlocked) { if (postGlobalId === 1 || postGlobalId === 8) { canCurrentlyInteract = !currentTeamData.mannedPostTeacherVerified[`post${postGlobalId}`]; } else { canCurrentlyInteract = false; } }
     }
-    updateGeofenceFeedback(distance, isEffectivelyWithinRange, false, targetLocationDetails.name, canCurrentlyInteract);
+    if (!isGeoRunActiveForCurrentPost || (currentTeamData.geoRunState && currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]?.finished)) { updateGeofenceFeedback(distance, isEffectivelyWithinRange, false, targetLocationDetails.name, canCurrentlyInteract); }
 }
 
-function startContinuousUserPositionUpdate() { 
-    if (!navigator.geolocation) { console.warn("Geolocation ikke støttet."); return; }
-    if (mapPositionWatchId !== null) return;
-    console.log("Starter kontinuerlig GPS posisjonssporing.");
-    mapPositionWatchId = navigator.geolocation.watchPosition( handlePositionUpdate,
-        (error) => { handleGeolocationError(error); if (error.code !== error.PERMISSION_DENIED && error.code !== error.TIMEOUT) {} },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-    );
-}
-function stopContinuousUserPositionUpdate() { 
-    if (mapPositionWatchId !== null) {
-        navigator.geolocation.clearWatch(mapPositionWatchId);
-        mapPositionWatchId = null;
-        console.log("Stoppet kontinuerlig GPS sporing.");
-        updateGeofenceFeedback(null, false, true, null, false); 
-    }
-}
+function startContinuousUserPositionUpdate() { if (!navigator.geolocation) { console.warn("Geolocation ikke støttet."); return; } if (mapPositionWatchId !== null) return; console.log("Starter kontinuerlig GPS posisjonssporing."); mapPositionWatchId = navigator.geolocation.watchPosition( handlePositionUpdate, (error) => { handleGeolocationError(error); if (error.code !== error.PERMISSION_DENIED && error.code !== error.TIMEOUT) {} }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }); }
+function stopContinuousUserPositionUpdate() { if (mapPositionWatchId !== null) { navigator.geolocation.clearWatch(mapPositionWatchId); mapPositionWatchId = null; console.log("Stoppet kontinuerlig GPS sporing."); updateGeofenceFeedback(null, false, true, null, false); } }
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG_V25: DOMContentLoaded event fired.");
+    console.log("DEBUG_V29: DOMContentLoaded event fired.");
+    initializeSounds(); 
     const teamCodeInput = document.getElementById('team-code-input');
     const startWithTeamCodeButton = document.getElementById('start-with-team-code-button');
     const teamCodeFeedback = document.getElementById('team-code-feedback');
@@ -278,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentScoreSpan = document.getElementById('current-score');
     const rebusContentElement = document.getElementById('rebus-content'); 
 
-    if (!rebusContentElement) console.error("DEBUG_V25: rebusContentElement is NULL!");
+    if (!rebusContentElement) console.error("DEBUG_V29: rebusContentElement is NULL!");
 
     const TEAM_CONFIG = {
         "LAG1": { name: "Lag 1", postSequence: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
@@ -300,7 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
             scoreDisplayElement.style.display = 'block';
         }
     }
-
     function updatePageText(pageElement, teamPostNumber, globalPostId) { 
         const titleElement = pageElement.querySelector('.post-title-placeholder');
         const taskTitleElement = pageElement.querySelector('.post-task-title-placeholder'); 
@@ -331,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        console.log("DEBUG_V25: Displaying final results.");
+        console.log("DEBUG_V29: Displaying final results.");
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -393,9 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showRebusPage(pageId) {
-        console.log(`DEBUG_V25: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V29: --- showRebusPage CALLED with pageId: '${pageId}' ---`);
         pages = document.querySelectorAll('#rebus-content .page');
-        if (!pages || pages.length === 0) { console.error("DEBUG_V25: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
+        if (!pages || pages.length === 0) { console.error("DEBUG_V29: CRITICAL - 'pages' NodeList is EMPTY!"); return; }
 
         pages.forEach((page) => {
             if (page.id === pageId) { page.classList.add('visible'); } 
@@ -416,11 +274,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const globalPostNum = parseInt(globalPostNumMatch[1]);
                 const teamPostNum = currentTeamData.postSequence.indexOf(globalPostNum) + 1;
                 updatePageText(document.getElementById(pageId), teamPostNum, globalPostNum);
+                
+                if (globalPostNum === GEO_RUN_POST_ID && currentTeamData.geoRunState && !currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`].active && !currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`].finished) {
+                    updateMapMarker(null, false, GEO_RUN_POINT1);
+                }
             }
         }
         resetPageUI(pageId); 
+        
         if (currentTeamData && pageId !== 'intro-page') { updateScoreDisplay(); } 
-        else if (scoreDisplayElement) { scoreDisplayElement.style.display = 'none'; }
+        else if (document.getElementById('score-display')) { document.getElementById('score-display').style.display = 'none'; }
         
         if (pageId === 'finale-page') {
             const finaleUnlockSection = document.getElementById('finale-unlock-section'); 
@@ -443,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pageId === 'finale-page' && !currentTeamData) { clearState(); showRebusPage('intro-page'); return; }
             }
         }
-        console.log(`DEBUG_V25: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
+        console.log(`DEBUG_V29: --- showRebusPage COMPLETED for pageId: '${pageId}' ---`);
     }
 
     function showTabContent(tabId) { 
@@ -469,14 +332,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     typeof currentTeamData.taskCompletionTimes === 'undefined' || 
                     typeof currentTeamData.canEnterFinishCode === 'undefined' ||
                     typeof currentTeamData.mannedPostTeacherVerified === 'undefined' || 
-                    (currentTeamData.mannedPostTeacherVerified && (typeof currentTeamData.mannedPostTeacherVerified.post1 === 'undefined' || typeof currentTeamData.mannedPostTeacherVerified.post8 === 'undefined'))
+                    (currentTeamData.mannedPostTeacherVerified && (typeof currentTeamData.mannedPostTeacherVerified.post1 === 'undefined' || typeof currentTeamData.mannedPostTeacherVerified.post8 === 'undefined')) ||
+                    typeof currentTeamData.arrivalSoundPlayed === 'undefined' || 
+                    typeof currentTeamData.geoRunState === 'undefined' 
                 ) { clearState(); return false; } 
                 if (typeof currentTeamData.startTime === 'string') currentTeamData.startTime = parseInt(currentTeamData.startTime,10);
                 if (currentTeamData.startTime && isNaN(currentTeamData.startTime)) currentTeamData.startTime = null; 
                 
                 if (!currentTeamData.minigolfScores) currentTeamData.minigolfScores = { post1: {} };
                 if (!currentTeamData.pyramidPoints) currentTeamData.pyramidPoints = {};
-
+                if (!currentTeamData.arrivalSoundPlayed) { 
+                    currentTeamData.arrivalSoundPlayed = {};
+                    POST_LOCATIONS.forEach((_,i) => currentTeamData.arrivalSoundPlayed[`post${i+1}`] = false);
+                    currentTeamData.arrivalSoundPlayed.finish = false;
+                }
+                if (!currentTeamData.geoRunState) { 
+                     currentTeamData.geoRunState = {};
+                     currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`] = { active: false, lap: 0, startTime: null, lapStartTime: null, atPoint1: false, atPoint2: false, countdownTimerId: null, finished: false, totalTime: null, pointsAwarded: null };
+                }
                 return true;
             } catch (e) { console.warn("Feil ved parsing av lagret data:", e); clearState(); return false; }
         }
@@ -489,11 +362,14 @@ document.addEventListener('DOMContentLoaded', () => {
         clearMapMarker(); clearFinishMarker();
         if (userPositionMarker) { userPositionMarker.setMap(null); userPositionMarker = null; }
         stopContinuousUserPositionUpdate(); 
-        if(scoreDisplayElement) scoreDisplayElement.style.display = 'none';
-        if(teamCodeInput) teamCodeInput.value = '';
-        if(teamCodeFeedback) { teamCodeFeedback.textContent = ''; teamCodeFeedback.className = 'feedback';}
+        const scoreDisplayElem = document.getElementById('score-display');
+        if(scoreDisplayElem) scoreDisplayElem.style.display = 'none';
+        const teamCodeInputElem = document.getElementById('team-code-input');
+        if(teamCodeInputElem) teamCodeInputElem.value = '';
+        const teamCodeFeedbackElem = document.getElementById('team-code-feedback');
+        if(teamCodeFeedbackElem) { teamCodeFeedbackElem.textContent = ''; teamCodeFeedbackElem.className = 'feedback';}
         if (geofenceFeedbackElement) { geofenceFeedbackElement.style.display = 'none'; geofenceFeedbackElement.textContent = ''; geofenceFeedbackElement.className = ''; }
-        console.log("DEBUG_V25: State cleared by clearState().");
+        console.log("DEBUG_V29: State cleared by clearState().");
     }
 
     function resetPageUI(pageId) {
@@ -528,6 +404,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const teacherPasswordSection = pageElement.querySelector('.teacher-password-section'); 
         const minigolfFormSection = pageElement.querySelector('.minigolf-form-section'); 
         const pyramidPointsSection = pageElement.querySelector('.pyramid-points-section'); 
+        const geoRunSetupSection = pageElement.querySelector('.geo-run-setup-section');
+        const geoRunActiveSection = pageElement.querySelector('.geo-run-active-section');
+        const geoRunResultsSection = pageElement.querySelector('.geo-run-results-section');
 
         const isPostUnlocked = currentTeamData?.unlockedPosts?.[`post${postNum}`]; 
         const isTaskCompleted = currentTeamData?.completedGlobalPosts?.[`post${postNum}`];
@@ -539,10 +418,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if(teacherPasswordSection) teacherPasswordSection.style.display = 'none';
         if(minigolfFormSection) minigolfFormSection.style.display = 'none';
         if(pyramidPointsSection) pyramidPointsSection.style.display = 'none';
+        if(geoRunSetupSection) geoRunSetupSection.style.display = 'none';
+        if(geoRunActiveSection) geoRunActiveSection.style.display = 'none';
+        if(geoRunResultsSection) geoRunResultsSection.style.display = 'none';
         
         if (postNum === 1) {
             const minigolfProceedButton = document.getElementById('minigolf-proceed-btn-post1');
             if (minigolfProceedButton) minigolfProceedButton.style.display = 'none';
+        }
+        if (postNum === GEO_RUN_POST_ID) {
+            const geoRunProceedButton = document.getElementById(`geo-run-proceed-btn-post${GEO_RUN_POST_ID}`);
+            if (geoRunProceedButton) geoRunProceedButton.style.display = 'none';
         }
         
         const teacherPassInput = pageElement.querySelector('.teacher-password-input');
@@ -587,7 +473,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         ppFeedback.className = "feedback success";
                     }
                 }
-            } else if (taskSection) { 
+            } else if (postNum === GEO_RUN_POST_ID && geoRunResultsSection) { // Post 7 fullført
+                geoRunResultsSection.style.display = 'block';
+                const timeDisplay = geoRunResultsSection.querySelector('.geo-run-total-time');
+                const pointsDisplay = geoRunResultsSection.querySelector('.geo-run-points-awarded');
+                const runState = currentTeamData.geoRunState[`post${postNum}`];
+                if(timeDisplay && runState?.totalTime !== null) timeDisplay.textContent = formatTimeFromMs(runState.totalTime);
+                if(pointsDisplay && runState?.pointsAwarded !== null) pointsDisplay.textContent = runState.pointsAwarded;
+                const geoRunProceedButton = document.getElementById(`geo-run-proceed-btn-post${GEO_RUN_POST_ID}`);
+                if (geoRunProceedButton) {
+                    geoRunProceedButton.style.display = 'inline-block';
+                    geoRunProceedButton.disabled = false;
+                }
+            }
+             else if (taskSection) { 
                 taskSection.style.display = 'block';
                 taskSection.querySelectorAll('input, button').forEach(el => el.disabled = true);
                 const taskFeedback = taskSection.querySelector('.feedback-task');
@@ -620,7 +519,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (teacherPasswordSection) { 
                     teacherPasswordSection.style.display = 'block';
                 }
-            } else if (taskSection) { 
+            } else if (postNum === GEO_RUN_POST_ID && currentTeamData && currentTeamData.geoRunState) { // Post 7 UI når nådd, men ikke ferdig
+                const runState = currentTeamData.geoRunState[`post${postNum}`];
+                if (runState.active) {
+                    if(geoRunActiveSection) geoRunActiveSection.style.display = 'block';
+                     const lapDisplay = geoRunActiveSection.querySelector('.geo-run-current-lap');
+                     const nextPointDisplay = geoRunActiveSection.querySelector('.geo-run-next-target');
+                     if(lapDisplay) lapDisplay.textContent = runState.lap;
+                     if(nextPointDisplay) nextPointDisplay.textContent = (runState.lap % 2 !== 0) ? GEO_RUN_POINT2.name : GEO_RUN_POINT1.name;
+                } else if (geoRunSetupSection) { // Viser nedtelling
+                    geoRunSetupSection.style.display = 'block';
+                    const countdownDisplay = geoRunSetupSection.querySelector('.geo-run-countdown');
+                    if(countdownDisplay && runState.countdownTimerId == null) countdownDisplay.textContent = GEO_RUN_COUNTDOWN_SECONDS; 
+                } else if (postInfoSection) { // Fallback hvis noe er rart med runState
+                     postInfoSection.style.display = 'block';
+                }
+            }
+             else if (taskSection) { 
                 taskSection.style.display = 'block';
                 const taskInput = taskSection.querySelector('.post-task-input');
                 const taskButton = taskSection.querySelector('.check-task-btn');
@@ -672,8 +587,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 canEnterFinishCode: false,
                 mannedPostTeacherVerified: { post1: false, post8: false }, 
                 minigolfScores: { post1: {} }, 
-                pyramidPoints: {} 
+                pyramidPoints: {},
+                arrivalSoundPlayed: {}, 
+                geoRunState: {} 
             };
+            POST_LOCATIONS.forEach((_,i) => currentTeamData.arrivalSoundPlayed[`post${i+1}`] = false);
+            currentTeamData.arrivalSoundPlayed.finish = false;
+            currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`] = { active: false, lap: 0, startTime: null, lapStartTime: null, atPoint1: false, atPoint2: false, countdownTimerId: null, finished: false, totalTime: null, pointsAwarded: null };
             currentTeamData.postSequence.forEach(postId => { currentTeamData.taskAttempts[`post${postId}`] = 0; });
             
             saveState(); resetAllPostUIs(); 
@@ -693,24 +613,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleTeacherPassword(postNum, password) {
         const pageElement = document.getElementById(`post-${postNum}-page`);
         if (!pageElement || !currentTeamData) return;
-
         const feedbackElement = pageElement.querySelector('.feedback-teacher-password');
         const passInput = pageElement.querySelector('.teacher-password-input');
         const passButton = pageElement.querySelector('.submit-teacher-password-btn');
-
-        if (!password) {
-            if(feedbackElement) {feedbackElement.textContent = "Lærerpassord mangler!"; feedbackElement.className = "feedback feedback-teacher-password error shake";}
-            if(passInput) {passInput.classList.add('shake'); setTimeout(()=>passInput.classList.remove('shake'), 400);}
-            return;
-        }
-
+        if (!password) { if(feedbackElement) {feedbackElement.textContent = "Lærerpassord mangler!"; feedbackElement.className = "feedback feedback-teacher-password error shake";} if(passInput) {passInput.classList.add('shake'); setTimeout(()=>passInput.classList.remove('shake'), 400);} return; }
         if (MANNED_POST_PASSWORDS[`post${postNum}`] && password.toUpperCase() === MANNED_POST_PASSWORDS[`post${postNum}`].toUpperCase()) {
             if(feedbackElement) {feedbackElement.textContent = "Passord godkjent! Fortsett med oppgaven."; feedbackElement.className = "feedback feedback-teacher-password success";}
-            if(passInput) passInput.disabled = true;
-            if(passButton) passButton.disabled = true;
-            
-            currentTeamData.mannedPostTeacherVerified[`post${postNum}`] = true;
-            saveState();
+            if(passInput) passInput.disabled = true; if(passButton) passButton.disabled = true;
+            currentTeamData.mannedPostTeacherVerified[`post${postNum}`] = true; saveState();
             setTimeout(() => resetPageUI(`post-${postNum}-page`), 800); 
         } else {
             if(feedbackElement) {feedbackElement.textContent = "Feil lærerpassord."; feedbackElement.className = "feedback feedback-teacher-password error shake";}
@@ -723,71 +633,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentTeamData || postNum !== 1) return;
         const pageElement = document.getElementById(`post-${postNum}-page`);
         const feedbackElement = document.getElementById('minigolf-results-feedback'); 
-        
         let totalScore = 0; let playerCount = 0; let scoresValid = true;
-
         for (let i = 1; i <= MAX_PLAYERS_PER_TEAM; i++) {
             const scoreInput = document.getElementById(`player-${i}-score-post${postNum}`);
             if (scoreInput && scoreInput.value !== '') {
                 const score = parseInt(scoreInput.value, 10);
-                if (isNaN(score) || score < 3) { 
-                    scoresValid = false;
-                    if(feedbackElement) {feedbackElement.textContent = `Ugyldig score for Spiller ${i}. Minimum 3 slag.`; feedbackElement.className = "feedback error";}
-                    scoreInput.classList.add('shake'); setTimeout(()=>scoreInput.classList.remove('shake'), 400);
-                    break;
-                }
-                currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = score;
-                totalScore += score; playerCount++;
-            } else if (scoreInput && scoreInput.value === '' && playerCount > 0 && i <= playerCount+1) {
-                currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = null;
-            } else if (scoreInput && scoreInput.value === '' && i === 1) { 
-                scoresValid = false;
-                if(feedbackElement) {feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error";}
-                break;
-            }
+                if (isNaN(score) || score < 3) { scoresValid = false; if(feedbackElement) {feedbackElement.textContent = `Ugyldig score for Spiller ${i}. Minimum 3 slag.`; feedbackElement.className = "feedback error";} scoreInput.classList.add('shake'); setTimeout(()=>scoreInput.classList.remove('shake'), 400); break; }
+                currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = score; totalScore += score; playerCount++;
+            } else if (scoreInput && scoreInput.value === '' && playerCount > 0 && i <= playerCount+1) { currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = null;
+            } else if (scoreInput && scoreInput.value === '' && i === 1) { scoresValid = false; if(feedbackElement) {feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error";} break; }
         }
-
-        if (!scoresValid || playerCount === 0) {
-            if (playerCount === 0 && scoresValid && feedbackElement) {
-                 feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error";
-            }
-            return;
-        }
-
-        const averageScore = totalScore / playerCount;
-        currentTeamData.minigolfScores[`post${postNum}`].average = averageScore;
-
-        let pointsAwarded = 0;
-        if (averageScore <= 8) pointsAwarded = 10;
-        else if (averageScore <= 9) pointsAwarded = 9;
-        else if (averageScore <= 10) pointsAwarded = 8;
-        else if (averageScore <= 11) pointsAwarded = 7;
-        else if (averageScore <= 12) pointsAwarded = 6;
-        else if (averageScore <= 13) pointsAwarded = 5;
-        else if (averageScore <= 14) pointsAwarded = 4;
-        else if (averageScore <= 15) pointsAwarded = 3;
-        else if (averageScore <= 16) pointsAwarded = 2;
-        else pointsAwarded = 1; 
-
-        currentTeamData.minigolfScores[`post${postNum}`].pointsAwarded = pointsAwarded;
-        currentTeamData.score += pointsAwarded;
-        updateScoreDisplay();
-
-        if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) {
-            currentTeamData.completedGlobalPosts[`post${postNum}`] = true;
-            currentTeamData.completedPostsCount++;
-            currentTeamData.taskCompletionTimes['post' + postNum] = Date.now();
-        }
-        saveState();
-        if(feedbackElement) {feedbackElement.textContent = `Snitt: ${averageScore.toFixed(2)}. Poeng: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
-        
+        if (!scoresValid || playerCount === 0) { if (playerCount === 0 && scoresValid && feedbackElement) { feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error"; } return; }
+        const averageScore = totalScore / playerCount; currentTeamData.minigolfScores[`post${postNum}`].average = averageScore;
+        let pointsAwarded = 0; if (averageScore <= 8) pointsAwarded = 10; else if (averageScore <= 9) pointsAwarded = 9; else if (averageScore <= 10) pointsAwarded = 8; else if (averageScore <= 11) pointsAwarded = 7; else if (averageScore <= 12) pointsAwarded = 6; else if (averageScore <= 13) pointsAwarded = 5; else if (averageScore <= 14) pointsAwarded = 4; else if (averageScore <= 15) pointsAwarded = 3; else if (averageScore <= 16) pointsAwarded = 2; else pointsAwarded = 1; 
+        currentTeamData.minigolfScores[`post${postNum}`].pointsAwarded = pointsAwarded; currentTeamData.score += pointsAwarded; updateScoreDisplay();
+        if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) { currentTeamData.completedGlobalPosts[`post${postNum}`] = true; currentTeamData.completedPostsCount++; currentTeamData.taskCompletionTimes['post' + postNum] = Date.now(); }
+        saveState(); if(feedbackElement) {feedbackElement.textContent = `Snitt: ${averageScore.toFixed(2)}. Poeng: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
         pageElement.querySelectorAll('.minigolf-form-section input, #submit-minigolf-post1').forEach(el => el.disabled = true);
-        
-        const proceedButton = document.getElementById('minigolf-proceed-btn-post1');
-        if (proceedButton) {
-            proceedButton.style.display = 'inline-block'; 
-            proceedButton.disabled = false;
-        }
+        const proceedButton = document.getElementById('minigolf-proceed-btn-post1'); if (proceedButton) { proceedButton.style.display = 'inline-block'; proceedButton.disabled = false; }
     }
 
     function handlePyramidPointsSubmit(postNum, points) {
@@ -795,72 +658,74 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageElement = document.getElementById(`post-${postNum}-page`);
         const feedbackElement = document.getElementById('pyramid-results-feedback'); 
         const pointsInput = document.getElementById(`pyramid-points-input-post${postNum}`);
-
         const pointsAwarded = parseInt(points, 10);
-        if (isNaN(pointsAwarded) || pointsAwarded < 0 || pointsAwarded > 10) {
-            if(feedbackElement) {feedbackElement.textContent = "Ugyldig poengsum (0-10)."; feedbackElement.className = "feedback error";}
-            if(pointsInput) {pointsInput.classList.add('shake'); setTimeout(()=>pointsInput.classList.remove('shake'), 400); pointsInput.focus();}
-            return;
-        }
-
-        currentTeamData.pyramidPoints[`post${postNum}`] = pointsAwarded;
-        currentTeamData.score += pointsAwarded;
-        updateScoreDisplay();
-
-        if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) {
-            currentTeamData.completedGlobalPosts[`post${postNum}`] = true;
-            currentTeamData.completedPostsCount++;
-            currentTeamData.taskCompletionTimes['post' + postNum] = Date.now();
-        }
-        saveState();
-        if(feedbackElement) {feedbackElement.textContent = `Poeng registrert: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
-
-        if(pointsInput) pointsInput.disabled = true;
-        const submitBtn = document.getElementById(`submit-pyramid-points-post${postNum}`);
-        if(submitBtn) submitBtn.disabled = true;
-        // Vurder en "Gå Videre"-knapp her også, eller automatisk progresjon
+        if (isNaN(pointsAwarded) || pointsAwarded < 0 || pointsAwarded > 10) { if(feedbackElement) {feedbackElement.textContent = "Ugyldig poengsum (0-10)."; feedbackElement.className = "feedback error";} if(pointsInput) {pointsInput.classList.add('shake'); setTimeout(()=>pointsInput.classList.remove('shake'), 400); pointsInput.focus();} return; }
+        currentTeamData.pyramidPoints[`post${postNum}`] = pointsAwarded; currentTeamData.score += pointsAwarded; updateScoreDisplay();
+        if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) { currentTeamData.completedGlobalPosts[`post${postNum}`] = true; currentTeamData.completedPostsCount++; currentTeamData.taskCompletionTimes['post' + postNum] = Date.now(); }
+        saveState(); if(feedbackElement) {feedbackElement.textContent = `Poeng registrert: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
+        if(pointsInput) pointsInput.disabled = true; const submitBtn = document.getElementById(`submit-pyramid-points-post${postNum}`); if(submitBtn) submitBtn.disabled = true;
         setTimeout(() => proceedToNextPostOrFinish(), 1500);
     }
 
-    function handleTaskCheck(postNum, userAnswer) { 
-        if (postNum === 1 || postNum === 8) { console.warn(`DEBUG_V25: handleTaskCheck kalt for bemannet post ${postNum}.`); return; }
-        
-        const pageElement = document.getElementById(`post-${postNum}-page`);
-        if(!pageElement) return;
-        const taskInput = pageElement.querySelector('.post-task-input');
-        const feedbackElement = pageElement.querySelector('.feedback-task');
-        const taskButton = pageElement.querySelector('.check-task-btn');
+    function handleGeoRunLogic(isAtTargetPoint, targetPointId) { // Flyttet inn i DOMContentLoaded
+        if (!currentTeamData || currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] !== GEO_RUN_POST_ID) return;
+        const runState = currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`];
+        const pageElement = document.getElementById(`post-${GEO_RUN_POST_ID}-page`);
+        if (runState.finished) return;
 
-        if (!currentTeamData) { if(feedbackElement) { feedbackElement.textContent = 'Feil: Lag ikke startet.'; feedbackElement.className = 'feedback feedback-task error'; } return; }
-        let correctTaskAnswer = CORRECT_TASK_ANSWERS[`post${postNum}`];
-        if(feedbackElement) { feedbackElement.className = 'feedback feedback-task'; feedbackElement.textContent = '';}
+        if (!runState.active) { 
+            if (targetPointId === 'geoRunStart' && isAtTargetPoint && !runState.countdownTimerId && !runState.atPoint1) {
+                console.log("DEBUG_V29: Geo-løp: Nådd startpunkt 1. Starter nedtelling."); runState.atPoint1 = true; 
+                updateMapMarker(null, false, GEO_RUN_POINT1); resetPageUI(`post-${GEO_RUN_POST_ID}-page`); 
+                let countdown = GEO_RUN_COUNTDOWN_SECONDS; const countdownDisplay = pageElement.querySelector('.geo-run-countdown');
+                if(countdownDisplay) countdownDisplay.textContent = countdown;
+                runState.countdownTimerId = setInterval(() => {
+                    countdown--; if(countdownDisplay) countdownDisplay.textContent = countdown;
+                    if (countdown <= 0) {
+                        clearInterval(runState.countdownTimerId); runState.countdownTimerId = null;
+                        console.log("DEBUG_V29: Geo-løp: Nedtelling ferdig. Starter løpet!"); playGeoRunStartSoundSequence();
+                        runState.active = true; runState.lap = 1; runState.startTime = Date.now(); runState.lapStartTime = runState.startTime;
+                        updateMapMarker(null, false, GEO_RUN_POINT2); resetPageUI(`post-${GEO_RUN_POST_ID}-page`); saveState();
+                    }
+                }, 1000);
+            }
+        } else { 
+            if (isAtTargetPoint) {
+                playGeoRunTurnSound(); console.log(`DEBUG_V29: Geo-løp: Nådd vendepunkt. Lap: ${runState.lap}`);
+                if (targetPointId === 'geoRunPoint2') { runState.atPoint1 = false; runState.atPoint2 = true; updateMapMarker(null, false, GEO_RUN_POINT1); }
+                else if (targetPointId === 'geoRunPoint1') { runState.atPoint1 = true; runState.atPoint2 = false; runState.lap++; if (runState.lap <= GEO_RUN_LAPS) { updateMapMarker(null, false, GEO_RUN_POINT2); } }
+                runState.lapStartTime = Date.now(); 
+                if (runState.lap > GEO_RUN_LAPS) {
+                    console.log("DEBUG_V29: Geo-løp: Ferdig!"); runState.finished = true; runState.active = false; 
+                    runState.totalTime = Date.now() - runState.startTime;
+                    let points = 0; const totalSeconds = runState.totalTime / 1000;
+                    for (const timeThreshold in GEO_RUN_POINTS_SCALE) { if (totalSeconds <= parseFloat(timeThreshold)) { points = GEO_RUN_POINTS_SCALE[timeThreshold]; break; } }
+                    runState.pointsAwarded = points; currentTeamData.score += points; updateScoreDisplay();
+                    if (!currentTeamData.completedGlobalPosts[`post${GEO_RUN_POST_ID}`]) { currentTeamData.completedGlobalPosts[`post${GEO_RUN_POST_ID}`] = true; currentTeamData.completedPostsCount++; currentTeamData.taskCompletionTimes[`post${GEO_RUN_POST_ID}`] = Date.now(); }
+                    updateMapMarker(currentTeamData.postSequence[currentTeamData.currentPostArrayIndex +1] || null, currentTeamData.completedPostsCount >= TOTAL_POSTS); 
+                    const geoRunProceedButton = document.getElementById(`geo-run-proceed-btn-post${GEO_RUN_POST_ID}`);
+                    if (geoRunProceedButton) { geoRunProceedButton.style.display = 'inline-block'; geoRunProceedButton.disabled = false; }
 
-        if (!userAnswer) { 
-            if(feedbackElement) { feedbackElement.textContent = 'Svar på oppgaven!'; feedbackElement.classList.add('error', 'shake'); }
-            if(taskInput) { taskInput.classList.add('shake'); setTimeout(() => taskInput.classList.remove('shake'), 400); }
-             setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400);
-            return;
+                }
+                resetPageUI(`post-${GEO_RUN_POST_ID}-page`); saveState();
+            }
         }
+    }
+
+    function handleTaskCheck(postNum, userAnswer) { 
+        if (postNum === 1 || postNum === 8 || postNum === GEO_RUN_POST_ID) { console.warn(`DEBUG_V29: handleTaskCheck kalt for spesiell post ${postNum}.`); return; }
+        const pageElement = document.getElementById(`post-${postNum}-page`); if(!pageElement) return;
+        const taskInput = pageElement.querySelector('.post-task-input'); const feedbackElement = pageElement.querySelector('.feedback-task'); const taskButton = pageElement.querySelector('.check-task-btn');
+        if (!currentTeamData) { if(feedbackElement) { feedbackElement.textContent = 'Feil: Lag ikke startet.'; feedbackElement.className = 'feedback feedback-task error'; } return; }
+        let correctTaskAnswer = CORRECT_TASK_ANSWERS[`post${postNum}`]; if(feedbackElement) { feedbackElement.className = 'feedback feedback-task'; feedbackElement.textContent = '';}
+        if (!userAnswer) { if(feedbackElement) { feedbackElement.textContent = 'Svar på oppgaven!'; feedbackElement.classList.add('error', 'shake'); } if(taskInput) { taskInput.classList.add('shake'); setTimeout(() => taskInput.classList.remove('shake'), 400); } setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400); return; }
         const isCorrect = (userAnswer.toUpperCase() === correctTaskAnswer.toUpperCase() || userAnswer.toUpperCase() === 'FASIT');
-        
         if (currentTeamData.taskAttempts[`post${postNum}`] === undefined) { currentTeamData.taskAttempts[`post${postNum}`] = 0; }
-        
         if (isCorrect) {
             if(feedbackElement) { feedbackElement.textContent = userAnswer.toUpperCase() === 'FASIT' ? 'FASIT godkjent! (Ingen poeng)' : 'Korrekt svar! Bra jobba!'; feedbackElement.classList.add('success');}
-            if (taskInput) taskInput.disabled = true;
-            if(taskButton) taskButton.disabled = true;
-
-            if (userAnswer.toUpperCase() !== 'FASIT') {
-                let pointsAwarded = POINTS_PER_CORRECT_TASK - ((currentTeamData.taskAttempts[`post${postNum}`] || 0) * 2);
-                pointsAwarded = Math.max(1, pointsAwarded);
-                currentTeamData.score += pointsAwarded;
-            }
-            updateScoreDisplay();
-            if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) {
-                currentTeamData.completedGlobalPosts[`post${postNum}`] = true;
-                currentTeamData.completedPostsCount++;
-                currentTeamData.taskCompletionTimes['post' + postNum] = Date.now(); 
-            }
+            if (taskInput) taskInput.disabled = true; if(taskButton) taskButton.disabled = true;
+            if (userAnswer.toUpperCase() !== 'FASIT') { let pointsAwarded = POINTS_PER_CORRECT_TASK - ((currentTeamData.taskAttempts[`post${postNum}`] || 0) * 2); pointsAwarded = Math.max(1, pointsAwarded); currentTeamData.score += pointsAwarded; }
+            updateScoreDisplay(); if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) { currentTeamData.completedGlobalPosts[`post${postNum}`] = true; currentTeamData.completedPostsCount++; currentTeamData.taskCompletionTimes['post' + postNum] = Date.now(); }
             proceedToNextPostOrFinish(); 
         } else { 
             currentTeamData.taskAttempts[`post${postNum}`]++; updateScoreDisplay();
@@ -869,14 +734,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if(feedbackElement){ feedbackElement.textContent = 'Feil svar, prøv igjen!'; feedbackElement.classList.add('error', 'shake'); }
             if(taskInput) { taskInput.classList.add('shake'); setTimeout(() => { if(taskInput) taskInput.classList.remove('shake'); }, 400); taskInput.focus(); taskInput.select(); }
             setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400);
-
             if (currentTeamData.taskAttempts[`post${postNum}`] >= MAX_ATTEMPTS_PER_TASK) {
                 if(feedbackElement) { feedbackElement.textContent = `Ingen flere forsøk. Går videre... (0 poeng)`; feedbackElement.className = 'feedback feedback-task error'; }
                 if (taskInput) taskInput.disabled = true; if(taskButton) taskButton.disabled = true;
-                if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) {
-                    currentTeamData.completedGlobalPosts[`post${postNum}`] = true; currentTeamData.completedPostsCount++;
-                    currentTeamData.taskCompletionTimes['post' + postNum] = Date.now(); 
-                }
+                if (!currentTeamData.completedGlobalPosts[`post${postNum}`]) { currentTeamData.completedGlobalPosts[`post${postNum}`] = true; currentTeamData.completedPostsCount++; currentTeamData.taskCompletionTimes['post' + postNum] = Date.now(); }
                 proceedToNextPostOrFinish(); 
             } else { saveState(); }
         }
@@ -890,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nextPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
                 setTimeout(() => { showRebusPage(`post-${nextPostGlobalId}-page`); if (map) updateMapMarker(nextPostGlobalId, false); }, 1200);
             } else { 
-                console.error("DEBUG_V25: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
+                console.error("DEBUG_V29: Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.");
                 setTimeout(() => { showRebusPage('finale-page'); if (map) updateMapMarker(null, true); }, 1200);
             }
         } else { 
@@ -905,34 +766,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleFinishCodeInput(userAnswer) {
-        console.log("DEBUG_V25: handleFinishCodeInput called with:", userAnswer);
+        console.log("DEBUG_V29: handleFinishCodeInput called with:", userAnswer);
         const feedbackElement = document.getElementById('feedback-unlock-finish');
         const finishCodeInput = document.getElementById('finish-unlock-input');
         const finishUnlockButton = document.getElementById('finish-unlock-btn');
-
-        if (!currentTeamData || !currentTeamData.canEnterFinishCode) {
-            if(feedbackElement) { feedbackElement.textContent = 'Du må være ved målet for å taste kode.'; feedbackElement.className = 'feedback feedback-unlock error';}
-            return;
-        }
+        if (!currentTeamData || !currentTeamData.canEnterFinishCode) { if(feedbackElement) { feedbackElement.textContent = 'Du må være ved målet for å taste kode.'; feedbackElement.className = 'feedback feedback-unlock error';} return; }
         if(feedbackElement) { feedbackElement.className = 'feedback feedback-unlock'; feedbackElement.textContent = ''; }
-        if (!userAnswer) { 
-            if(feedbackElement) { feedbackElement.textContent = 'Skriv målkoden!'; feedbackElement.classList.add('error', 'shake'); }
-            if(finishCodeInput) { finishCodeInput.classList.add('shake'); setTimeout(() => finishCodeInput.classList.remove('shake'), 400); }
-            setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400);
-            return;
-        }
-
+        if (!userAnswer) { if(feedbackElement) { feedbackElement.textContent = 'Skriv målkoden!'; feedbackElement.classList.add('error', 'shake'); } if(finishCodeInput) { finishCodeInput.classList.add('shake'); setTimeout(() => finishCodeInput.classList.remove('shake'), 400); } setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400); return; }
         if (userAnswer.toUpperCase() === FINISH_UNLOCK_CODE.toUpperCase() || (DEV_MODE_NO_GEOFENCE && userAnswer.toUpperCase() === 'ÅPNE')) {
             if(feedbackElement) { feedbackElement.textContent = 'Målgang registrert! Gratulerer!'; feedbackElement.classList.add('success'); }
-            if (finishCodeInput) finishCodeInput.disabled = true;
-            if (finishUnlockButton) finishUnlockButton.disabled = true;
-
-            currentTeamData.endTime = Date.now();
-            if (currentTeamData.startTime) { currentTeamData.totalTimeSeconds = Math.round((currentTeamData.endTime - currentTeamData.startTime) / 1000); }
-            saveState();
-            stopContinuousUserPositionUpdate(); 
-            updateGeofenceFeedback(null, false, true, null, false); 
-            
+            if (finishCodeInput) finishCodeInput.disabled = true; if (finishUnlockButton) finishUnlockButton.disabled = true;
+            currentTeamData.endTime = Date.now(); if (currentTeamData.startTime) { currentTeamData.totalTimeSeconds = Math.round((currentTeamData.endTime - currentTeamData.startTime) / 1000); }
+            saveState(); stopContinuousUserPositionUpdate(); updateGeofenceFeedback(null, false, true, null, false); 
             setTimeout(() => { showRebusPage('finale-page'); }, 1200);
         } else {
             if(feedbackElement) { feedbackElement.textContent = 'Feil målkode. Prøv igjen!'; feedbackElement.classList.add('error', 'shake'); }
@@ -942,20 +787,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === EVENT LISTENERS ===
-    if (startWithTeamCodeButton && teamCodeInput) {
-        startWithTeamCodeButton.addEventListener('click', () => { initializeTeam(teamCodeInput.value); });
-    }
-    if (teamCodeInput) { 
-        teamCodeInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter' && !startWithTeamCodeButton.disabled) { event.preventDefault(); startWithTeamCodeButton.click(); }
-        });
-    }
+    if (startWithTeamCodeButton && teamCodeInput) { startWithTeamCodeButton.addEventListener('click', () => { initializeTeam(teamCodeInput.value); }); }
+    if (teamCodeInput) { teamCodeInput.addEventListener('keypress', function(event) { if (event.key === 'Enter' && !startWithTeamCodeButton.disabled) { event.preventDefault(); startWithTeamCodeButton.click(); } }); }
     if (rebusContentElement) {
         rebusContentElement.addEventListener('click', (event) => {
             const target = event.target;
             if (target.classList.contains('check-task-btn') && !target.disabled) { 
                 const postNum = parseInt(target.getAttribute('data-post'));
-                if (postNum !== 1 && postNum !== 8) { 
+                if (postNum !== 1 && postNum !== 8 && postNum !== GEO_RUN_POST_ID) { 
                     const pageElement = document.getElementById(`post-${postNum}-page`);
                     if(pageElement) { const taskInput = pageElement.querySelector('.post-task-input'); if(taskInput) handleTaskCheck(postNum, taskInput.value.trim().toUpperCase()); }
                 }
@@ -963,16 +802,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const postNum = parseInt(target.getAttribute('data-post'));
                 const pageElement = document.getElementById(`post-${postNum}-page`);
                 if(pageElement) { const passInput = pageElement.querySelector('.teacher-password-input'); if(passInput) handleTeacherPassword(postNum, passInput.value.trim()); }
-            } else if (target.id === 'submit-minigolf-post1' && !target.disabled) { 
-                handleMinigolfSubmit(1);
-            } else if (target.id === 'minigolf-proceed-btn-post1' && !target.disabled) { 
-                console.log("DEBUG_V25: Minigolf proceed button clicked.");
-                proceedToNextPostOrFinish();
-            }
-             else if (target.id === 'submit-pyramid-points-post8' && !target.disabled) { 
-                const pointsInput = document.getElementById('pyramid-points-input-post8');
-                if(pointsInput) handlePyramidPointsSubmit(8, pointsInput.value.trim());
-            }
+            } else if (target.id === 'submit-minigolf-post1' && !target.disabled) { handleMinigolfSubmit(1); }
+            else if (target.id === 'minigolf-proceed-btn-post1' && !target.disabled) { console.log("DEBUG_V29: Minigolf proceed button clicked."); proceedToNextPostOrFinish(); }
+            else if (target.id === 'submit-pyramid-points-post8' && !target.disabled) { const pointsInput = document.getElementById('pyramid-points-input-post8'); if(pointsInput) handlePyramidPointsSubmit(8, pointsInput.value.trim()); }
+            else if (target.id === `geo-run-proceed-btn-post${GEO_RUN_POST_ID}` && !target.disabled) { console.log("DEBUG_V29: Geo-run proceed button clicked."); proceedToNextPostOrFinish(); }
         });
         rebusContentElement.addEventListener('keypress', (event) => {
             const target = event.target;
@@ -981,69 +814,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     const postPage = target.closest('.page');
                     if (postPage) { 
                         const postNum = parseInt(postPage.id.split('-')[1]);
-                        if (postNum !== 1 && postNum !== 8) { 
-                            event.preventDefault(); 
-                            const taskButton = postPage.querySelector(`.check-task-btn[data-post="${postNum}"]`); 
-                            if (taskButton && !taskButton.disabled) taskButton.click(); 
+                        if (postNum !== 1 && postNum !== 8 && postNum !== GEO_RUN_POST_ID) { 
+                            event.preventDefault(); const taskButton = postPage.querySelector(`.check-task-btn[data-post="${postNum}"]`); if (taskButton && !taskButton.disabled) taskButton.click(); 
                         }
                     }
                 } else if (target.classList.contains('teacher-password-input') && !target.disabled) { 
                      const postPage = target.closest('.page');
-                     if(postPage) {
-                        event.preventDefault();
-                        const postNum = parseInt(postPage.id.split('-')[1]);
-                        const passButton = postPage.querySelector('.submit-teacher-password-btn');
-                        if(passButton && !passButton.disabled) passButton.click();
-                     }
+                     if(postPage) { event.preventDefault(); const postNum = parseInt(postPage.id.split('-')[1]); const passButton = postPage.querySelector('.submit-teacher-password-btn'); if(passButton && !passButton.disabled) passButton.click(); }
                 }
             }
         });
     }
     const finishButton = document.getElementById('finish-unlock-btn'); 
-    if (finishButton) {
-        finishButton.addEventListener('click', () => {
-            if (finishButton.disabled) return;
-            const finishCodeInput = document.getElementById('finish-unlock-input');
-            if (finishCodeInput && currentTeamData && currentTeamData.canEnterFinishCode) { handleFinishCodeInput(finishCodeInput.value.trim().toUpperCase()); }
-        });
-    }
+    if (finishButton) { finishButton.addEventListener('click', () => { if (finishButton.disabled) return; const finishCodeInput = document.getElementById('finish-unlock-input'); if (finishCodeInput && currentTeamData && currentTeamData.canEnterFinishCode) { handleFinishCodeInput(finishCodeInput.value.trim().toUpperCase()); } }); }
     const finishCodeInputElement = document.getElementById('finish-unlock-input');
-    if(finishCodeInputElement){
-        finishCodeInputElement.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter' && !finishCodeInputElement.disabled) { 
-                event.preventDefault(); const associatedButton = document.getElementById('finish-unlock-btn');
-                if (associatedButton && !associatedButton.disabled && currentTeamData && currentTeamData.canEnterFinishCode) { handleFinishCodeInput(finishCodeInputElement.value.trim().toUpperCase()); }
-            }
-        });
-    }
-    tabButtons.forEach(button => { 
-        button.addEventListener('click', () => {
-            const tabId = button.getAttribute('data-tab'); showTabContent(tabId);
-            if (tabId === 'map' && map && currentTeamData) {
-                let targetLocation = null; let zoomLevel = 15;
-                if (currentTeamData.endTime || currentTeamData.completedPostsCount >= TOTAL_POSTS) { targetLocation = FINISH_LOCATION; zoomLevel = 16; }
-                else if (currentTeamData.completedPostsCount < TOTAL_POSTS) { const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]; targetLocation = POST_LOCATIONS[currentPostGlobalId - 1]; }
-                if (targetLocation) {
-                    let bounds = new google.maps.LatLngBounds(); bounds.extend(new google.maps.LatLng(targetLocation.lat, targetLocation.lng));
-                    if (userPositionMarker && userPositionMarker.getPosition()) { bounds.extend(userPositionMarker.getPosition()); map.fitBounds(bounds); if (map.getZoom() > 18) map.setZoom(18); }
-                    else { map.panTo(new google.maps.LatLng(targetLocation.lat, targetLocation.lng)); map.setZoom(zoomLevel); }
-                } else if (userPositionMarker && userPositionMarker.getPosition()){ map.panTo(userPositionMarker.getPosition()); map.setZoom(16); }
-                else { map.panTo(START_LOCATION); map.setZoom(15); }
-            }
-        });
-    });
-    devResetButtons.forEach(button => { 
-        button.addEventListener('click', () => {
-            if (confirm("Nullstille rebusen?")) { clearState(); showRebusPage('intro-page'); showTabContent('rebus'); if (teamCodeInput) teamCodeInput.disabled = false; if (startWithTeamCodeButton) startWithTeamCodeButton.disabled = false; }
-        });
-    });
-    
-    document.addEventListener('postReached', function(event) {
-        if (event.detail && event.detail.pageId) {
-            console.log(`DEBUG_V25: Custom event 'postReached' for pageId: ${event.detail.pageId}. Calling resetPageUI.`);
-            resetPageUI(event.detail.pageId);
-        }
-    });
+    if(finishCodeInputElement){ finishCodeInputElement.addEventListener('keypress', function(event) { if (event.key === 'Enter' && !finishCodeInputElement.disabled) { event.preventDefault(); const associatedButton = document.getElementById('finish-unlock-btn'); if (associatedButton && !associatedButton.disabled && currentTeamData && currentTeamData.canEnterFinishCode) { handleFinishCodeInput(finishCodeInputElement.value.trim().toUpperCase()); } } }); }
+    tabButtons.forEach(button => { button.addEventListener('click', () => { const tabId = button.getAttribute('data-tab'); showTabContent(tabId); if (tabId === 'map' && map && currentTeamData) { let targetLocation = null; let zoomLevel = 15; if (currentTeamData.endTime || currentTeamData.completedPostsCount >= TOTAL_POSTS) { targetLocation = FINISH_LOCATION; zoomLevel = 16; } else if (currentTeamData.completedPostsCount < TOTAL_POSTS) { const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]; targetLocation = POST_LOCATIONS[currentPostGlobalId - 1]; } if (targetLocation) { let bounds = new google.maps.LatLngBounds(); bounds.extend(new google.maps.LatLng(targetLocation.lat, targetLocation.lng)); if (userPositionMarker && userPositionMarker.getPosition()) { bounds.extend(userPositionMarker.getPosition()); map.fitBounds(bounds); if (map.getZoom() > 18) map.setZoom(18); } else { map.panTo(new google.maps.LatLng(targetLocation.lat, targetLocation.lng)); map.setZoom(zoomLevel); } } else if (userPositionMarker && userPositionMarker.getPosition()){ map.panTo(userPositionMarker.getPosition()); map.setZoom(16); } else { map.panTo(START_LOCATION); map.setZoom(15); } } }); });
+    devResetButtons.forEach(button => { button.addEventListener('click', () => { if (confirm("Nullstille rebusen?")) { clearState(); showRebusPage('intro-page'); showTabContent('rebus'); if (teamCodeInput) teamCodeInput.disabled = false; if (startWithTeamCodeButton) startWithTeamCodeButton.disabled = false; } }); });
+    document.addEventListener('postReached', function(event) { if (event.detail && event.detail.pageId) { console.log(`DEBUG_V29: Custom event 'postReached' for pageId: ${event.detail.pageId}. Calling resetPageUI.`); resetPageUI(event.detail.pageId); } });
     
     // === INITALISERING VED LASTING AV SIDE ===
     if (DEV_MODE_NO_GEOFENCE) { if (geofenceFeedbackElement) { geofenceFeedbackElement.textContent = "DEV MODE: Geofence deaktivert."; geofenceFeedbackElement.className = 'geofence-info dev-mode'; geofenceFeedbackElement.style.display = 'block'; } }
@@ -1058,6 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { clearState(); showRebusPage('intro-page'); }
         updateUIAfterLoad();
     } else { showTabContent('rebus'); showRebusPage('intro-page'); resetAllPostUIs(); }
-    console.log("DEBUG_V25: Initial page setup complete.");
+    console.log("DEBUG_V29: Initial page setup complete.");
 });
-/* Version: #25 */
+/* Version: #29 */
