@@ -1,9 +1,10 @@
 /* Version: #43 */
 // Filnavn: posts/post1.js
 
-function definePost1() {
-    const POST_ID = 1;
+const POST_ID = 1; // DEFINERT GLOBALT INNENFOR DENNE FILENS SKOP
 
+function definePost1() {
+    // POST_ID er nå tilgjengelig her
     const postData = {
         id: POST_ID,
         name: "Bassengparken Minigolf",
@@ -11,7 +12,7 @@ function definePost1() {
         lng: 10.667771549607588,
         type: "manned_minigolf", 
         teacherPassword: "GOLFMESTER", 
-        maxPlayers: 6, // Definerer maks spillere for denne posten
+        maxPlayers: 6,
         minScorePerPlayer: 3, 
         instructionsManned: "Lærer: Tast inn passord for å starte minigolfoppgaven.",
         instructionsTask: "Spill 3 hull minigolf. Fyll inn totalt antall slag per spiller nedenfor. La felt stå tomt hvis færre enn 6 spillere.",
@@ -19,7 +20,6 @@ function definePost1() {
         
         initUI: function(pageElement, teamData) {
             if (!pageElement) {
-                // Bruk global logToMobile hvis den er definert, ellers console.error
                 const logFunc = window.logToMobile || console.error;
                 logFunc(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
                 return;
@@ -32,7 +32,6 @@ function definePost1() {
             const minigolfFormSection = pageElement.querySelector('.minigolf-form-section');
             const minigolfProceedButton = pageElement.querySelector('#minigolf-proceed-btn-post1');
 
-            // Skjul alle seksjoner som default
             if(postInfoSection) postInfoSection.style.display = 'none';
             if(teacherPasswordSection) teacherPasswordSection.style.display = 'none';
             if(minigolfFormSection) minigolfFormSection.style.display = 'none';
@@ -73,7 +72,7 @@ function definePost1() {
                 if (teamData.mannedPostTeacherVerified[`post${POST_ID}`]) { 
                     if (minigolfFormSection) {
                         minigolfFormSection.style.display = 'block';
-                        for (let i = 1; i <= (this.maxPlayers || 6); i++) { // Bruk this.maxPlayers
+                        for (let i = 1; i <= (this.maxPlayers || 6); i++) {
                             const scoreInput = pageElement.querySelector(`#player-${i}-score-post${POST_ID}`);
                             if (scoreInput) { scoreInput.value = ''; scoreInput.disabled = false;}
                         }
@@ -85,26 +84,21 @@ function definePost1() {
                     }
                 } else if (teacherPasswordSection) { teacherPasswordSection.style.display = 'block'; }
             } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
-        } // Avslutter initUI
-    }; // Avslutter postData objektet
-    return postData; 
-} // Avslutter definePost1 funksjonen
-
-// Registrer posten hos kjerneapplikasjonen
-if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-    window.CoreApp.registerPost(definePost1());
-} else {
-    // Hvis CoreApp ikke er klar enda (burde ikke skje med ny logikk i core.js), vent på 'coreAppReady'
-    document.addEventListener('coreAppReady', function onCoreAppReadyForPost1() {
-        if (window.logToMobile) logToMobile(`Post ${POST_ID}: coreAppReady event mottatt, registrerer post.`, "debug");
-        else console.debug(`Post ${POST_ID}: coreAppReady event mottatt, registrerer post.`);
-        if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-            window.CoreApp.registerPost(definePost1());
-        } else {
-             if (window.logToMobile) logToMobile(`Post ${POST_ID}: CoreApp fortsatt ikke funnet etter coreAppReady.`, "error");
-             else console.error(`Post ${POST_ID}: CoreApp fortsatt ikke funnet etter coreAppReady.`);
         }
-        document.removeEventListener('coreAppReady', onCoreAppReadyForPost1); 
-    }, { once: true });
-}
+    };
+    // Returnerer postData slik at core.js kan kalle definePost1() og få dette objektet.
+    // Selve registreringen skjer nå i core.js etter at dette scriptet er lastet.
+    // window.definePost1 = definePost1; // Gjør funksjonen globalt tilgjengelig for core.js
+    // Bedre: La core.js kalle definePost1 hvis den er definert.
+
+    // For å sikre at CoreApp er klar:
+    if (window.CoreApp && window.CoreApp.isReady) {
+        CoreApp.registerPost(definePost1());
+    } else {
+        document.addEventListener('coreAppReady', function onCoreAppReady() {
+            CoreApp.registerPost(definePost1());
+            document.removeEventListener('coreAppReady', onCoreAppReady); // Rydd opp
+        }, { once: true });
+    }
+})();
 /* Version: #43 */
