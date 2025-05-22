@@ -1,7 +1,7 @@
 /* Version: #42 */
 // Filnavn: posts/post1.js
 
-function definePost1() { // Endret til en navngitt funksjon
+function definePost1() { 
     const POST_ID = 1;
 
     const postData = {
@@ -18,12 +18,13 @@ function definePost1() { // Endret til en navngitt funksjon
         pointsScale: { 8: 10, 9: 9, 10: 8, 11: 7, 12: 6, 13: 5, 14: 4, 15: 3, 16: 2, Infinity: 1 },
         
         initUI: function(pageElement, teamData) {
-            // ... (initUI logikk som i v41, men bruk logToMobile direkte)
             if (!pageElement) {
-                logToMobile(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
+                if (window.logToMobile) logToMobile(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
+                else console.error(`Post ${POST_ID}: initUI kalt uten pageElement.`);
                 return;
             }
-            logToMobile(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
+            const currentLog = window.logToMobile || console.debug; // Bruk global logToMobile hvis den finnes
+            currentLog(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
             
             const postInfoSection = pageElement.querySelector('.post-info-section'); 
             const teacherPasswordSection = pageElement.querySelector('.teacher-password-section');
@@ -83,9 +84,22 @@ function definePost1() { // Endret til en navngitt funksjon
                 } else if (teacherPasswordSection) { teacherPasswordSection.style.display = 'block'; }
             } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
         }
-        // Ingen handleSubmit her lenger, den logikken flyttes til core.js's event delegering
-        // som kaller de globale handleMinigolfSubmit etc. basert på postData.type
     };
-    return postData; // Returner postData objektet
-}
+    
+    // Registrer posten hos kjerneapplikasjonen NÅR CoreApp er klar.
+    // Siden CoreApp.setReady() og coreAppReady-eventet nå sendes ETTER at alle post-scripts er lastet,
+    // kan vi trygt anta at CoreApp er tilgjengelig her.
+    if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
+        window.CoreApp.registerPost(definePost1()); // Kall definePost1 for å få postData
+    } else {
+        // Fallback hvis CoreApp mot formodning ikke er klar (bør ikke skje med ny logikk i core.js)
+        console.error(`Post ${POST_ID}: Kritisk feil - CoreApp er ikke definert når post1.js (v42) kjører!`);
+        document.addEventListener('coreAppReady', function onCoreAppReadyForPost1() {
+             if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
+                window.CoreApp.registerPost(definePost1());
+             }
+            document.removeEventListener('coreAppReady', onCoreAppReadyForPost1);
+        }, { once: true });
+    }
+})();
 /* Version: #42 */
