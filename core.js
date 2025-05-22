@@ -1,4 +1,4 @@
-/* Version: #38 */
+/* Version: #39 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -28,7 +28,7 @@ const CoreApp = {
             return;
         }
         this.registeredPostsData[postData.id] = postData;
-        logToMobile(`Post ${postData.id} (${postData.name || 'Ukjent Navn'}) registrert.`, "info");
+        logToMobile(`Post ${postData.id} (${postData.name || 'Ukjent Navn'}) registrert. Antall registrerte poster: ${Object.keys(this.registeredPostsData).length}`, "info");
     },
 
     getPostData: function(postId) {
@@ -62,8 +62,8 @@ const CoreApp = {
     },
     setReady: function() { 
         this.isReady = true;
-        logToMobile("CoreApp er nå satt til klar.", "info");
-        // Eventet 'coreAppReady' sendes nå fra DOMContentLoaded etter at CoreApp.setReady() er kalt
+        document.dispatchEvent(new Event('coreAppReady')); // Send event når CoreApp er klar
+        logToMobile("CoreApp er nå satt til klar og 'coreAppReady' event er sendt.", "info");
     }
 };
 
@@ -567,8 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('requestProceedToNext', window.proceedToNextPostOrFinishGlobal); 
     
     // === INITALISERING VED LASTING AV SIDE ===
-    CoreApp.setReady(); 
-
     const postScriptsToLoad = [];
     for (let i = 1; i <= 10; i++) { 
         postScriptsToLoad.push(`posts/post${i}.js`);
@@ -587,6 +585,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const successfullyLoaded = results.filter(res => res).length;
         logToMobile(`${successfullyLoaded} av ${postScriptsToLoad.length} post-spesifikke scripts lastet OK. Initialiserer app-tilstand...`, "info");
         
+        CoreApp.setReady(); // VIKTIG: Signaliser at CoreApp er klar ETTER at post-scripts er forsøkt lastet
+
         if (DEV_MODE_NO_GEOFENCE) { if (geofenceFeedbackElement) { geofenceFeedbackElement.textContent = "DEV MODE: Geofence deaktivert."; geofenceFeedbackElement.className = 'geofence-info dev-mode'; geofenceFeedbackElement.style.display = 'block'; } }
         if (loadState()) {
             logToMobile("Tilstand lastet fra localStorage.", "info");
