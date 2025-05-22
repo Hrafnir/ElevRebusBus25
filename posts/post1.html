@@ -1,0 +1,42 @@
+<!-- Filnavn: posts/post1.html -->
+<!-- Version: #36 -->
+<div id="post-1-page"> <!-- Ingen 'page' eller 'visible' klasse her, det styres av core.js/CSS for #post-content-container -->
+    <h2 class="post-title-placeholder">Post 1: Tittel</h2>
+    
+    <div class="post-info-section" style="display: block;"> <!-- Starter synlig, skjules av JS når posten nås -->
+        <p class="post-info-placeholder">Gå til posten for instruksjoner.</p>
+    </div>
+
+    <div class="teacher-password-section" style="display: none;">
+        <h3 class="manned-post-title-placeholder">Bemannet Post: Minigolf</h3>
+        <p class="manned-post-instruction-placeholder">Lærer: Tast inn passord for å starte oppgaven.</p>
+        <input type="password" class="teacher-password-input" id="teacher-password-input-post1" placeholder="Lærerpassord">
+        <button class="submit-teacher-password-btn" data-post="1">Lås opp Oppgave</button>
+        <div class="feedback feedback-teacher-password" id="feedback-teacher-password-post1"></div>
+    </div>
+
+    <div class="minigolf-form-section" style="display: none;">
+        <h3>Minigolf Challenge!</h3>
+        <p>Spill 3 hull minigolf. Læreren noterer antall slag for hver spiller på laget (inntil 6 spillere).</p>
+        <p>Fyll inn totalt antall slag per spiller nedenfor. La felt stå tomt hvis færre enn 6 spillere.</p>
+        <div id="minigolf-player-inputs-post1" style="text-align: left; max-width: 300px; margin: 15px auto;">
+            <label for="player-1-score-post1">Spiller 1 Totalt Antall Slag:</label>
+            <input type="number" id="player-1-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
+            <label for="player-2-score-post1">Spiller 2 Totalt Antall Slag:</label>
+            <input type="number" id="player-2-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
+            <label for="player-3-score-post1">Spiller 3 Totalt Antall Slag:</label>
+            <input type="number" id="player-3-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
+            <label for="player-4-score-post1">Spiller 4 Totalt Antall Slag:</label>
+            <input type="number" id="player-4-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
+            <label for="player-5-score-post1">Spiller 5 Totalt Antall Slag:</label>
+            <input type="number" id="player-5-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
+            <label for="player-6-score-post1">Spiller 6 Totalt Antall Slag:</label>
+            <input type="number" id="player-6-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
+        </div>
+        <button id="submit-minigolf-post1">Registrer Golfresultater</button>
+        <div class="feedback" id="minigolf-results-feedback"></div>
+        <button id="minigolf-proceed-btn-post1" style="display: none; margin-top: 10px; background-color: #28a745;">Gå Videre til Neste Post</button> 
+    </div>
+    <button class="dev-reset-button">Reset Spill</button>
+</div>
+<!-- Version: #36 -->
