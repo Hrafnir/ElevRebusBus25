@@ -1,0 +1,24 @@
+<!-- Filnavn: posts/intro.html -->
+<!-- Version: #37 -->
+<div id="intro-page"> <!-- IDen er viktig for showRebusPage og resetPageUI -->
+    <h1>Skolerebus!</h1>
+    <p>Velkommen! Skriv inn lagkoden deres for å starte spillet.</p>
+    <!-- Disse elementene er utenfor postContentContainer, men logikken for dem er i core.js 
+         og forventer at de er tilgjengelige når intro-siden vises.
+         Det er bedre om disse er i hoved-index.html og bare vises/skjules.
+         Men for å følge mønsteret med å laste alt innhold, legger vi dem her.
+         Dette betyr at core.js må hente dem på nytt hver gang intro.html lastes.
+         Dette er ikke optimalt. Se kommentar i core.js for bedre løsning.
+    -->
+    <!-- FORBEDRING: Flytt input/knapp/feedback for teamkode til hoved-index.html og vis/skjul den,
+         i stedet for å laste den på nytt hver gang. Foreløpig lar vi den være her for konsistens
+         med "alt innhold lastes dynamisk"-modellen. -->
+
+    <input type="text" id="team-code-input-dynamic" placeholder="Lagkode (f.eks. LAG1)">
+    <button id="start-with-team-code-button-dynamic">Start Spillet!</button>
+    <div class="feedback" id="team-code-feedback-dynamic"></div>
+
+    <!-- Den globale dev-reset-knappen kan være her også, eller bare i bunnen av index.html -->
+    <button class="dev-reset-button">Reset Spill (Globalt)</button> 
+</div>
+<!-- Version: #37 -->
