@@ -1,10 +1,9 @@
-/* Version: #43 */
+/* Version: #44 */
 // Filnavn: posts/post1.js
 
-const POST_ID = 1; // DEFINERT GLOBALT INNENFOR DENNE FILENS SKOP
+const POST_ID = 1; 
 
 function definePost1() {
-    // POST_ID er nå tilgjengelig her
     const postData = {
         id: POST_ID,
         name: "Bassengparken Minigolf",
@@ -32,11 +31,13 @@ function definePost1() {
             const minigolfFormSection = pageElement.querySelector('.minigolf-form-section');
             const minigolfProceedButton = pageElement.querySelector('#minigolf-proceed-btn-post1');
 
+            // Skjul alle relevante seksjoner som default
             if(postInfoSection) postInfoSection.style.display = 'none';
             if(teacherPasswordSection) teacherPasswordSection.style.display = 'none';
             if(minigolfFormSection) minigolfFormSection.style.display = 'none';
             if(minigolfProceedButton) minigolfProceedButton.style.display = 'none';
 
+            // Nullstill lærerpassord-delen
             const teacherPassInput = pageElement.querySelector(`#teacher-password-input-post${POST_ID}`);
             if (teacherPassInput) { teacherPassInput.value = ''; teacherPassInput.disabled = false; }
             const teacherPassButton = pageElement.querySelector(`.submit-teacher-password-btn[data-post="${POST_ID}"]`);
@@ -44,15 +45,17 @@ function definePost1() {
             const teacherPassFeedback = pageElement.querySelector(`#feedback-teacher-password-post${POST_ID}`);
             if (teacherPassFeedback) { teacherPassFeedback.textContent = ''; teacherPassFeedback.className = 'feedback feedback-teacher-password'; }
 
+            // Sett instruksjoner
             const mannedInstrElement = pageElement.querySelector('.manned-post-instruction-placeholder');
             if (mannedInstrElement && this.instructionsManned) {
                  mannedInstrElement.textContent = this.instructionsManned;
             }
-            const taskInstrElement = pageElement.querySelector('#minigolf-instructions-post1');
+            const taskInstrElement = pageElement.querySelector('#minigolf-instructions-post1'); // Antar denne IDen er i post1.html
             if (taskInstrElement && this.instructionsTask) {
                 taskInstrElement.textContent = this.instructionsTask;
             }
 
+            // Vis seksjoner basert på tilstand
             if (teamData.completedGlobalPosts[`post${POST_ID}`]) { 
                 if (minigolfFormSection) {
                     minigolfFormSection.style.display = 'block';
@@ -84,21 +87,26 @@ function definePost1() {
                     }
                 } else if (teacherPasswordSection) { teacherPasswordSection.style.display = 'block'; }
             } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
-        }
-    };
-    // Returnerer postData slik at core.js kan kalle definePost1() og få dette objektet.
-    // Selve registreringen skjer nå i core.js etter at dette scriptet er lastet.
-    // window.definePost1 = definePost1; // Gjør funksjonen globalt tilgjengelig for core.js
-    // Bedre: La core.js kalle definePost1 hvis den er definert.
+        } // Avslutter initUI
+    }; // Avslutter postData objektet
+    return postData; 
+} // Avslutter definePost1 funksjonen
 
-    // For å sikre at CoreApp er klar:
-    if (window.CoreApp && window.CoreApp.isReady) {
-        CoreApp.registerPost(definePost1());
-    } else {
-        document.addEventListener('coreAppReady', function onCoreAppReady() {
-            CoreApp.registerPost(definePost1());
-            document.removeEventListener('coreAppReady', onCoreAppReady); // Rydd opp
-        }, { once: true });
-    }
-})();
+// Registrer posten hos kjerneapplikasjonen
+if (window.CoreApp && window.CoreApp.isReady) { // Sjekk om CoreApp er klar før registrering
+    window.CoreApp.registerPost(definePost1());
+} else {
+    // Hvis CoreApp ikke er klar enda, lytt etter eventet
+    document.addEventListener('coreAppReady', function onCoreAppReadyForPost1() {
+        const currentLog = window.logToMobile || console.debug;
+        currentLog(`Post ${POST_ID}: coreAppReady event mottatt, registrerer post.`, "debug");
+        if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
+            window.CoreApp.registerPost(definePost1());
+        } else {
+             const errorLog = window.logToMobile || console.error;
+             errorLog(`Post ${POST_ID}: CoreApp fortsatt ikke funnet etter coreAppReady.`, "error");
+        }
+        document.removeEventListener('coreAppReady', onCoreAppReadyForPost1); 
+    }, { once: true });
+}
 /* Version: #43 */
