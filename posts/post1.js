@@ -1,7 +1,7 @@
-/* Version: #42 */
+/* Version: #43 */
 // Filnavn: posts/post1.js
 
-function definePost1() { 
+function definePost1() {
     const POST_ID = 1;
 
     const postData = {
@@ -11,7 +11,7 @@ function definePost1() {
         lng: 10.667771549607588,
         type: "manned_minigolf", 
         teacherPassword: "GOLFMESTER", 
-        maxPlayers: 6,
+        maxPlayers: 6, // Definerer maks spillere for denne posten
         minScorePerPlayer: 3, 
         instructionsManned: "Lærer: Tast inn passord for å starte minigolfoppgaven.",
         instructionsTask: "Spill 3 hull minigolf. Fyll inn totalt antall slag per spiller nedenfor. La felt stå tomt hvis færre enn 6 spillere.",
@@ -19,11 +19,12 @@ function definePost1() {
         
         initUI: function(pageElement, teamData) {
             if (!pageElement) {
-                if (window.logToMobile) logToMobile(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
-                else console.error(`Post ${POST_ID}: initUI kalt uten pageElement.`);
+                // Bruk global logToMobile hvis den er definert, ellers console.error
+                const logFunc = window.logToMobile || console.error;
+                logFunc(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
                 return;
             }
-            const currentLog = window.logToMobile || console.debug; // Bruk global logToMobile hvis den finnes
+            const currentLog = window.logToMobile || console.debug;
             currentLog(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
             
             const postInfoSection = pageElement.querySelector('.post-info-section'); 
@@ -31,6 +32,7 @@ function definePost1() {
             const minigolfFormSection = pageElement.querySelector('.minigolf-form-section');
             const minigolfProceedButton = pageElement.querySelector('#minigolf-proceed-btn-post1');
 
+            // Skjul alle seksjoner som default
             if(postInfoSection) postInfoSection.style.display = 'none';
             if(teacherPasswordSection) teacherPasswordSection.style.display = 'none';
             if(minigolfFormSection) minigolfFormSection.style.display = 'none';
@@ -71,7 +73,7 @@ function definePost1() {
                 if (teamData.mannedPostTeacherVerified[`post${POST_ID}`]) { 
                     if (minigolfFormSection) {
                         minigolfFormSection.style.display = 'block';
-                        for (let i = 1; i <= (this.maxPlayers || 6); i++) {
+                        for (let i = 1; i <= (this.maxPlayers || 6); i++) { // Bruk this.maxPlayers
                             const scoreInput = pageElement.querySelector(`#player-${i}-score-post${POST_ID}`);
                             if (scoreInput) { scoreInput.value = ''; scoreInput.disabled = false;}
                         }
@@ -83,23 +85,26 @@ function definePost1() {
                     }
                 } else if (teacherPasswordSection) { teacherPasswordSection.style.display = 'block'; }
             } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
+        } // Avslutter initUI
+    }; // Avslutter postData objektet
+    return postData; 
+} // Avslutter definePost1 funksjonen
+
+// Registrer posten hos kjerneapplikasjonen
+if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
+    window.CoreApp.registerPost(definePost1());
+} else {
+    // Hvis CoreApp ikke er klar enda (burde ikke skje med ny logikk i core.js), vent på 'coreAppReady'
+    document.addEventListener('coreAppReady', function onCoreAppReadyForPost1() {
+        if (window.logToMobile) logToMobile(`Post ${POST_ID}: coreAppReady event mottatt, registrerer post.`, "debug");
+        else console.debug(`Post ${POST_ID}: coreAppReady event mottatt, registrerer post.`);
+        if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
+            window.CoreApp.registerPost(definePost1());
+        } else {
+             if (window.logToMobile) logToMobile(`Post ${POST_ID}: CoreApp fortsatt ikke funnet etter coreAppReady.`, "error");
+             else console.error(`Post ${POST_ID}: CoreApp fortsatt ikke funnet etter coreAppReady.`);
         }
-    };
-    
-    // Registrer posten hos kjerneapplikasjonen NÅR CoreApp er klar.
-    // Siden CoreApp.setReady() og coreAppReady-eventet nå sendes ETTER at alle post-scripts er lastet,
-    // kan vi trygt anta at CoreApp er tilgjengelig her.
-    if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-        window.CoreApp.registerPost(definePost1()); // Kall definePost1 for å få postData
-    } else {
-        // Fallback hvis CoreApp mot formodning ikke er klar (bør ikke skje med ny logikk i core.js)
-        console.error(`Post ${POST_ID}: Kritisk feil - CoreApp er ikke definert når post1.js (v42) kjører!`);
-        document.addEventListener('coreAppReady', function onCoreAppReadyForPost1() {
-             if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-                window.CoreApp.registerPost(definePost1());
-             }
-            document.removeEventListener('coreAppReady', onCoreAppReadyForPost1);
-        }, { once: true });
-    }
-})();
-/* Version: #42 */
+        document.removeEventListener('coreAppReady', onCoreAppReadyForPost1); 
+    }, { once: true });
+}
+/* Version: #43 */
