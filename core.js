@@ -60,19 +60,19 @@ const CoreApp = {
             logToMobile(`Post ${postId} var allerede markert som fullført.`, "info");
         }
     },
-    setReady: function() {
+    setReady: function() { 
         this.isReady = true;
-        document.dispatchEvent(new Event('coreAppReady'));
-        logToMobile("CoreApp er nå klar og 'coreAppReady' event er sendt.", "info");
+        logToMobile("CoreApp er nå satt til klar.", "info");
+        // Eventet 'coreAppReady' sendes nå fra DOMContentLoaded etter at CoreApp.setReady() er kalt
     }
 };
 
 // === GLOBAL KONFIGURASJON ===
 const TOTAL_POSTS = 10; 
 const GEOFENCE_RADIUS = 25; 
-const DEV_MODE_NO_GEOFENCE = true; // Satt til true for enklere testing
+const DEV_MODE_NO_GEOFENCE = true; 
 const FINISH_UNLOCK_CODE = "FASTLAND24"; 
-const GEO_RUN_POST_ID = 7; // Denne forblir global for enkel referanse
+const GEO_RUN_POST_ID = 7; 
 
 const START_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Start: Fastland", name: "Start: Fastland" };
 const FINISH_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Mål: Fastland", name: "Mål: Fastland" };
@@ -197,7 +197,7 @@ function handlePositionUpdate(position) {
             if (!currentTeamData.arrivalSoundPlayed[`post${postGlobalId}`]) { 
                 const thisPostData = CoreApp.getPostData(postGlobalId);
                 if (thisPostData && thisPostData.type === 'georun') { 
-                    const runStateForPips = currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]; // Bruk alltid post 7 her
+                    const runStateForPips = currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]; 
                     if (runStateForPips && !runStateForPips.preRunPipTimerId && runStateForPips.preCountdownPipsDone < (thisPostData.preCountdownPips || GEO_RUN_PRE_COUNTDOWN_PIPS) ) {
                         document.dispatchEvent(new CustomEvent('startGeoRunPrePipsTrigger'));
                     }
@@ -286,12 +286,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (postData.type === 'manned_minigolf' || postData.type === 'manned_pyramid') {
             if (mannedPostTitleElement) mannedPostTitleElement.textContent = `Bemannet Post: ${postName}`;
-            if (mannedPostInstructionElement && postData.instructionsManned) { // Bruk instructionsManned
+            if (mannedPostInstructionElement && postData.instructionsManned) { 
                 mannedPostInstructionElement.textContent = postData.instructionsManned;
             }
         } else if (postData.type === 'georun') {
-            // Geo-løp instruksjoner er primært i sin egen HTML, men kan settes her om nødvendig
-            const geoRunSetupInstructions = pageElement.querySelector('.geo-run-setup-section p:not(:first-child)'); // Finner p-taggen med instruksjoner
+            const geoRunSetupInstructions = pageElement.querySelector('.geo-run-setup-section p:not(:first-child)'); 
             if (geoRunSetupInstructions && postData.instructionsTask) {
                 geoRunSetupInstructions.textContent = postData.instructionsTask;
             }
@@ -328,13 +327,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 let startTimeForStage = (i === 0) ? currentTeamData.startTime : currentTeamData.taskCompletionTimes[`post${currentTeamData.postSequence[i-1]}`];
                 
                 if (currentTeamData.taskCompletionTimes['post' + postGlobalId]) {
-                    if (startTimeForStage) { // Sørg for at forrige post var fullført
+                    if (startTimeForStage) { 
                         const stageTime = currentTeamData.taskCompletionTimes['post' + postGlobalId] - startTimeForStage;
                         const li = document.createElement('li');
                         const fromPoint = (i === 0) ? "Start" : CoreApp.getPostData(currentTeamData.postSequence[i-1]).name;
                         li.textContent = `${fromPoint} til ${postName}: ${formatTimeFromMs(stageTime)}`;
                         stageTimesList.appendChild(li);
-                    } else if (i === 0) { // For første post hvis startTimeForStage er null (bør ikke skje)
+                    } else if (i === 0) { 
                         const li = document.createElement('li');
                         li.textContent = `Start til ${postName}: Tid ukjent`;
                         stageTimesList.appendChild(li);
@@ -394,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updatePageText(loadedPageElement, teamPostNum, globalPostNum);
                     
                     const postData = CoreApp.getPostData(globalPostNum);
-                    if (postData && postData.type === 'georun' && currentTeamData.geoRunState && !currentTeamData.geoRunState[`post${globalPostNum}`].active && !currentTeamData.geoRunState[`post${globalPostNum}`].finished) {
+                    if (postData && postData.type === 'georun' && currentTeamData.geoRunState && currentTeamData.geoRunState[`post${globalPostNum}`] && !currentTeamData.geoRunState[`post${globalPostNum}`].active && !currentTeamData.geoRunState[`post${globalPostNum}`].finished) {
                         updateMapMarker(null, false, postData.geoRunPoint1 || GEO_RUN_POINT1); 
                     }
                 }
@@ -431,6 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (postData && typeof postData.initUI === 'function') {
                     logToMobile(`Kaller initUI for post ${postNum}`, "debug");
                     postData.initUI(loadedPageElement, currentTeamData);
+                } else {
+                    logToMobile(`Ingen initUI funksjon funnet eller postData mangler for post ${postNum}`, "debug");
                 }
             }
         } catch (error) {
@@ -476,17 +477,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (target.id === 'start-with-team-code-button-dynamic' && !target.disabled) {
                 const dynamicTeamCodeInput = postContentContainer.querySelector('#team-code-input-dynamic');
-                if (dynamicTeamCodeInput) initializeTeam(dynamicTeamCodeInput.value);
+                if (dynamicTeamCodeInput) {
+                    logToMobile("Startknapp (dynamisk) klikket. Kaller initializeTeam.", "debug");
+                    initializeTeam(dynamicTeamCodeInput.value);
+                } else {
+                    logToMobile("FEIL: Fant ikke team-code-input-dynamic ved startknapp-klikk.", "error");
+                }
             } else if (target.classList.contains('check-task-btn') && !target.disabled) { 
                 const postNum = parseInt(target.getAttribute('data-post'));
                 const postData = CoreApp.getPostData(postNum);
                 if (postData && postData.type === 'standard') { 
-                    const taskInput = postContentContainer.querySelector(`#post-${postNum}-task-input`); // Antar ID-format
+                    const taskInput = postContentContainer.querySelector(`#post-${postNum}-task-input`); 
                     if(taskInput) handleTaskCheck(postNum, taskInput.value.trim().toUpperCase()); 
                 }
             } else if (target.classList.contains('submit-teacher-password-btn') && !target.disabled) { 
                 const postNum = parseInt(target.getAttribute('data-post'));
-                const passInput = postContentContainer.querySelector(`#teacher-password-input-post${postNum}`); // Antar ID-format
+                const passInput = postContentContainer.querySelector(`#teacher-password-input-post${postNum}`);
                 if(passInput) handleTeacherPassword(postNum, passInput.value.trim()); 
             } else if (target.id === 'submit-minigolf-post1' && !target.disabled) { 
                 const postData = CoreApp.getPostData(1);
@@ -523,7 +529,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (target.id === 'team-code-input-dynamic' && !target.disabled) {
                     event.preventDefault();
                     const dynamicStartButton = postContentContainer.querySelector('#start-with-team-code-button-dynamic');
-                    if (dynamicStartButton && !dynamicStartButton.disabled) dynamicStartButton.click();
+                    if (dynamicStartButton && !dynamicStartButton.disabled) {
+                        logToMobile("Enter i team-code-input-dynamic, klikker startknapp.", "debug");
+                        dynamicStartButton.click();
+                    }
                 } else if (target.classList.contains('post-task-input') && !target.disabled) { 
                     const postWrapperDiv = target.closest('div[id$="-content-wrapper"]'); 
                     if (postWrapperDiv) { 
@@ -561,19 +570,16 @@ document.addEventListener('DOMContentLoaded', () => {
     CoreApp.setReady(); 
 
     const postScriptsToLoad = [];
-    // Anta at vi har en måte å vite hvor mange poster som faktisk har egne JS-filer
-    // For nå, prøv å laste for alle 10.
     for (let i = 1; i <= 10; i++) { 
         postScriptsToLoad.push(`posts/post${i}.js`);
     }
-    // Du kan også legge til 'posts/intro.js' og 'posts/finale.js' her hvis de får egen logikk.
     
     Promise.all(postScriptsToLoad.map(scriptPath => {
         return new Promise((resolve) => { 
             const script = document.createElement('script');
             script.src = scriptPath;
-            script.onload = () => { logToMobile(`${scriptPath} lastet og kjørt.`, "debug"); resolve(true); }; // Resolve med true for suksess
-            script.onerror = () => { logToMobile(`FEIL ved lasting av ${scriptPath}.`, "error"); resolve(false); }; // Resolve med false for feil
+            script.onload = () => { logToMobile(`${scriptPath} lastet og kjørt.`, "debug"); resolve(true); }; 
+            script.onerror = () => { logToMobile(`FEIL ved lasting av ${scriptPath}.`, "error"); resolve(false); }; 
             document.head.appendChild(script);
         });
     }))
@@ -587,9 +593,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showTabContent('rebus');
             if (currentTeamData.endTime) { showRebusPage('finale'); if (map) updateMapMarker(null, true); }
             else if (currentTeamData.completedPostsCount >= Object.keys(CoreApp.registeredPostsData).length) { showRebusPage('finale'); if (map) updateMapMarker(null, true); if(map && !currentTeamData.endTime) startContinuousUserPositionUpdate(); }
-            else if (currentTeamData.completedPostsCount < Object.keys(CoreApp.registeredPostsData).length && currentTeamData.postSequence.length > 0) { 
+            else if (currentTeamData.completedPostsCount < Object.keys(CoreApp.registeredPostsData).length && currentTeamData.postSequence.length > 0 && Object.keys(CoreApp.registeredPostsData).length > 0) { 
                 const currentExpectedPostId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
-                 if (CoreApp.getPostData(currentExpectedPostId)) { // Sjekk om posten er registrert
+                 if (CoreApp.getPostData(currentExpectedPostId)) { 
                     showRebusPage(`post-${currentExpectedPostId}`); 
                     if(map && !currentTeamData.endTime) startContinuousUserPositionUpdate(); 
                  } else {
