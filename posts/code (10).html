@@ -1,0 +1,30 @@
+<!-- Filnavn: posts/post7.html -->
+<!-- Version: #26 -->
+<div id="post-7-content-wrapper"> 
+    <h2 class="post-title-placeholder">Post 7: Geo-Løp</h2>
+    <div class="post-info-section" style="display: block;"> 
+        <p class="post-info-placeholder">Bruk kartet for å finne startpunktet for Geo-løpet.</p>
+    </div>
+
+    <div class="geo-run-setup-section" style="display: none;">
+        <h3>Klar for Geo-Løp!</h3>
+        <p><span class="geo-run-pre-pip-info"></span> Løpet starter om <span class="geo-run-countdown">10</span> sekunder!</p>
+        <p id="georun-instructions-post7">[Geo-løp instruksjoner laster...]</p>
+    </div>
+
+    <div class="geo-run-active-section" style="display: none;">
+        <h3>Geo-Løp Pågår!</h3>
+        <p>Runde (kryssing): <span class="geo-run-current-lap">1</span> av X.</p> <!-- X fylles av JS -->
+        <p>Løp til: <strong class="geo-run-next-target">Vendepunkt...</strong>!</p>
+    </div>
+
+    <div class="geo-run-results-section" style="display: none;">
+        <h3>Geo-Løp Fullført!</h3>
+        <p>Din totale tid: <strong class="geo-run-total-time">00:00</strong></p>
+        <p>Poeng tildelt: <strong class="geo-run-points-awarded">0</strong></p>
+        <button id="geo-run-proceed-btn-post7" style="display: none; margin-top: 10px; background-color: #28a745;">Gå Videre til Neste Post</button>
+    </div>
+    <button class="dev-reset-button">Reset Spill</button>
+</div>
+<script src="posts/post7.js"></script>
+<!-- Version: #26 -->
