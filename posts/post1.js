@@ -1,4 +1,4 @@
-/* Version: #39 */
+/* Version: #40 */
 // Filnavn: posts/post1.js
 
 (function() {
@@ -18,8 +18,14 @@
         pointsScale: { 8: 10, 9: 9, 10: 8, 11: 7, 12: 6, 13: 5, 14: 4, 15: 3, 16: 2, Infinity: 1 },
         
         initUI: function(pageElement, teamData) {
-            if (!pageElement) return;
-            logToMobile(`Post ${POST_ID}: initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
+            // Sikrer at vi har pageElement før vi fortsetter
+            if (!pageElement) {
+                if (window.logToMobile) logToMobile(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
+                else console.error(`Post ${POST_ID}: initUI kalt uten pageElement.`);
+                return;
+            }
+            if (window.logToMobile) logToMobile(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
+            else console.debug(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`);
             
             const postInfoSection = pageElement.querySelector('.post-info-section'); 
             const teacherPasswordSection = pageElement.querySelector('.teacher-password-section');
@@ -66,7 +72,7 @@
                 if (teamData.mannedPostTeacherVerified[`post${POST_ID}`]) { 
                     if (minigolfFormSection) {
                         minigolfFormSection.style.display = 'block';
-                        for (let i = 1; i <= (this.maxPlayers || MAX_PLAYERS_PER_TEAM); i++) {
+                        for (let i = 1; i <= (this.maxPlayers || 6); i++) { // Fallback til 6
                             const scoreInput = pageElement.querySelector(`#player-${i}-score-post${POST_ID}`);
                             if (scoreInput) { scoreInput.value = ''; scoreInput.disabled = false;}
                         }
@@ -78,32 +84,30 @@
                     }
                 } else if (teacherPasswordSection) { teacherPasswordSection.style.display = 'block'; }
             } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
-        },
-        // Funksjonen som kalles når læreren har godkjent og minigolf-data skal sendes inn.
-        // Denne vil bli kalt fra den delegerte event-listeneren i core.js
-        // basert på knappens ID ('submit-minigolf-post1').
-        // Vi trenger ikke en egen handleSubmit her hvis logikken er den samme som gamle handleMinigolfSubmit.
-        // core.js vil kalle den globale handleMinigolfSubmit(POST_ID)
+        }
     };
 
-    // Registrer posten hos kjerneapplikasjonen
-    function tryRegister() {
-        if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
+    function attemptRegistration() {
+        if (window.CoreApp && window.CoreApp.isReady && typeof window.CoreApp.registerPost === 'function') {
             window.CoreApp.registerPost(postData);
         } else {
-            logToMobile(`Post ${POST_ID}: Venter på CoreApp...`, "debug");
-            setTimeout(tryRegister, 200); // Prøv igjen om litt
+            if(window.logToMobile) logToMobile(`Post ${POST_ID}: CoreApp ikke klar, venter på coreAppReady...`, "debug");
+            else console.debug(`Post ${POST_ID}: CoreApp ikke klar, venter på coreAppReady...`);
+            document.addEventListener('coreAppReady', function onCoreAppReady() {
+                if(window.logToMobile) logToMobile(`Post ${POST_ID}: coreAppReady event mottatt, registrerer post.`, "debug");
+                else console.debug(`Post ${POST_ID}: coreAppReady event mottatt, registrerer post.`);
+                window.CoreApp.registerPost(postData);
+                document.removeEventListener('coreAppReady', onCoreAppReady); // Rydd opp lytter
+            }, { once: true });
         }
     }
-    
-    if (document.readyState === 'loading') { // Sikrer at CoreApp er lastet før vi prøver
-        document.addEventListener('coreAppReady', tryRegister, { once: true });
-    } else if (window.CoreApp && window.CoreApp.isReady) { // Hvis CoreApp allerede er klar
-        tryRegister();
-    } else { // Fallback hvis coreAppReady allerede er sendt
-         document.addEventListener('coreAppReady', tryRegister, { once: true });
-         logToMobile(`Post ${POST_ID}: DOMContentLoaded, men CoreApp ikke klar, setter lytter for coreAppReady.`, "debug");
+
+    // Sjekk om DOM er klar, deretter om CoreApp er klar, ellers lytt etter event.
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        attemptRegistration();
+    } else {
+        document.addEventListener('DOMContentLoaded', attemptRegistration, { once: true });
     }
 
 })();
-/* Version: #39 */
+/* Version: #40 */
