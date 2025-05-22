@@ -1,13 +1,14 @@
 <!-- Filnavn: posts/intro.html -->
-<!-- Version: #39 -->
-<div id="intro-content-wrapper"> <!-- ENDRET ID for å matche core.js v36 -->
+<!-- Version: #40 -->
+<div id="intro-content-wrapper"> <!-- ID for core.js å finne dette elementet -->
     <h1>Skolerebus!</h1>
     <p>Velkommen! Skriv inn lagkoden deres for å starte spillet.</p>
     
-    <input type="text" id="team-code-input-dynamic" placeholder="Lagkode (f.eks. LAG1)">
-    <button id="start-with-team-code-button-dynamic">Start Spillet!</button>
-    <div class="feedback" id="team-code-feedback-dynamic"></div>
+    <input type="text" id="team-code-input" placeholder="Lagkode (f.eks. LAG1)">
+    <button id="start-with-team-code-button">Start Spillet!</button>
+    <div class="feedback" id="team-code-feedback"></div>
 
-    <button class="dev-reset-button">Reset Spill (Globalt)</button> 
+    <!-- Global reset knapp er flyttet til index.html for å være permanent tilgjengelig -->
 </div>
-<!-- Version: #39 -->
+<!-- Ingen <script> tag her, da intro-logikken er enkel nok for core.js -->
+<!-- Version: #40 -->
