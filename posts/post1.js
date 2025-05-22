@@ -1,7 +1,7 @@
-/* Version: #41 */
+/* Version: #42 */
 // Filnavn: posts/post1.js
 
-(function() {
+function definePost1() { // Endret til en navngitt funksjon
     const POST_ID = 1;
 
     const postData = {
@@ -18,14 +18,12 @@
         pointsScale: { 8: 10, 9: 9, 10: 8, 11: 7, 12: 6, 13: 5, 14: 4, 15: 3, 16: 2, Infinity: 1 },
         
         initUI: function(pageElement, teamData) {
+            // ... (initUI logikk som i v41, men bruk logToMobile direkte)
             if (!pageElement) {
-                if (window.logToMobile) logToMobile(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
-                else console.error(`Post ${POST_ID}: initUI kalt uten pageElement.`);
+                logToMobile(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
                 return;
             }
-            // Bruk window.logToMobile hvis tilgjengelig, ellers console.debug
-            const currentLog = window.logToMobile || console.debug;
-            currentLog(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
+            logToMobile(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
             
             const postInfoSection = pageElement.querySelector('.post-info-section'); 
             const teacherPasswordSection = pageElement.querySelector('.teacher-password-section');
@@ -85,21 +83,9 @@
                 } else if (teacherPasswordSection) { teacherPasswordSection.style.display = 'block'; }
             } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
         }
+        // Ingen handleSubmit her lenger, den logikken flyttes til core.js's event delegering
+        // som kaller de globale handleMinigolfSubmit etc. basert på postData.type
     };
-
-    // Registrer posten hos kjerneapplikasjonen
-    // Siden core.js nå laster dette scriptet og deretter kaller CoreApp.setReady(),
-    // og DERETTER fortsetter med loadState etc., bør CoreApp være definert her.
-    if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-        window.CoreApp.registerPost(postData);
-    } else {
-        // Dette er en fallback hvis noe uventet skjer med lastingsrekkefølgen.
-        // En bedre løsning er å sikre at core.js alltid er fullt lastet og CoreApp definert
-        // før post-spesifikke scripts prøver å bruke det.
-        // Den nye strukturen i core.js (v38) med Promise.all og .then(CoreApp.setReady) bør håndtere dette.
-        console.error(`Post ${POST_ID}: Kritisk feil - CoreApp er ikke definert når post1.js kjører!`);
-        // Du kan legge til en lytter som en ekstra sikkerhet, men det burde ikke være nødvendig nå.
-        // document.addEventListener('coreAppReady', () => window.CoreApp.registerPost(postData), { once: true });
-    }
-})();
-/* Version: #41 */
+    return postData; // Returner postData objektet
+}
+/* Version: #42 */
