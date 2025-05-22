@@ -1,15 +1,15 @@
 <!-- Filnavn: posts/post1.html -->
-<!-- Version: #39 -->
-<div id="post-1-content-wrapper"> <!-- ID for core.js å finne dette elementet -->
-    <h2 class="post-title-placeholder">[Post 1 Tittel]</h2> <!-- Fylles av core.js -->
+<!-- Version: #40 -->
+<div id="post-1-content-wrapper"> 
+    <h2 class="post-title-placeholder">[Post 1 Tittel Laster...]</h2> 
     
     <div class="post-info-section" style="display: block;"> 
-        <p class="post-info-placeholder">[Gå til posten...]</p> <!-- Fylles av core.js -->
+        <p class="post-info-placeholder">[Laster post-info...]</p> 
     </div>
 
     <div class="teacher-password-section" style="display: none;">
-        <h3 class="manned-post-title-placeholder">Bemannet Post: Minigolf</h3>
-        <p class="manned-post-instruction-placeholder">[Lærerinstruksjoner]</p> <!-- Kan settes fra post1.js -->
+        <h3 class="manned-post-title-placeholder">Bemannet Post</h3>
+        <p class="manned-post-instruction-placeholder">[Lærerinstruksjoner laster...]</p> 
         <input type="password" class="teacher-password-input" id="teacher-password-input-post1" placeholder="Lærerpassord">
         <button class="submit-teacher-password-btn" data-post="1">Lås opp Oppgave</button>
         <div class="feedback feedback-teacher-password" id="feedback-teacher-password-post1"></div>
@@ -17,9 +17,8 @@
 
     <div class="minigolf-form-section" style="display: none;">
         <h3>Minigolf Challenge!</h3>
-        <p id="minigolf-instructions-post1">[Minigolf Instruksjoner]</p> <!-- Kan settes fra post1.js -->
+        <p id="minigolf-instructions-post1">[Minigolf Instruksjoner laster...]</p> 
         <div id="minigolf-player-inputs-post1" style="text-align: left; max-width: 300px; margin: 15px auto;">
-            <!-- Inputfelt for spillere (opptil 6) -->
             <label for="player-1-score-post1">Spiller 1 Totalt Antall Slag:</label>
             <input type="number" id="player-1-score-post1" min="3" style="width: 60px; margin-bottom: 5px; display: block;"><br>
             <label for="player-2-score-post1">Spiller 2 Totalt Antall Slag:</label>
@@ -40,4 +39,4 @@
     <button class="dev-reset-button">Reset Spill</button>
 </div>
 <script src="posts/post1.js"></script>
-<!-- Version: #39 -->
+<!-- Version: #40 -->
