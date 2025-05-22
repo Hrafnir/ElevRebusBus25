@@ -60,11 +60,15 @@ const CoreApp = {
             logToMobile(`Post ${postId} var allerede markert som fullført.`, "info");
         }
     },
-    // setReady fjernes her, kalles etter Promise.all
+    setReady: function() { 
+        this.isReady = true;
+        document.dispatchEvent(new Event('coreAppReady')); 
+        logToMobile("CoreApp er nå satt til klar og 'coreAppReady' event er sendt.", "info");
+    }
 };
 
 // === GLOBAL KONFIGURASJON ===
-const TOTAL_POSTS = 10; // Kan potensielt fjernes hvis vi alltid stoler på lengden av registeredPostsData
+const TOTAL_POSTS = 10; 
 const GEOFENCE_RADIUS = 25; 
 const DEV_MODE_NO_GEOFENCE = true; 
 const FINISH_UNLOCK_CODE = "FASTLAND24"; 
@@ -126,7 +130,7 @@ function handlePositionUpdate(position) {
         isGeoRunActiveForCurrentPost = true; 
         logToMobile(`handlePositionUpdate: Er på Post 7 (GeoRun). RunState active: ${runState.active}, finished: ${runState.finished}, prePipsDone: ${runState.preCountdownPipsDone}`, "debug");
 
-        const geoRunPoint1Data = currentPostDataFromCore.geoRunPoint1 || GEO_RUN_POINT1; 
+        const geoRunPoint1Data = currentPostDataFromCore.geoRunPoint1 || GEO_RUN_POINT1; // Fallback hvis ikke definert på posten
         const geoRunPoint2Data = currentPostDataFromCore.geoRunPoint2 || GEO_RUN_POINT2;
         const prePipsForThisRun = currentPostDataFromCore.preCountdownPips || GEO_RUN_PRE_COUNTDOWN_PIPS;
 
@@ -218,7 +222,7 @@ function stopContinuousUserPositionUpdate() { if (mapPositionWatchId !== null) {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output'); 
-    logToMobile("DEBUG_V38: DOMContentLoaded event fired.", "info");
+    logToMobile("DEBUG_V39: DOMContentLoaded event fired.", "info");
     initializeSounds(); 
     
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -300,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile("DEBUG_V38: Displaying final results.", "info");
+        logToMobile("DEBUG_V39: Displaying final results.", "info");
         const finalScoreSpan = document.getElementById('final-score'); 
         const totalTimeSpan = document.getElementById('total-time');   
         const stageTimesList = document.getElementById('stage-times-list'); 
@@ -455,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!currentTeamData || typeof currentTeamData.completedPostsCount === 'undefined' ||
                     !currentTeamData.postSequence || !currentTeamData.unlockedPosts ||
                     typeof currentTeamData.score === 'undefined' || !currentTeamData.taskAttempts ||
-                    currentTeamData.postSequence.length !== TOTAL_POSTS || // Bruk TOTAL_POSTS her for sekvenslengde
+                    currentTeamData.postSequence.length !== TOTAL_POSTS || 
                     typeof currentTeamData.startTime === 'undefined' ||
                     typeof currentTeamData.taskCompletionTimes === 'undefined' || 
                     typeof currentTeamData.canEnterFinishCode === 'undefined' ||
@@ -464,14 +468,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     typeof currentTeamData.geoRunState === 'undefined' 
                 ) { logToMobile("Lagret data er korrupt/utdatert (hovedsjekk), nullstiller.", "warn"); clearState(); return false; } 
                 
-                // Detaljert sjekk for bemannede poster og geo-løp
                 if (currentTeamData.mannedPostTeacherVerified && (typeof currentTeamData.mannedPostTeacherVerified.post1 === 'undefined' || typeof currentTeamData.mannedPostTeacherVerified.post8 === 'undefined')) {
                      logToMobile("Lagret data mangler mannedPostTeacherVerified-detaljer, nullstiller.", "warn"); clearState(); return false;
                 }
                 if (!currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`] || typeof currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`].preCountdownPipsDone === 'undefined') {
                     logToMobile("Lagret data mangler geoRunState-detaljer for Post 7, nullstiller.", "warn"); clearState(); return false;
                 }
-
 
                 if (typeof currentTeamData.startTime === 'string') currentTeamData.startTime = parseInt(currentTeamData.startTime,10);
                 if (currentTeamData.startTime && isNaN(currentTeamData.startTime)) currentTeamData.startTime = null; 
@@ -480,15 +482,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!currentTeamData.pyramidPoints) currentTeamData.pyramidPoints = {};
                 if (!currentTeamData.arrivalSoundPlayed) { 
                     currentTeamData.arrivalSoundPlayed = {};
-                    // Initialiser basert på registrerte poster, ikke POST_LOCATIONS direkte
                     Object.keys(CoreApp.registeredPostsData).forEach(postId => currentTeamData.arrivalSoundPlayed[`post${postId}`] = false);
                     currentTeamData.arrivalSoundPlayed.finish = false;
                 }
                 if (!currentTeamData.geoRunState) { 
                      currentTeamData.geoRunState = {};
                 }
-                // Sikre at geoRunState for post 7 har alle nødvendige felter, selv om den er tom
-                 if (!currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]) {
+                 if (!currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`]) { // Sikre at geoRunState for post 7 har alle nødvendige felter
                     currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`] = { 
                         active: false, lap: 0, startTime: null, lapStartTime: null, 
                         atPoint1: false, atPoint2: false, countdownTimerId: null, 
@@ -749,16 +749,271 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleTeacherPassword(postNum, password) { /* ... (som i v38) ... */ }
-    function handleMinigolfSubmit(postNum) { /* ... (som i v38) ... */ }
-    function handlePyramidPointsSubmit(postNum, points) { /* ... (som i v38) ... */ }
-    function startGeoRunPreCountdownPips() { /* ... (som i v38) ... */ }
-    function handleGeoRunLogic(isAtTargetPoint, targetPointId) { /* ... (som i v38) ... */ }
-    function handleTaskCheck(postNum, userAnswer) { /* ... (som i v38) ... */ }
+    function handleTeacherPassword(postNum, password) {
+        const pageElement = postContentContainer.firstChild; 
+        if (!pageElement || !currentTeamData) return;
+        const postData = CoreApp.getPostData(postNum);
+        if (!postData || !postData.teacherPassword) {
+            logToMobile(`Lærerpassord ikke konfigurert for post ${postNum}.`, "error");
+            return;
+        }
+
+        const feedbackElement = pageElement.querySelector(`#feedback-teacher-password-post${postNum}`); 
+        const passInput = pageElement.querySelector(`#teacher-password-input-post${postNum}`);
+        const passButton = pageElement.querySelector(`.submit-teacher-password-btn[data-post="${postNum}"]`);
+
+        if (!password) { if(feedbackElement) {feedbackElement.textContent = "Lærerpassord mangler!"; feedbackElement.className = "feedback feedback-teacher-password error shake";} if(passInput) {passInput.classList.add('shake'); setTimeout(()=>passInput.classList.remove('shake'), 400);} return; }
+        
+        if (password.toUpperCase() === postData.teacherPassword.toUpperCase()) {
+            if(feedbackElement) {feedbackElement.textContent = "Passord godkjent! Fortsett med oppgaven."; feedbackElement.className = "feedback feedback-teacher-password success";}
+            if(passInput) passInput.disabled = true; if(passButton) passButton.disabled = true;
+            currentTeamData.mannedPostTeacherVerified[`post${postNum}`] = true; saveState();
+            setTimeout(() => resetPageUI(`post-${postNum}`), 800); 
+        } else {
+            if(feedbackElement) {feedbackElement.textContent = "Feil lærerpassord."; feedbackElement.className = "feedback feedback-teacher-password error shake";}
+            if(passInput) {passInput.value=''; passInput.classList.add('shake'); setTimeout(()=>passInput.classList.remove('shake'), 400); passInput.focus();}
+            setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400);
+        }
+    }
+
+    function handleMinigolfSubmit(postNum) {
+        if (!currentTeamData || !CoreApp.getPostData(postNum) || CoreApp.getPostData(postNum).type !== 'manned_minigolf') return;
+        const pageElement = postContentContainer.firstChild; 
+        const feedbackElement = pageElement.querySelector('#minigolf-results-feedback'); 
+        const postData = CoreApp.getPostData(postNum);
+
+        let totalScore = 0; let playerCount = 0; let scoresValid = true;
+        for (let i = 1; i <= (postData.maxPlayers || 6); i++) {
+            const scoreInput = pageElement.querySelector(`#player-${i}-score-post${postNum}`);
+            if (scoreInput && scoreInput.value !== '') {
+                const score = parseInt(scoreInput.value, 10);
+                if (isNaN(score) || score < (postData.minScorePerPlayer || 3) ) { 
+                    scoresValid = false; if(feedbackElement) {feedbackElement.textContent = `Ugyldig score for Spiller ${i}. Minimum ${postData.minScorePerPlayer || 3} slag.`; feedbackElement.className = "feedback error";} 
+                    scoreInput.classList.add('shake'); setTimeout(()=>scoreInput.classList.remove('shake'), 400); break; 
+                }
+                currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = score; totalScore += score; playerCount++;
+            } else if (scoreInput && scoreInput.value === '' && playerCount > 0 && i <= playerCount+1) { currentTeamData.minigolfScores[`post${postNum}`]['player' + i] = null;
+            } else if (scoreInput && scoreInput.value === '' && i === 1) { scoresValid = false; if(feedbackElement) {feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error";} break; }
+        }
+        if (!scoresValid || playerCount === 0) { if (playerCount === 0 && scoresValid && feedbackElement) { feedbackElement.textContent = `Minst én spiller må ha score.`; feedbackElement.className = "feedback error"; } return; }
+        const averageScore = totalScore / playerCount;
+        currentTeamData.minigolfScores[`post${postNum}`].average = averageScore;
+
+        let pointsAwarded = 0;
+        const pointsScale = postData.pointsScale || { 8:10, 9:9, 10:8, 11:7, 12:6, 13:5, 14:4, 15:3, 16:2, Infinity:1};
+        for (const scoreThreshold in pointsScale) {
+            if (averageScore <= parseFloat(scoreThreshold)) {
+                pointsAwarded = pointsScale[scoreThreshold];
+                break;
+            }
+        }
+        
+        currentTeamData.minigolfScores[`post${postNum}`].pointsAwarded = pointsAwarded;
+        // Poengsum og fullføring håndteres nå sentralt
+        CoreApp.markPostAsCompleted(postNum, pointsAwarded); 
+        if(feedbackElement) {feedbackElement.textContent = `Snitt: ${averageScore.toFixed(2)}. Poeng: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
+        pageElement.querySelectorAll('.minigolf-form-section input, #submit-minigolf-post1').forEach(el => el.disabled = true);
+        const proceedButton = pageElement.querySelector('#minigolf-proceed-btn-post1'); if (proceedButton) { proceedButton.style.display = 'inline-block'; proceedButton.disabled = false; }
+    }
+
+    function handlePyramidPointsSubmit(postNum, points) {
+        if (!currentTeamData || !CoreApp.getPostData(postNum) || CoreApp.getPostData(postNum).type !== 'manned_pyramid') return;
+        const pageElement = postContentContainer.firstChild;
+        const feedbackElement = pageElement.querySelector('#pyramid-results-feedback'); 
+        const pointsInput = pageElement.querySelector(`#pyramid-points-input-post${postNum}`);
+        const postData = CoreApp.getPostData(postNum);
+        const maxPoints = postData.maxPoints || 10;
+
+        const pointsAwarded = parseInt(points, 10);
+        if (isNaN(pointsAwarded) || pointsAwarded < 0 || pointsAwarded > maxPoints) { if(feedbackElement) {feedbackElement.textContent = `Ugyldig poengsum (0-${maxPoints}).`; feedbackElement.className = "feedback error";} if(pointsInput) {pointsInput.classList.add('shake'); setTimeout(()=>pointsInput.classList.remove('shake'), 400); pointsInput.focus();} return; }
+        
+        currentTeamData.pyramidPoints[`post${postNum}`] = pointsAwarded;
+        CoreApp.markPostAsCompleted(postNum, pointsAwarded);
+        if(feedbackElement) {feedbackElement.textContent = `Poeng registrert: ${pointsAwarded}!`; feedbackElement.className = "feedback success";}
+        if(pointsInput) pointsInput.disabled = true; const submitBtn = pageElement.querySelector(`#submit-pyramid-points-post${postNum}`); if(submitBtn) submitBtn.disabled = true;
+        // Vurder "Gå Videre"-knapp for pyramide også, for konsistens
+        setTimeout(() => window.proceedToNextPostOrFinishGlobal(), 1500); 
+    }
+
+    function startGeoRunPreCountdownPips() { 
+        if (!currentTeamData || currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] !== GEO_RUN_POST_ID) return;
+        const postData = CoreApp.getPostData(GEO_RUN_POST_ID);
+        if (!postData || postData.type !== 'georun') return;
+
+        const runState = currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`];
+        const prePips = postData.preCountdownPips || GEO_RUN_PRE_COUNTDOWN_PIPS;
+        const prePipInterval = postData.preCountdownInterval || GEO_RUN_PRE_COUNTDOWN_INTERVAL_SECONDS;
+
+        if (!runState || runState.preRunPipTimerId || runState.preCountdownPipsDone >= prePips || runState.active || runState.finished) return;
+        logToMobile("Starter pre-countdown pip-sekvens for Geo-løp.", "info");
+        playArrivalSound(); 
+        runState.preCountdownPipsDone = 1;
+        resetPageUI(`post-${GEO_RUN_POST_ID}`); 
+        saveState();
+        runState.preRunPipTimerId = setInterval(() => {
+            if (runState.preCountdownPipsDone < prePips) {
+                playArrivalSound(); runState.preCountdownPipsDone++; resetPageUI(`post-${GEO_RUN_POST_ID}`); saveState();
+                logToMobile(`Geo-løp pre-pip ${runState.preCountdownPipsDone}/${prePips}`, "debug");
+            }
+            if (runState.preCountdownPipsDone >= prePips) {
+                clearInterval(runState.preRunPipTimerId); runState.preRunPipTimerId = null;
+                logToMobile("Pre-countdown pips ferdig. Kaller handleGeoRunLogic for å starte vanlig nedtelling.", "info");
+                if (runState.atPoint1) { handleGeoRunLogic(true, 'geoRunStart'); }
+            }
+        }, prePipInterval * 1000);
+    }
+
+    function handleGeoRunLogic(isAtTargetPoint, targetPointId) { 
+        if (!currentTeamData || currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] !== GEO_RUN_POST_ID) return;
+        const postData = CoreApp.getPostData(GEO_RUN_POST_ID);
+        if (!postData || postData.type !== 'georun') return;
+        
+        const runState = currentTeamData.geoRunState[`post${GEO_RUN_POST_ID}`];
+        const pageElement = postContentContainer.firstChild; 
+        if (!pageElement || pageElement.id !== `post-${GEO_RUN_POST_ID}-content-wrapper`) { logToMobile("FEIL: Finner ikke korrekt pageElement i handleGeoRunLogic for Post 7", "error"); return; }
+        if (runState.finished) return;
+
+        const geoRunPoint1Data = postData.geoRunPoint1 || GEO_RUN_POINT1;
+        const geoRunPoint2Data = postData.geoRunPoint2 || GEO_RUN_POINT2;
+        const lapsForThisRun = DEV_MODE_NO_GEOFENCE ? (postData.lapsTest || GEO_RUN_LAPS_TEST) : (postData.lapsNormal || GEO_RUN_LAPS_NORMAL);
+        const countdownForThisRun = postData.countdownSeconds || GEO_RUN_COUNTDOWN_SECONDS;
+        const pointsScaleForThisRun = postData.pointsScale || GEO_RUN_POINTS_SCALE;
+
+        if (!runState.active) { 
+            if (targetPointId === 'geoRunStart' && isAtTargetPoint && !runState.countdownTimerId && !runState.atPoint1 && runState.preCountdownPipsDone >= (postData.preCountdownPips || GEO_RUN_PRE_COUNTDOWN_PIPS)) {
+                logToMobile("Geo-løp: Nådd startpunkt 1 etter pre-pips. Starter " + countdownForThisRun + "s nedtelling.", "info"); runState.atPoint1 = true; 
+                updateMapMarker(null, false, geoRunPoint1Data); resetPageUI(`post-${GEO_RUN_POST_ID}`); 
+                let countdown = countdownForThisRun; const countdownDisplay = pageElement.querySelector('.geo-run-countdown');
+                if(countdownDisplay) countdownDisplay.textContent = countdown;
+                runState.countdownTimerId = setInterval(() => {
+                    countdown--; if(countdownDisplay) countdownDisplay.textContent = countdown;
+                    if (countdown <= 0) {
+                        clearInterval(runState.countdownTimerId); runState.countdownTimerId = null;
+                        logToMobile("Geo-løp: Nedtelling ferdig. Starter løpet!", "info"); playGeoRunStartSoundSequence();
+                        runState.active = true; runState.lap = 1; runState.startTime = Date.now(); runState.lapStartTime = runState.startTime;
+                        updateMapMarker(null, false, geoRunPoint2Data); resetPageUI(`post-${GEO_RUN_POST_ID}`); saveState();
+                    }
+                }, 1000);
+            } 
+        } else { 
+            if (isAtTargetPoint) {
+                playGeoRunTurnSound(); logToMobile(`Geo-løp: Nådd vendepunkt. Lap: ${runState.lap}`, "debug");
+                if (targetPointId === 'geoRunPoint2') { runState.atPoint1 = false; runState.atPoint2 = true; updateMapMarker(null, false, geoRunPoint1Data); }
+                else if (targetPointId === 'geoRunPoint1') { runState.atPoint1 = true; runState.atPoint2 = false; runState.lap++; if (runState.lap <= lapsForThisRun) { updateMapMarker(null, false, geoRunPoint2Data); } }
+                runState.lapStartTime = Date.now(); 
+                if (runState.lap > lapsForThisRun) {
+                    logToMobile("Geo-løp: Ferdig!", "info"); runState.finished = true; runState.active = false; 
+                    runState.totalTime = Date.now() - runState.startTime;
+                    let points = 0; const totalSeconds = runState.totalTime / 1000;
+                    for (const timeThreshold in pointsScaleForThisRun) { if (totalSeconds <= parseFloat(timeThreshold)) { points = pointsScaleForThisRun[timeThreshold]; break; } }
+                    runState.pointsAwarded = points; 
+                    CoreApp.markPostAsCompleted(GEO_RUN_POST_ID, points); 
+                    updateMapMarker(currentTeamData.postSequence[currentTeamData.currentPostArrayIndex +1] || null, currentTeamData.completedPostsCount >= Object.keys(CoreApp.registeredPostsData).length); 
+                    const geoRunProceedButton = document.getElementById(`geo-run-proceed-btn-post${GEO_RUN_POST_ID}`);
+                    if (geoRunProceedButton) { geoRunProceedButton.style.display = 'inline-block'; geoRunProceedButton.disabled = false; }
+                }
+                resetPageUI(`post-${GEO_RUN_POST_ID}`); saveState();
+            }
+        }
+    }
+
+    function handleTaskCheck(postNum, userAnswer) { 
+        const postData = CoreApp.getPostData(postNum);
+        if (!postData || postData.type !== 'standard') { logToMobile(`handleTaskCheck kalt for ikke-standard post ${postNum}. Ignoreres.`, "warn"); return; }
+        
+        const pageElement = postContentContainer.firstChild; 
+        if(!pageElement || pageElement.id !== `post-${postNum}-content-wrapper`) { logToMobile(`handleTaskCheck: Finner ikke korrekt pageElement for post ${postNum}`, "error"); return;}
+        const taskInput = pageElement.querySelector('.post-task-input'); const feedbackElement = pageElement.querySelector('.feedback-task'); const taskButton = pageElement.querySelector('.check-task-btn');
+        if (!currentTeamData) { if(feedbackElement) { feedbackElement.textContent = 'Feil: Lag ikke startet.'; feedbackElement.className = 'feedback feedback-task error'; } return; }
+        
+        let correctTaskAnswer = postData.correctAnswer; 
+        if (!correctTaskAnswer) { logToMobile(`Ingen correctAnswer definert for post ${postNum}`, "error"); return; }
+
+        if(feedbackElement) { feedbackElement.className = 'feedback feedback-task'; feedbackElement.textContent = '';}
+        if (!userAnswer) { if(feedbackElement) { feedbackElement.textContent = 'Svar på oppgaven!'; feedbackElement.classList.add('error', 'shake'); } if(taskInput) { taskInput.classList.add('shake'); setTimeout(() => taskInput.classList.remove('shake'), 400); } setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400); return; }
+        const isCorrect = (userAnswer.toUpperCase() === correctTaskAnswer.toUpperCase() || userAnswer.toUpperCase() === 'FASIT');
+        
+        const maxAttempts = postData.maxAttempts || MAX_ATTEMPTS_PER_TASK;
+        if (currentTeamData.taskAttempts[`post${postNum}`] === undefined) { currentTeamData.taskAttempts[`post${postNum}`] = 0; }
+        
+        if (isCorrect) {
+            if(feedbackElement) { feedbackElement.textContent = userAnswer.toUpperCase() === 'FASIT' ? 'FASIT godkjent! (Ingen poeng)' : 'Korrekt svar! Bra jobba!'; feedbackElement.classList.add('success');}
+            if (taskInput) taskInput.disabled = true; if(taskButton) taskButton.disabled = true;
+            let pointsAwarded = 0;
+            if (userAnswer.toUpperCase() !== 'FASIT') { 
+                pointsAwarded = (postData.pointsPerCorrect || POINTS_PER_CORRECT_TASK) - ((currentTeamData.taskAttempts[`post${postNum}`] || 0) * (postData.pointsDeductionPerAttempt || 2));
+                pointsAwarded = Math.max((postData.minPointsIfCorrect || 1), pointsAwarded); 
+            }
+            CoreApp.markPostAsCompleted(postNum, pointsAwarded);
+        } else { 
+            currentTeamData.taskAttempts[`post${postNum}`]++; 
+            const attemptsLeft = maxAttempts - currentTeamData.taskAttempts[`post${postNum}`];
+            const attemptCounterElement = pageElement.querySelector('.attempt-counter');
+            if (attemptCounterElement) attemptCounterElement.textContent = `Feil svar. Forsøk igjen: ${attemptsLeft > 0 ? attemptsLeft : 0}`;
+            if(feedbackElement){ feedbackElement.textContent = 'Feil svar, prøv igjen!'; feedbackElement.classList.add('error', 'shake'); }
+            if(taskInput) { taskInput.classList.add('shake'); setTimeout(() => { if(taskInput) taskInput.classList.remove('shake'); }, 400); taskInput.focus(); taskInput.select(); }
+            setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400);
+            if (currentTeamData.taskAttempts[`post${postNum}`] >= maxAttempts) {
+                if(feedbackElement) { feedbackElement.textContent = `Ingen flere forsøk. Går videre... (0 poeng)`; feedbackElement.className = 'feedback feedback-task error'; }
+                if (taskInput) taskInput.disabled = true; if(taskButton) taskButton.disabled = true;
+                CoreApp.markPostAsCompleted(postNum, 0); 
+            } else { saveState(); } 
+        }
+    }
     
-    window.proceedToNextPostOrFinishGlobal = function() { /* ... (som i v38) ... */ }
-    function updateUIAfterLoad() { /* ... (som i v38) ... */ }
-    function handleFinishCodeInput(userAnswer) { /* ... (som i v38) ... */ }
+    window.proceedToNextPostOrFinishGlobal = function() { 
+        if (!currentTeamData) return;
+        saveState(); 
+        if (currentTeamData.completedPostsCount < Object.keys(CoreApp.registeredPostsData).length) {
+            currentTeamData.currentPostArrayIndex++;
+            if (currentTeamData.currentPostArrayIndex < currentTeamData.postSequence.length) {
+                const nextPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
+                setTimeout(() => { showRebusPage(`post-${nextPostGlobalId}`); if (map) updateMapMarker(nextPostGlobalId, false); }, 1200);
+            } else { 
+                logToMobile("Ulogisk tilstand i proceedToNextPostOrFinish. Går til finale.", "error");
+                setTimeout(() => { showRebusPage('finale'); if (map) updateMapMarker(null, true); }, 1200);
+            }
+        } else { 
+            setTimeout(() => { showRebusPage('finale'); if (map) updateMapMarker(null, true); }, 1200);
+        }
+    }
+    function updateUIAfterLoad() { 
+        if (!currentTeamData) { resetAllPostUIs(); return; }
+        let currentPageIdentifier;
+        if (currentTeamData.endTime) { currentPageIdentifier = 'finale'; }
+        else if (currentTeamData.completedPostsCount >= Object.keys(CoreApp.registeredPostsData).length) { currentPageIdentifier = 'finale'; }
+        else { currentPageIdentifier = `post-${currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]}`; }
+        
+        if (currentPageIdentifier !== 'intro' && !document.getElementById(`${currentPageIdentifier}-content-wrapper`)) {
+            showRebusPage(currentPageIdentifier).then(() => { 
+                 if (currentTeamData.score !== undefined) updateScoreDisplay();
+            }).catch(err => logToMobile(`Feil i showRebusPage under updateUIAfterLoad: ${err}`, "error"));
+        } else {
+            resetPageUI(currentPageIdentifier); 
+            if (currentTeamData.score !== undefined) updateScoreDisplay();
+        }
+    }
+
+    function handleFinishCodeInput(userAnswer) {
+        logToMobile(`handleFinishCodeInput called with: ${userAnswer}`, "info");
+        const feedbackElement = document.getElementById('feedback-unlock-finish'); 
+        const finishCodeInput = document.getElementById('finish-unlock-input');
+        const finishUnlockButton = document.getElementById('finish-unlock-btn');
+        if (!currentTeamData || !currentTeamData.canEnterFinishCode) { if(feedbackElement) { feedbackElement.textContent = 'Du må være ved målet for å taste kode.'; feedbackElement.className = 'feedback feedback-unlock error';} return; }
+        if(feedbackElement) { feedbackElement.className = 'feedback feedback-unlock'; feedbackElement.textContent = ''; }
+        if (!userAnswer) { if(feedbackElement) { feedbackElement.textContent = 'Skriv målkoden!'; feedbackElement.classList.add('error', 'shake'); } if(finishCodeInput) { finishCodeInput.classList.add('shake'); setTimeout(() => finishCodeInput.classList.remove('shake'), 400); } setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400); return; }
+        if (userAnswer.toUpperCase() === FINISH_UNLOCK_CODE.toUpperCase() || (DEV_MODE_NO_GEOFENCE && userAnswer.toUpperCase() === 'ÅPNE')) {
+            if(feedbackElement) { feedbackElement.textContent = 'Målgang registrert! Gratulerer!'; feedbackElement.classList.add('success'); }
+            if (finishCodeInput) finishCodeInput.disabled = true; if (finishUnlockButton) finishUnlockButton.disabled = true;
+            currentTeamData.endTime = Date.now(); if (currentTeamData.startTime) { currentTeamData.totalTimeSeconds = Math.round((currentTeamData.endTime - currentTeamData.startTime) / 1000); }
+            saveState(); stopContinuousUserPositionUpdate(); updateGeofenceFeedback(null, false, true, null, false); 
+            setTimeout(() => { showRebusPage('finale'); }, 1200);
+        } else {
+            if(feedbackElement) { feedbackElement.textContent = 'Feil målkode. Prøv igjen!'; feedbackElement.classList.add('error', 'shake'); }
+            if(finishCodeInput) { finishCodeInput.classList.add('shake'); setTimeout(() => finishCodeInput.classList.remove('shake'), 400); finishCodeInput.focus(); finishCodeInput.select(); }
+            setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400);
+        }
+    }
 
     // === EVENT LISTENERS ===
     tabButtons.forEach(button => { button.addEventListener('click', () => { const tabId = button.getAttribute('data-tab'); showTabContent(tabId); if (tabId === 'map' && map && currentTeamData) { let targetLocation = null; let zoomLevel = 15; if (currentTeamData.endTime || currentTeamData.completedPostsCount >= Object.keys(CoreApp.registeredPostsData).length) { targetLocation = FINISH_LOCATION; zoomLevel = 16; } else if (currentTeamData.completedPostsCount < Object.keys(CoreApp.registeredPostsData).length) { const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]; const postData = CoreApp.getPostData(currentPostGlobalId); if(postData) targetLocation = {lat: postData.lat, lng: postData.lng}; } if (targetLocation) { let bounds = new google.maps.LatLngBounds(); bounds.extend(new google.maps.LatLng(targetLocation.lat, targetLocation.lng)); if (userPositionMarker && userPositionMarker.getPosition()) { bounds.extend(userPositionMarker.getPosition()); map.fitBounds(bounds); if (map.getZoom() > 18) map.setZoom(18); } else { map.panTo(new google.maps.LatLng(targetLocation.lat, targetLocation.lng)); map.setZoom(zoomLevel); } } else if (userPositionMarker && userPositionMarker.getPosition()){ map.panTo(userPositionMarker.getPosition()); map.setZoom(16); } else { map.panTo(START_LOCATION); map.setZoom(15); } } }); });
@@ -877,6 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Promise((resolve) => { 
             const script = document.createElement('script');
             script.src = scriptPath;
+            script.async = false; 
             script.onload = () => { logToMobile(`${scriptPath} lastet og kjørt.`, "debug"); resolve(true); }; 
             script.onerror = () => { logToMobile(`FEIL ved lasting av ${scriptPath}.`, "error"); resolve(false); }; 
             document.head.appendChild(script);
@@ -886,7 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const successfullyLoaded = results.filter(res => res).length;
         logToMobile(`${successfullyLoaded} av ${postScriptsToLoad.length} post-spesifikke scripts lastet OK. Initialiserer app-tilstand...`, "info");
         
-        CoreApp.setReady(); // VIKTIG: Signaliser at CoreApp er klar ETTER at post-scripts er forsøkt lastet
+        CoreApp.setReady(); 
 
         if (DEV_MODE_NO_GEOFENCE) { if (geofenceFeedbackElement) { geofenceFeedbackElement.textContent = "DEV MODE: Geofence deaktivert."; geofenceFeedbackElement.className = 'geofence-info dev-mode'; geofenceFeedbackElement.style.display = 'block'; } }
         if (loadState()) {
@@ -909,4 +1165,4 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile("Initial page setup complete.", "info");
     });
 });
-/* Version: #38 */
+/* Version: #39 */
