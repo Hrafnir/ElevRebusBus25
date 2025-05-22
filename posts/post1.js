@@ -1,11 +1,10 @@
-/* Version: #44 */
+/* Version: #45 */
 // Filnavn: posts/post1.js
 
-const POST_ID_P1 = 1; // Unik konstant for denne filen for å unngå skop-kollisjon
-
-function definePost1() {
+function definePost1() { // Enkel global funksjon
+    const POST_ID = 1; 
     const postData = {
-        id: POST_ID_P1,
+        id: POST_ID,
         name: "Bassengparken Minigolf",
         lat: 60.7962307499199,
         lng: 10.667771549607588,
@@ -20,11 +19,11 @@ function definePost1() {
         initUI: function(pageElement, teamData) {
             if (!pageElement) {
                 const logFunc = window.logToMobile || console.error;
-                logFunc(`Post ${POST_ID_P1}: initUI kalt uten pageElement.`, "error");
+                logFunc(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
                 return;
             }
             const currentLog = window.logToMobile || console.debug;
-            currentLog(`Post ${POST_ID_P1}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID_P1}`]}`, "debug");
+            currentLog(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug");
             
             const postInfoSection = pageElement.querySelector('.post-info-section'); 
             const teacherPasswordSection = pageElement.querySelector('.teacher-password-section');
@@ -36,11 +35,11 @@ function definePost1() {
             if(minigolfFormSection) minigolfFormSection.style.display = 'none';
             if(minigolfProceedButton) minigolfProceedButton.style.display = 'none';
 
-            const teacherPassInput = pageElement.querySelector(`#teacher-password-input-post${POST_ID_P1}`);
+            const teacherPassInput = pageElement.querySelector(`#teacher-password-input-post${POST_ID}`);
             if (teacherPassInput) { teacherPassInput.value = ''; teacherPassInput.disabled = false; }
-            const teacherPassButton = pageElement.querySelector(`.submit-teacher-password-btn[data-post="${POST_ID_P1}"]`);
+            const teacherPassButton = pageElement.querySelector(`.submit-teacher-password-btn[data-post="${POST_ID}"]`);
             if (teacherPassButton) teacherPassButton.disabled = false;
-            const teacherPassFeedback = pageElement.querySelector(`#feedback-teacher-password-post${POST_ID_P1}`);
+            const teacherPassFeedback = pageElement.querySelector(`#feedback-teacher-password-post${POST_ID}`);
             if (teacherPassFeedback) { teacherPassFeedback.textContent = ''; teacherPassFeedback.className = 'feedback feedback-teacher-password'; }
 
             const mannedInstrElement = pageElement.querySelector('.manned-post-instruction-placeholder');
@@ -52,14 +51,14 @@ function definePost1() {
                 taskInstrElement.textContent = this.instructionsTask;
             }
 
-            if (teamData.completedGlobalPosts[`post${POST_ID_P1}`]) { 
+            if (teamData.completedGlobalPosts[`post${POST_ID}`]) { 
                 if (minigolfFormSection) {
                     minigolfFormSection.style.display = 'block';
                     minigolfFormSection.querySelectorAll('input, button:not(#minigolf-proceed-btn-post1)').forEach(el => el.disabled = true);
                     const mgFeedback = pageElement.querySelector('#minigolf-results-feedback');
                     if(mgFeedback) {
-                        const savedGolfPoints = teamData.minigolfScores[`post${POST_ID_P1}`]?.pointsAwarded;
-                        const savedGolfAverage = teamData.minigolfScores[`post${POST_ID_P1}`]?.average;
+                        const savedGolfPoints = teamData.minigolfScores[`post${POST_ID}`]?.pointsAwarded;
+                        const savedGolfAverage = teamData.minigolfScores[`post${POST_ID}`]?.average;
                         if (savedGolfPoints !== undefined && savedGolfAverage !== undefined) {
                             mgFeedback.textContent = `Snitt: ${savedGolfAverage.toFixed(2)}. Poeng: ${savedGolfPoints}!`;
                         } else { mgFeedback.textContent = "Minigolf fullført! Poeng registrert."; }
@@ -67,15 +66,15 @@ function definePost1() {
                     }
                     if (minigolfProceedButton) { minigolfProceedButton.style.display = 'inline-block'; minigolfProceedButton.disabled = false; }
                 }
-            } else if (teamData.unlockedPosts[`post${POST_ID_P1}`]) { 
-                if (teamData.mannedPostTeacherVerified[`post${POST_ID_P1}`]) { 
+            } else if (teamData.unlockedPosts[`post${POST_ID}`]) { 
+                if (teamData.mannedPostTeacherVerified[`post${POST_ID}`]) { 
                     if (minigolfFormSection) {
                         minigolfFormSection.style.display = 'block';
                         for (let i = 1; i <= (this.maxPlayers || 6); i++) {
-                            const scoreInput = pageElement.querySelector(`#player-${i}-score-post${POST_ID_P1}`);
+                            const scoreInput = pageElement.querySelector(`#player-${i}-score-post${POST_ID}`);
                             if (scoreInput) { scoreInput.value = ''; scoreInput.disabled = false;}
                         }
-                        const submitGolfBtn = pageElement.querySelector(`#submit-minigolf-post${POST_ID_P1}`);
+                        const submitGolfBtn = pageElement.querySelector(`#submit-minigolf-post${POST_ID}`);
                         if(submitGolfBtn) submitGolfBtn.disabled = false;
                         const mgFeedback = pageElement.querySelector('#minigolf-results-feedback');
                         if(mgFeedback) { mgFeedback.textContent = ""; mgFeedback.className = "feedback";}
@@ -85,17 +84,6 @@ function definePost1() {
             } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
         }
     };
-    // Kaller direkte, CoreApp bør være definert globalt når dette scriptet kjører
-    if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-        window.CoreApp.registerPost(definePost1());
-    } else {
-        console.error(`Post ${POST_ID_P1}: Kunne ikke registrere - CoreApp eller registerPost er ikke tilgjengelig.`);
-        // Alternativt, behold lytteren som en siste utvei, men den burde ikke være nødvendig nå.
-        // document.addEventListener('coreAppReady', () => {
-        //     if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-        //         window.CoreApp.registerPost(definePost1());
-        //     }
-        // }, { once: true });
-    }
-})();
-/* Version: #44 */
+    return postData; 
+}
+/* Version: #45 */
