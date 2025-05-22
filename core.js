@@ -1,4 +1,4 @@
-/* Version: #39 */
+/* Version: #40 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -696,9 +696,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         logToMobile(`Forsøker å initialisere lag: ${teamKey}. Funnet config: ${!!config}`, "debug");
         logToMobile(`Antall registrerte poster i CoreApp: ${Object.keys(CoreApp.registeredPostsData).length}`, "debug");
+        Object.keys(CoreApp.registeredPostsData).forEach(pid => {
+            logToMobile(`  Registrert post-ID: ${pid}, Navn: ${CoreApp.getPostData(pid)?.name}`, "debug");
+        });
 
 
         if (config && Object.keys(CoreApp.registeredPostsData).length > 0) { 
+            const firstPostInSequenceId = config.postSequence[0];
+            const firstPostData = CoreApp.getPostData(firstPostInSequenceId);
+
+            if (!firstPostData) {
+                logToMobile(`FEIL: Data for første post (${firstPostInSequenceId}) i sekvensen for ${teamKey} ikke funnet i CoreApp.registeredPostsData. Kan ikke starte.`, "error");
+                if(dynamicTeamCodeFeedback) { dynamicTeamCodeFeedback.textContent = 'Systemfeil: Finner ikke data for første post.'; dynamicTeamCodeFeedback.className = 'feedback error'; }
+                if (dynamicStartButton) dynamicStartButton.disabled = false; 
+                if (dynamicTeamCodeInput) dynamicTeamCodeInput.disabled = false;
+                return; 
+            }
+
             currentTeamData = {
                 ...config, id: teamKey, currentPostArrayIndex: 0, completedPostsCount: 0,
                 completedGlobalPosts: {}, unlockedPosts: {}, score: 0, taskAttempts: {},
@@ -740,20 +754,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dynamicStartButton) dynamicStartButton.disabled = true;
 
             clearFinishMarker(); updateScoreDisplay();
-            const firstPostInSequence = currentTeamData.postSequence[0];
-            logToMobile(`Team ${currentTeamData.name} starter. Første post: ${firstPostInSequence}`, "info");
-            if (CoreApp.getPostData(firstPostInSequence)) { 
-                showRebusPage(`post-${firstPostInSequence}`); 
-                if (map) updateMapMarker(firstPostInSequence, false);
-                startContinuousUserPositionUpdate(); 
-            } else {
-                logToMobile(`FEIL: Data for første post (${firstPostInSequence}) ikke funnet i CoreApp.registeredPostsData. Kan ikke starte.`, "error");
-                if(dynamicTeamCodeFeedback) { dynamicTeamCodeFeedback.textContent = 'Systemfeil: Finner ikke data for første post.'; dynamicTeamCodeFeedback.className = 'feedback error'; }
-                if (dynamicStartButton) dynamicStartButton.disabled = false; 
-                if (dynamicTeamCodeInput) dynamicTeamCodeInput.disabled = false;
-                currentTeamData = null; 
-                saveState(); 
-            }
+            logToMobile(`Team ${currentTeamData.name} starter. Første post: ${firstPostInSequenceId}`, "info");
+            showRebusPage(`post-${firstPostInSequenceId}`); 
+            
+            if (map) updateMapMarker(firstPostInSequenceId, false);
+            startContinuousUserPositionUpdate(); 
         } else {
             if (dynamicStartButton) dynamicStartButton.disabled = false;
             let errorMsg = 'Ugyldig lagkode!';
@@ -951,7 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!userAnswer) { if(feedbackElement) { feedbackElement.textContent = 'Svar på oppgaven!'; feedbackElement.classList.add('error', 'shake'); } if(taskInput) { taskInput.classList.add('shake'); setTimeout(() => taskInput.classList.remove('shake'), 400); } setTimeout(() => { if(feedbackElement) feedbackElement.classList.remove('shake'); }, 400); return; }
         const isCorrect = (userAnswer.toUpperCase() === correctTaskAnswer.toUpperCase() || userAnswer.toUpperCase() === 'FASIT');
         
-        const maxAttempts = postData.maxAttempts || 5; // Bruk global MAX_ATTEMPTS_PER_TASK hvis ikke satt
+        const maxAttempts = postData.maxAttempts || 5; 
         if (currentTeamData.taskAttempts[`post${postNum}`] === undefined) { currentTeamData.taskAttempts[`post${postNum}`] = 0; }
         
         if (isCorrect) {
