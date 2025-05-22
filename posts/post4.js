@@ -12,14 +12,4 @@ function definePost4() {
         correctAnswer: "SVARPOST4", // ERSTATT
     };
 }
-if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-    window.CoreApp.registerPost(definePost4());
-} else {
-    document.addEventListener('coreAppReady', function onCoreAppReadyForPost4() {
-        if (window.CoreApp && typeof window.CoreApp.registerPost === 'function') {
-            window.CoreApp.registerPost(definePost4());
-        }
-        document.removeEventListener('coreAppReady', onCoreAppReadyForPost4);
-    }, { once: true });
-}
 /* Version: #40 */
