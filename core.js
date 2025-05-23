@@ -40,9 +40,9 @@ const CoreApp = {
 
     markPostAsCompleted: function(postId, pointsAwarded = 0) {
         logToMobile(`CoreApp.markPostAsCompleted kalt for post ${postId} med ${pointsAwarded} poeng.`, "info");
-        const postData = this.getPostData(postId); // Hent postData for å sjekke type
+        const postData = this.getPostData(postId);
 
-        if (!currentTeamData || !postData) { // Endret sjekk til postData direkte
+        if (!currentTeamData || !postData) {
             logToMobile(`Kan ikke markere post ${postId} som fullført: mangler team data eller post data.`, "warn");
             return;
         }
@@ -57,24 +57,17 @@ const CoreApp = {
             saveState();
             document.dispatchEvent(new CustomEvent('scoreUpdated'));
 
-            // NY LOGIKK: Ikke gå videre automatisk for visse posttyper
             const requiresManualProceed = ['manned_minigolf', 'manned_pyramid', 'georun'];
             if (!requiresManualProceed.includes(postData.type)) {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
             } else {
                 logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI.`, "debug");
-                // Sørg for at UI oppdateres for å vise "Gå Videre"-knapp
-                // Dette gjøres vanligvis av resetPageUI -> initUI for den spesifikke posten.
-                // Vi kan trigge en UI-oppdatering her om nødvendig, eller stole på at postens egen logikk håndterer det.
-                // For nå, la oss anta at postens initUI vil håndtere dette når den ser at posten er fullført.
-                // En resetPageUI kan være nødvendig hvis postens HTML ikke allerede er lastet.
                 const currentPageId = `post-${postId}`;
                 const pageElement = document.getElementById(`${currentPageId}-content-wrapper`);
                 if (pageElement) {
                     resetPageUI(currentPageId, pageElement);
                 } else {
-                    // Hvis siden ikke er den aktive, vil neste visning av den uansett kalle resetPageUI.
                     logToMobile(`Sideelement for post ${postId} ikke funnet for umiddelbar UI-oppdatering etter markPostAsCompleted.`, "warn");
                 }
             }
@@ -311,7 +304,7 @@ function stopContinuousUserPositionUpdate() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DEBUG_V50: DOMContentLoaded event fired.`, "info");
+    logToMobile(`DEBUG_V51: DOMContentLoaded event fired.`, "info");
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -399,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`DEBUG_V50: Displaying final results.`, "info");
+        logToMobile(`DEBUG_V51: Displaying final results.`, "info");
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -553,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`DEBUG_V50: clearState kalt`, "info");
+        logToMobile(`DEBUG_V51: clearState kalt`, "info");
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -670,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeTeam(teamCode) {
-        logToMobile(`DEBUG_V50: initializeTeam kalt med kode: ${teamCode}`, "info");
+        logToMobile(`DEBUG_V51: initializeTeam kalt med kode: ${teamCode}`, "info");
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
             logToMobile("initializeTeam: Ingen poster er registrert i CoreApp. Kan ikke starte lag.", "error");
             const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
@@ -850,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile(`Pyramide post ${postNum}: ${points} poeng registrert.`, "info");
 
         pageElement.querySelectorAll('.pyramid-points-section input, .pyramid-points-section button:not(#pyramid-proceed-btn-post8)').forEach(el => el.disabled = true);
-        const proceedButton = pageElement.querySelector(`#pyramid-proceed-btn-post${postNum}`);
+        const proceedButton = pageElement.querySelector(`#pyramid-proceed-btn-post${postNum}`); // Antar at post8.html har denne knappen
         if (proceedButton) { proceedButton.style.display = 'inline-block'; proceedButton.disabled = false; }
 
         CoreApp.markPostAsCompleted(postNum, points);
@@ -1049,8 +1042,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         currentTeamData.taskAttempts[`post${postNum}`]++;
+        let isCorrect = false;
 
-        if (userAnswer.toUpperCase() === (postData.correctAnswer ? postData.correctAnswer.toUpperCase() : "")) {
+        if (postData.answerRange && typeof postData.answerRange.min === 'number' && typeof postData.answerRange.max === 'number') {
+            const userAnswerNum = parseInt(userAnswer);
+            if (!isNaN(userAnswerNum) && userAnswerNum >= postData.answerRange.min && userAnswerNum <= postData.answerRange.max) {
+                isCorrect = true;
+            }
+        } else if (postData.correctAnswer) { // Fallback til eksakt match hvis answerRange ikke er definert/gyldig
+            if (userAnswer.toUpperCase() === postData.correctAnswer.toUpperCase()) {
+                isCorrect = true;
+            }
+        }
+
+
+        if (isCorrect) {
             if(feedbackEl) {
                 feedbackEl.textContent = "Riktig svar! Bra jobbet!";
                 feedbackEl.className = "feedback success";
@@ -1354,4 +1360,4 @@ document.addEventListener('DOMContentLoaded', () => {
         postContentContainer.innerHTML = `<p class="feedback error">En kritisk feil oppstod under lasting av spillets data. Prøv å laste siden på nytt, eller kontakt en arrangør.</p>`;
     });
 });
-/* Version: #50 */
+/* Version: #51 */
