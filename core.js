@@ -1,4 +1,4 @@
-/* Version: #55 */
+/* Version: #58 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -62,6 +62,7 @@ const CoreApp = {
             document.dispatchEvent(new CustomEvent('scoreUpdated'));
 
             const requiresManualProceed = ['manned_minigolf', 'manned_pyramid', 'georun'];
+            // Standardposter (inkludert standard_hint) går videre automatisk hvis de er fullført
             if (!requiresManualProceed.includes(postData.type)) {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
@@ -94,14 +95,12 @@ const DEV_MODE_NO_GEOFENCE = true;
 const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
-const START_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Start: Fastland", name: "Start: Fastland" };
-const FINISH_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Mål: Fastland", name: "Mål: Fastland" };
-
-// NY: Global mapStyles konstant
 const MAP_STYLES_NO_LABELS = [
     { featureType: "all", elementType: "labels", stylers: [{ visibility: "off" }] }
 ];
 
+const START_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Start: Fastland", name: "Start: Fastland" };
+const FINISH_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Mål: Fastland", name: "Mål: Fastland" };
 
 // === HJELPEFUNKSJONER (Globale) ===
 function calculateDistance(lat1, lon1, lat2, lon2) { const R = 6371e3; const φ1 = lat1 * Math.PI / 180; const φ2 = lat2 * Math.PI / 180; const Δφ = (lat2 - lat1) * Math.PI / 180; const Δλ = (lon2 - lon1) * Math.PI / 180; const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2); const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); return R * c; }
@@ -124,39 +123,7 @@ function playSoundPromise(audioObject) { return new Promise((resolve, reject) =>
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 // === GOOGLE MAPS API CALLBACK ===
-window.initMap = function() {
-    mapElement = document.getElementById('dynamic-map-container');
-    if (!mapElement) {
-        setTimeout(window.initMap, 500);
-        return;
-    }
-    geofenceFeedbackElement = document.getElementById('geofence-feedback');
-    map = new google.maps.Map(mapElement, {
-        center: START_LOCATION,
-        zoom: 15,
-        mapTypeId: google.maps.MapTypeId.HYBRID,
-        styles: MAP_STYLES_NO_LABELS, // Bruk global konstant
-        disableDefaultUI: false,
-        streetViewControl: false,
-        fullscreenControl: true,
-        mapTypeControlOptions: {
-            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-            mapTypeIds: [google.maps.MapTypeId.SATELLITE, google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.HYBRID]
-        }
-    });
-    if (currentTeamData) {
-        if (currentTeamData.completedPostsCount >= Object.keys(CoreApp.registeredPostsData).length && !currentTeamData.endTime) {
-            updateMapMarker(null, true);
-        } else if (currentTeamData.completedPostsCount < Object.keys(CoreApp.registeredPostsData).length) {
-            const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
-            updateMapMarker(currentPostGlobalId, false);
-        } else {
-            updateMapMarker(null, true);
-        }
-        startContinuousUserPositionUpdate();
-    }
-    logToMobile("Skolerebus Kart initialisert.", "info");
-}
+window.initMap = function() { mapElement = document.getElementById('dynamic-map-container'); if (!mapElement) { setTimeout(window.initMap, 500); return; } geofenceFeedbackElement = document.getElementById('geofence-feedback'); map = new google.maps.Map(mapElement, { center: START_LOCATION, zoom: 15, mapTypeId: google.maps.MapTypeId.HYBRID, styles: MAP_STYLES_NO_LABELS, disableDefaultUI: false, streetViewControl: false, fullscreenControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: [google.maps.MapTypeId.SATELLITE, google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.HYBRID] } }); if (currentTeamData) { if (currentTeamData.completedPostsCount >= Object.keys(CoreApp.registeredPostsData).length && !currentTeamData.endTime) { updateMapMarker(null, true); } else if (currentTeamData.completedPostsCount < Object.keys(CoreApp.registeredPostsData).length) { const currentPostGlobalId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]; updateMapMarker(currentPostGlobalId, false); } else { updateMapMarker(null, true); } startContinuousUserPositionUpdate(); } logToMobile("Skolerebus Kart initialisert.", "info"); }
 
 // === GLOBALE KARTFUNKSJONER ===
 function updateMapMarker(postGlobalId, isFinalTarget = false, customLocation = null) { if (!map) { logToMobile("Kart ikke initialisert for updateMapMarker.", "warn"); return; } clearMapMarker(); if (!customLocation) clearFinishMarker(); let locationDetails, markerTitle, markerIconUrl; if (customLocation) { locationDetails = customLocation; markerTitle = customLocation.name || "Spesialpunkt"; markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'; } else if (isFinalTarget) { locationDetails = FINISH_LOCATION; markerTitle = FINISH_LOCATION.title; markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'; if (finishMarker) finishMarker.setMap(null); finishMarker = new google.maps.Marker({ position: { lat: locationDetails.lat, lng: locationDetails.lng }, map: map, title: markerTitle, animation: google.maps.Animation.DROP, icon: { url: markerIconUrl } }); if(locationDetails) { map.panTo({ lat: locationDetails.lat, lng: locationDetails.lng }); if (map.getZoom() < 16) map.setZoom(16); } return; } else { const postData = CoreApp.getPostData(postGlobalId); if (!postData || typeof postData.lat === 'undefined' || typeof postData.lng === 'undefined') { logToMobile(`Ugyldig postGlobalId (${postGlobalId}) eller post ikke registrert/manglende koordinater for updateMapMarker.`, "warn"); return; } locationDetails = {lat: postData.lat, lng: postData.lng}; markerTitle = `Neste: ${postData.name || `Post ${postGlobalId}`}`; markerIconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'; } currentMapMarker = new google.maps.Marker({ position: { lat: locationDetails.lat, lng: locationDetails.lng }, map: map, title: markerTitle, animation: google.maps.Animation.DROP, icon: { url: markerIconUrl } }); if(locationDetails) { map.panTo({ lat: locationDetails.lat, lng: locationDetails.lng }); if (map.getZoom() < (customLocation ? 18 : 15) ) map.setZoom((customLocation ? 18 : 15)); } logToMobile(`Kartmarkør oppdatert til: ${markerTitle}`, "debug");}
@@ -209,7 +176,7 @@ function handleGeolocationError(error, isFromWatchPosition = true) {
 
 // === KARTPOSISJON OG GEOFENCE FUNKSJONER (Globale) ===
 function updateUserPositionOnMap(position) {
-    if (!map && (!window.geoRunMiniMapInstance && typeof window.geoRunMiniMapInstance !== 'object')) return; // Sjekk begge kart, og at minimap er et objekt
+    if (!map && (!window.geoRunMiniMapInstance && typeof window.geoRunMiniMapInstance !== 'object')) return;
 
     const userPos = { lat: position.coords.latitude, lng: position.coords.longitude };
 
@@ -226,11 +193,8 @@ function updateUserPositionOnMap(position) {
 
     const currentPostData = currentTeamData ? CoreApp.getPostData(currentTeamData.postSequence[currentTeamData.currentPostArrayIndex]) : null;
     if (currentPostData && currentPostData.type === 'georun' && typeof currentPostData.updateMiniMap === 'function') {
-        // Sjekk om minimap-instansen faktisk er et Google Maps-objekt før kallet
         if (window.geoRunMiniMapInstance && typeof window.geoRunMiniMapInstance.panTo === 'function') {
             currentPostData.updateMiniMap(userPos, currentTeamData);
-        } else {
-            // logToMobile("updateUserPositionOnMap: geoRunMiniMapInstance er ikke et gyldig kartobjekt for Post 7.", "debug");
         }
     }
 }
@@ -515,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mannedPostInstructionElement.textContent = postData.instructionsManned;
             }
         }
-         else if (postData.type === 'standard') {
+         else if (postData.type === 'standard' || postData.type === 'standard_hint') { // Lagt til standard_hint
             if (taskTitleElement) taskTitleElement.textContent = `Oppgave: ${postName}`;
             if (taskQuestionElement && postData.question) {
                 taskQuestionElement.textContent = postData.question;
@@ -580,9 +544,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!postContentContainer) { logToMobile("CRITICAL - postContentContainer is NULL in showRebusPage! Kan ikke laste innhold.", "error"); return; }
 
         const currentPostArrayIndex = currentTeamData ? currentTeamData.currentPostArrayIndex : -1;
-        const previousPostGlobalId = (currentTeamData && currentPostArrayIndex > -1 && currentTeamData.postSequence[currentPostArrayIndex]) ?
+        const previousPostGlobalId = (currentTeamData && currentPostArrayIndex > -1 && currentTeamData.postSequence[currentPostArrayIndex] !== undefined) ?
                                      currentTeamData.postSequence[currentPostArrayIndex] : null;
 
+        // Sjekk om vi navigerer *bort* fra GeoRun posten
         if (previousPostGlobalId === GEO_RUN_POST_ID && pageIdentifier !== `post-${GEO_RUN_POST_ID}`) {
             const geoRunPostData = CoreApp.getPostData(GEO_RUN_POST_ID);
             if (geoRunPostData && typeof geoRunPostData.cleanupUI === 'function') {
@@ -590,6 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 geoRunPostData.cleanupUI();
             }
         }
+
 
         let htmlFileToFetch;
         let expectedWrapperId;
@@ -735,18 +701,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const teacherPasswordSection = context.querySelector('.teacher-password-section');
         const minigolfFormSection = context.querySelector('.minigolf-form-section');
         const pyramidPointsSection = context.querySelector('.pyramid-points-section');
-        const geoRunSetupSection = context.querySelector('.geo-run-setup-section');
         const geoRunStartButtonSection = context.querySelector('.geo-run-start-button-section');
         const geoRunActiveSection = context.querySelector('.geo-run-active-section');
         const geoRunResultsSection = context.querySelector('.geo-run-results-section');
 
 
-        [postInfoSection, taskSection, teacherPasswordSection, minigolfFormSection, pyramidPointsSection, geoRunSetupSection, geoRunStartButtonSection, geoRunActiveSection, geoRunResultsSection]
+        [postInfoSection, taskSection, teacherPasswordSection, minigolfFormSection, pyramidPointsSection, geoRunStartButtonSection, geoRunActiveSection, geoRunResultsSection]
             .forEach(section => { if (section) section.style.display = 'none'; });
 
         if (postData) {
             if (isCompleted) {
-                if (postData.type === 'standard' && taskSection) {
+                if ((postData.type === 'standard' || postData.type === 'standard_hint') && taskSection) {
                     taskSection.style.display = 'block';
                     taskSection.querySelectorAll('input, button').forEach(el => el.disabled = true);
                     const feedbackEl = taskSection.querySelector('.feedback-task');
@@ -762,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     postInfoSection.innerHTML = `<p>Du har fullført denne posten.</p>`;
                 }
             } else if (isUnlocked) {
-                if (postData.type === 'standard' && taskSection) {
+                if ((postData.type === 'standard' || postData.type === 'standard_hint') && taskSection) {
                     taskSection.style.display = 'block';
                     const inputEl = taskSection.querySelector('.post-task-input');
                     if (inputEl) { inputEl.value = ''; inputEl.disabled = false; }
@@ -1059,7 +1024,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateMapMarker(null, false, nextMapTargetPoint);
                 if (typeof postData.updateMiniMap === 'function') {
-                     // Få tak i nåværende brukerposisjon for updateMiniMap
                     let currentUserPosForMiniMap = null;
                     if (window.userPositionMarker && window.userPositionMarker.getPosition()) {
                         currentUserPosForMiniMap = window.userPositionMarker.getPosition();
@@ -1076,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleTaskCheck(postNum, userAnswer) {
         const postData = CoreApp.getPostData(postNum);
-        if (!postData || postData.type !== 'standard') return;
+        if (!postData || (postData.type !== 'standard' && postData.type !== 'standard_hint')) return; // Endret til å inkludere standard_hint
 
         const pageElement = document.getElementById(`post-${postNum}-content-wrapper`);
         if (!pageElement) return;
@@ -1118,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(attemptsEl) attemptsEl.textContent = `Post fullført! Poeng: ${pointsAwarded}`;
             logToMobile(`Post ${postNum} korrekt besvart på forsøk ${attemptsMade}. Poeng: ${pointsAwarded}.`, "info");
             CoreApp.markPostAsCompleted(postNum, pointsAwarded);
-        } else {
+        } else { // Feil svar
             const remainingAttempts = maxAttemptsForPost - attemptsMade;
             if(feedbackEl) {
                 feedbackEl.textContent = "Feil svar.";
@@ -1126,6 +1090,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if(inputEl) { inputEl.value = ""; inputEl.focus(); }
             logToMobile(`Post ${postNum} feil besvart. Forsøk ${attemptsMade} av ${maxAttemptsForPost}.`, "warn");
+
+            // Håndter hint for standard_hint type
+            if (postData.type === 'standard_hint' && postData.hints && postData.hints.length > 0) {
+                if (typeof postData.initUI === 'function') { // Kall initUI for å vise neste hint
+                    logToMobile(`Post ${postNum} (hint): Viser neste hint etter feil svar.`, "debug");
+                    postData.initUI(pageElement, currentTeamData);
+                }
+            }
 
             if (remainingAttempts <= 0) {
                 if(feedbackEl) feedbackEl.textContent += ` Ingen flere forsøk igjen på denne posten.`;
@@ -1135,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 logToMobile(`Post ${postNum}: Ingen flere forsøk. Markerer som fullført med 0 poeng.`, "info");
                 CoreApp.markPostAsCompleted(postNum, 0);
             } else {
-                if(feedbackEl) feedbackEl.textContent += ` Prøv igjen!`;
+                if(feedbackEl && !(postData.type === 'standard_hint')) feedbackEl.textContent += ` Prøv igjen!`; // Ikke legg til "Prøv igjen" hvis hint vises
                 if(attemptsEl) attemptsEl.textContent = `Forsøk igjen: ${remainingAttempts}`;
             }
             saveState();
@@ -1247,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (target.classList.contains('check-task-btn') && !target.disabled) {
                 const postNum = parseInt(target.getAttribute('data-post'));
                 const postData = CoreApp.getPostData(postNum);
-                if (postData && postData.type === 'standard') {
+                if (postData && (postData.type === 'standard' || postData.type === 'standard_hint')) { // Endret
                     const taskInput = postContentContainer.querySelector(`#post-${postNum}-task-input`);
                     if(taskInput) handleTaskCheck(postNum, taskInput.value.trim());
                 }
@@ -1331,7 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const pageId = postWrapperDiv.id.replace('-content-wrapper', '');
                         const postNum = parseInt(pageId.split('-')[1]);
                         const postData = CoreApp.getPostData(postNum);
-                        if (postData && postData.type === 'standard') {
+                        if (postData && (postData.type === 'standard' || postData.type === 'standard_hint')) { // Endret
                             event.preventDefault(); const taskButton = postWrapperDiv.querySelector(`.check-task-btn[data-post="${postNum}"]`);
                             if (taskButton && !taskButton.disabled) taskButton.click();
                         }
@@ -1455,4 +1427,4 @@ document.addEventListener('DOMContentLoaded', () => {
         postContentContainer.innerHTML = `<p class="feedback error">En kritisk feil oppstod under lasting av spillets data. Prøv å laste siden på nytt, eller kontakt en arrangør.</p>`;
     });
 });
-/* Version: #54 */
+/* Version: #58 */
