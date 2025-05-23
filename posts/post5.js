@@ -1,31 +1,28 @@
-/* Version: #58 */
+/* Version: #65 */
 // Filnavn: posts/post5.js
 
 function definePost5() {
     const POST_ID = 5;
     return {
         id: POST_ID,
-        name: "Gjøvik Gård (Hint-oppgave)", // Foreslått navn
-        lat: 60.79442,    // ERSTATT MED KORREKT LATITUDE for Gjøvik Gård
-        lng: 10.69259,    // ERSTATT MED KORREKT LONGITUDE for Gjøvik Gård
-        type: "standard_hint", // Ny type for å signalisere hint-logikk i core.js
+        name: "Krysset Øverbyvegen/Prost Bloms gate (Hint-oppgave)", // Oppdatert navn
+        lat: 60.80357722632382,    // Korrekt latitude
+        lng: 10.66556509447771,    // Korrekt longitude
+        type: "standard_hint",
         question: "Hvem grunnla Gjøvik by?",
-        correctAnswer: "CASPAR KAUFFELDT", // Svar med både fornavn og etternavn
+        correctAnswer: "CASPAR KAUFFELDT",
         hints: [
-            "Dere lærte om han under Gjøvik Glassbyen.", // Hint 1 (vises med oppgaven)
-            "Han var eier av Gjøvik gård.",             // Hint 2 (vises etter 1. feil svar)
-            "En gate på Gjøvik har etternavnet hans i seg.", // Hint 3 (vises etter 2. feil svar)
-            "Initialene er; CK.",                        // Hint 4 (vises etter 3. feil svar)
-            "Fornavnet er Caspar."                       // Hint 5 (vises etter 4. feil svar)
+            "Dere lærte om han under Gjøvik Glassbyen.",
+            "Han var eier av Gjøvik gård.",
+            "En gate på Gjøvik har etternavnet hans i seg.",
+            "Initialene er; CK.",
+            "Fornavnet er Caspar."
         ],
-        // maxAttempts settes til antall hint + 1 for å gi ett forsøk per hint, og ett siste forsøk med alle hint
-        // Dette håndteres nå av core.js sin standard poenglogikk, men vi kan overstyre hvis nødvendig.
-        // Standard poenglogikk (5 forsøk) passer bra med 5 hint.
-        // pointsPerCorrect vil bruke standard poenglogikk (5 poeng på første, -1 per feil)
-
+        // initUI for å vise hintene er allerede definert i forrige versjon av post5.js (v58)
+        // og vil fortsatt fungere.
         initUI: function(pageElement, teamData) {
             const currentLog = window.logToMobile || console.debug;
-            currentLog(`Post ${POST_ID} initUI: Kjører.`, "debug");
+            // currentLog(`Post ${POST_ID} initUI: Kjører.`, "debug"); // Kan redusere logging hvis ønskelig
 
             const hintsContainer = pageElement.querySelector('#hints-container-post5');
             const hintsList = pageElement.querySelector('#hints-list-post5');
@@ -37,24 +34,29 @@ function definePost5() {
 
             hintsList.innerHTML = ''; // Tøm tidligere hint
 
+            // Antall forsøk gjort på denne posten
             const attemptsMade = (teamData && teamData.taskAttempts && teamData.taskAttempts[`post${POST_ID}`]) || 0;
-            const hintsToShow = Math.min(this.hints.length, attemptsMade + 1); // Vis ett hint mer enn antall feil forsøk (minst 1)
 
-            if (hintsToShow > 0) {
+            // Antall hint som skal vises:
+            // Første hint (indeks 0) vises alltid (når attemptsMade er 0).
+            // For hvert feil forsøk (attemptsMade > 0), vises ett hint til.
+            // Så, hvis attemptsMade er 1 (ett feil svar), skal hint 0 og 1 vises (dvs. hintsToShow = 2).
+            // Maks antall hint er lengden på hints-arrayen.
+            const hintsToShow = Math.min(this.hints.length, attemptsMade + 1);
+
+            if (this.hints && this.hints.length > 0 && hintsToShow > 0) {
                 hintsContainer.style.display = 'block';
                 for (let i = 0; i < hintsToShow; i++) {
-                    const li = document.createElement('li');
-                    li.textContent = this.hints[i];
-                    hintsList.appendChild(li);
+                    if (this.hints[i]) { // Sjekk at hintet faktisk finnes
+                        const li = document.createElement('li');
+                        li.textContent = this.hints[i];
+                        hintsList.appendChild(li);
+                    }
                 }
             } else {
                 hintsContainer.style.display = 'none';
             }
-
-            // Standard UI-oppsett (input-felt, knapper) håndteres av resetPageUI i core.js
-            // basert på om posten er ulåst/fullført.
-            // Her fokuserer vi kun på å vise riktig antall hint.
         }
     };
 }
-/* Version: #58 */
+/* Version: #65 */
