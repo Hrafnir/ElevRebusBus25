@@ -1,4 +1,4 @@
-/* Version: #50 */
+/* Version: #51 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -40,7 +40,9 @@ const CoreApp = {
 
     markPostAsCompleted: function(postId, pointsAwarded = 0) {
         logToMobile(`CoreApp.markPostAsCompleted kalt for post ${postId} med ${pointsAwarded} poeng.`, "info");
-        if (!currentTeamData || !this.getPostData(postId)) {
+        const postData = this.getPostData(postId); // Hent postData for å sjekke type
+
+        if (!currentTeamData || !postData) { // Endret sjekk til postData direkte
             logToMobile(`Kan ikke markere post ${postId} som fullført: mangler team data eller post data.`, "warn");
             return;
         }
@@ -54,7 +56,28 @@ const CoreApp = {
             logToMobile(`Post ${postId} markert som fullført. Poeng: ${currentTeamData.score}, Fullførte: ${currentTeamData.completedPostsCount}`, "info");
             saveState();
             document.dispatchEvent(new CustomEvent('scoreUpdated'));
-            document.dispatchEvent(new CustomEvent('requestProceedToNext'));
+
+            // NY LOGIKK: Ikke gå videre automatisk for visse posttyper
+            const requiresManualProceed = ['manned_minigolf', 'manned_pyramid', 'georun'];
+            if (!requiresManualProceed.includes(postData.type)) {
+                logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
+                document.dispatchEvent(new CustomEvent('requestProceedToNext'));
+            } else {
+                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI.`, "debug");
+                // Sørg for at UI oppdateres for å vise "Gå Videre"-knapp
+                // Dette gjøres vanligvis av resetPageUI -> initUI for den spesifikke posten.
+                // Vi kan trigge en UI-oppdatering her om nødvendig, eller stole på at postens egen logikk håndterer det.
+                // For nå, la oss anta at postens initUI vil håndtere dette når den ser at posten er fullført.
+                // En resetPageUI kan være nødvendig hvis postens HTML ikke allerede er lastet.
+                const currentPageId = `post-${postId}`;
+                const pageElement = document.getElementById(`${currentPageId}-content-wrapper`);
+                if (pageElement) {
+                    resetPageUI(currentPageId, pageElement);
+                } else {
+                    // Hvis siden ikke er den aktive, vil neste visning av den uansett kalle resetPageUI.
+                    logToMobile(`Sideelement for post ${postId} ikke funnet for umiddelbar UI-oppdatering etter markPostAsCompleted.`, "warn");
+                }
+            }
 
         } else {
             logToMobile(`Post ${postId} var allerede markert som fullført.`, "info");
@@ -70,7 +93,7 @@ const CoreApp = {
 const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25;
 const DEV_MODE_NO_GEOFENCE = true;
-const FINISH_UNLOCK_CODE = "FASTLAND24"; // Holdes som store bokstaver for konsistens
+const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
 const START_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Start: Fastland", name: "Start: Fastland" };
@@ -252,7 +275,6 @@ function startContinuousUserPositionUpdate() {
         return;
     }
     if (mapPositionWatchId !== null || devModePositionUpdateIntervalId !== null) {
-        // logToMobile("Posisjonssporing (ekte eller fallback) er allerede aktiv.", "info"); // Kan være støyende
         return;
     }
     logToMobile("Starter kontinuerlig GPS posisjonssporing (eller forsøker).", "info");
@@ -502,7 +524,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (pageIdentifier === 'finale' && !currentTeamData) { logToMobile("Prøver å vise finale uten teamdata, går til intro.", "warn"); clearState(); showRebusPage('intro'); return; }
                 }
             }
-            // initUI kalles nå kun fra resetPageUI
         } catch (error) {
             logToMobile(`Feil ved lasting av sideinnhold for '${pageIdentifier}': ${error.message} (catch-blokk i showRebusPage)`, "error");
             postContentContainer.innerHTML = `<p class="feedback error">Kunne ikke laste innholdet for ${pageIdentifier}. Prøv å laste siden på nytt.</p>`;
@@ -648,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile("resetAllPostUIs kalt.", "debug");
     }
 
-    async function initializeTeam(teamCode) { // Gjort async for å kunne await showRebusPage
+    async function initializeTeam(teamCode) {
         logToMobile(`DEBUG_V50: initializeTeam kalt med kode: ${teamCode}`, "info");
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
             logToMobile("initializeTeam: Ingen poster er registrert i CoreApp. Kan ikke starte lag.", "error");
@@ -694,10 +715,10 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile(`Lag ${currentTeamData.teamName} initialisert. Starter på post ${currentTeamData.postSequence[0]}. Antall registrerte poster: ${Object.keys(CoreApp.registeredPostsData).length}`, "info");
 
         const firstPostId = currentTeamData.postSequence[0];
-        await showRebusPage(`post-${firstPostId}`); // Vent til siden er fullstendig vist
+        await showRebusPage(`post-${firstPostId}`);
 
         updateMapMarker(firstPostId, false);
-        startContinuousUserPositionUpdate(); // Start GPS ETTER at siden er vist
+        startContinuousUserPositionUpdate();
         updateScoreDisplay();
         if (geofenceFeedbackElement) geofenceFeedbackElement.style.display = 'block';
     }
@@ -711,7 +732,6 @@ document.addEventListener('DOMContentLoaded', () => {
             logToMobile(`handleTeacherPassword: Nødvendige elementer/data mangler for post ${postNum}.`, "error");
             return;
         }
-        // Case-insensitiv sammenligning
         if (password.toUpperCase() === postData.teacherPassword.toUpperCase()) {
             feedbackEl.textContent = "Korrekt passord! Oppgaven er låst opp.";
             feedbackEl.className = "feedback success";
@@ -1030,7 +1050,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentTeamData.taskAttempts[`post${postNum}`]++;
 
-        // Case-insensitiv sammenligning (var allerede OK for userAnswer, sikrer for correctAnswer)
         if (userAnswer.toUpperCase() === (postData.correctAnswer ? postData.correctAnswer.toUpperCase() : "")) {
             if(feedbackEl) {
                 feedbackEl.textContent = "Riktig svar! Bra jobbet!";
@@ -1098,7 +1117,6 @@ document.addEventListener('DOMContentLoaded', () => {
             stopContinuousUserPositionUpdate();
             if (geofenceFeedbackElement) geofenceFeedbackElement.style.display = 'none';
         } else if (currentTeamData) {
-            // startContinuousUserPositionUpdate(); // Kalles nå fra initializeTeam etter at siden er vist
             if (geofenceFeedbackElement) geofenceFeedbackElement.style.display = 'block';
         }
     }
@@ -1121,7 +1139,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Case-insensitiv sammenligning
         if (userAnswer.toUpperCase() === FINISH_UNLOCK_CODE.toUpperCase()) {
             currentTeamData.endTime = Date.now();
             currentTeamData.totalTimeSeconds = Math.round((currentTeamData.endTime - currentTeamData.startTime) / 1000);
@@ -1168,14 +1185,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const target = event.target;
             if (target.id === 'start-with-team-code-button-dynamic' && !target.disabled) {
                 const dynamicTeamCodeInput = postContentContainer.querySelector('#team-code-input-dynamic');
-                if (dynamicTeamCodeInput) { initializeTeam(dynamicTeamCodeInput.value); } // initializeTeam er nå async
+                if (dynamicTeamCodeInput) { initializeTeam(dynamicTeamCodeInput.value); }
                 else { logToMobile("FEIL: Fant ikke team-code-input-dynamic.", "error"); }
             } else if (target.classList.contains('check-task-btn') && !target.disabled) {
                 const postNum = parseInt(target.getAttribute('data-post'));
                 const postData = CoreApp.getPostData(postNum);
                 if (postData && postData.type === 'standard') {
                     const taskInput = postContentContainer.querySelector(`#post-${postNum}-task-input`);
-                    if(taskInput) handleTaskCheck(postNum, taskInput.value.trim()); // Fjerner .toUpperCase() her, håndteres i funksjonen
+                    if(taskInput) handleTaskCheck(postNum, taskInput.value.trim());
                 }
             } else if (target.classList.contains('submit-teacher-password-btn') && !target.disabled) {
                 const postNum = parseInt(target.getAttribute('data-post'));
@@ -1191,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (target.id === `geo-run-proceed-btn-post${GEO_RUN_POST_ID}` && !target.disabled) { window.proceedToNextPostOrFinishGlobal(); }
             else if (target.id === 'finish-unlock-btn' && !target.disabled) {
                 const finishCodeInput = postContentContainer.querySelector('#finish-unlock-input');
-                if (finishCodeInput && currentTeamData && (currentTeamData.canEnterFinishCode || DEV_MODE_NO_GEOFENCE) ) { handleFinishCodeInput(finishCodeInput.value.trim()); } // Fjerner .toUpperCase() her
+                if (finishCodeInput && currentTeamData && (currentTeamData.canEnterFinishCode || DEV_MODE_NO_GEOFENCE) ) { handleFinishCodeInput(finishCodeInput.value.trim()); }
                 else if (finishCodeInput && currentTeamData && !currentTeamData.canEnterFinishCode && !DEV_MODE_NO_GEOFENCE) {
                     const feedbackEl = document.getElementById('feedback-unlock-finish');
                     if(feedbackEl) { feedbackEl.textContent = "Du er ikke nær nok målområdet."; feedbackEl.className = "feedback error"; }
@@ -1228,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (target.id === 'finish-unlock-input' && !target.disabled) {
                     event.preventDefault();
                     const associatedButton = postContentContainer.querySelector('#finish-unlock-btn');
-                    if (associatedButton && !associatedButton.disabled && currentTeamData && (currentTeamData.canEnterFinishCode || DEV_MODE_NO_GEOFENCE)) { handleFinishCodeInput(target.value.trim()); } // Fjerner .toUpperCase() her
+                    if (associatedButton && !associatedButton.disabled && currentTeamData && (currentTeamData.canEnterFinishCode || DEV_MODE_NO_GEOFENCE)) { handleFinishCodeInput(target.value.trim()); }
                 }
             }
         });
@@ -1275,7 +1292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.head.appendChild(script);
         });
     }))
-    .then(async () => { // Gjort async for å kunne await initializeTeam -> showRebusPage
+    .then(async () => {
         logToMobile(`Alle ${postScriptsToLoad.length} post-spesifikke scripts lastet. Registrerer poster...`, "info");
         for (let i = 1; i <= TOTAL_POSTS; i++) {
             const defineFunctionName = `definePost${i}`;
@@ -1301,34 +1318,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (loadState()) {
             logToMobile("Tilstand lastet fra localStorage.", "info");
-            showTabContent('rebus'); // Vis tab først
+            showTabContent('rebus');
             if (currentTeamData.endTime) {
-                await showRebusPage('finale'); // Vent til siden er vist
+                await showRebusPage('finale');
                 if (map) updateMapMarker(null, true);
             } else if (currentTeamData.completedPostsCount >= Object.keys(CoreApp.registeredPostsData).length && Object.keys(CoreApp.registeredPostsData).length > 0) {
-                await showRebusPage('finale'); // Vent til siden er vist
+                await showRebusPage('finale');
                 if (map) updateMapMarker(null, true);
                 if(map && !currentTeamData.endTime) startContinuousUserPositionUpdate();
             } else if (currentTeamData.completedPostsCount < Object.keys(CoreApp.registeredPostsData).length && currentTeamData.postSequence.length > 0 && Object.keys(CoreApp.registeredPostsData).length > 0) {
                 const currentExpectedPostId = currentTeamData.postSequence[currentTeamData.currentPostArrayIndex];
                  if (CoreApp.getPostData(currentExpectedPostId)) {
-                    await showRebusPage(`post-${currentExpectedPostId}`); // Vent til siden er vist
-                    if(map && !currentTeamData.endTime) startContinuousUserPositionUpdate(); // Start GPS etter siden er vist
+                    await showRebusPage(`post-${currentExpectedPostId}`);
+                    if(map && !currentTeamData.endTime) startContinuousUserPositionUpdate();
                  } else {
                     logToMobile(`Post ${currentExpectedPostId} fra lagret state er ikke registrert (Antall registrerte: ${Object.keys(CoreApp.registeredPostsData).length}). Nullstiller.`, "warn");
                     clearState();
-                    await showRebusPage('intro'); // Vent til siden er vist
+                    await showRebusPage('intro');
                  }
             } else {
                 logToMobile("Uventet tilstand ved lasting (eller ingen poster registrert), nullstiller.", "warn");
                 clearState();
-                await showRebusPage('intro'); // Vent til siden er vist
+                await showRebusPage('intro');
             }
-            updateUIAfterLoad(); // Denne kan kalle startContinuousUserPositionUpdate igjen, men det er OK pga. sjekk i starten av funksjonen
+            updateUIAfterLoad();
         } else {
             logToMobile("Ingen lagret tilstand funnet, viser introduksjonsside.", "info");
             showTabContent('rebus');
-            await showRebusPage('intro'); // Vent til siden er vist
+            await showRebusPage('intro');
         }
         logToMobile("Initial page setup complete.", "info");
     })
