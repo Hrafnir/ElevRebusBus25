@@ -1,15 +1,14 @@
 <!-- Filnavn: posts/intro.html -->
-<!-- Version: #41 -->
-<div id="intro-content-wrapper"> 
+<!-- Version: #59 -->
+<div id="intro-content-wrapper">
     <h1>Skolerebus!</h1>
-    <p>Velkommen! Skriv inn lagkoden deres for å starte spillet.</p>
-    
-    <input type="text" id="team-code-input-dynamic" placeholder="Lagkode (f.eks. LAG1)">
+    <p>Velkommen! Skriv inn lagkoden og passordet deres for å starte spillet.</p>
+
+    <input type="text" id="team-code-input-dynamic" placeholder="Lagkode (f.eks. LAG1)" autocomplete="off">
+    <input type="password" id="team-password-input-dynamic" placeholder="Passord" autocomplete="current-password">
     <button id="start-with-team-code-button-dynamic">Start Spillet!</button>
     <div class="feedback" id="team-code-feedback-dynamic"></div>
 
-    <!-- dev-reset-button håndteres nå av delegering i core.js hvis den har klassen -->
-    <button class="dev-reset-button">Reset Spill</button> 
+    <button class="dev-reset-button">Reset Spill</button>
 </div>
-<!-- Ingen <script> tag her for intro, core.js håndterer det -->
-<!-- Version: #41 -->
+<!-- Version: #59 -->
