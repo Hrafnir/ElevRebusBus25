@@ -1,17 +1,19 @@
 <!-- Filnavn: posts/post7.html -->
-<!-- Version: #53 -->
+<!-- Version: #54 -->
 <div id="post-7-content-wrapper">
     <h2 class="post-title-placeholder">Post 7: Geo-Løp</h2>
 
-    <!-- Seksjon 1: Første ankomst til området -->
-    <div class="post-info-section" style="display: block;"> <!-- Denne vises av core.js basert på unlockedPosts -->
+    <!-- Seksjon 1: Første ankomst til området (håndteres av core.js/resetPageUI) -->
+    <div class="post-info-section" style="display: block;">
         <p class="post-info-placeholder">[Laster generell post-info...]</p>
     </div>
 
-    <!-- Seksjon 2: Kart (alltid synlig når post 7 er aktiv) -->
-    <div id="georun-map-in-post7" style="width: 100%; height: 300px; margin-top:15px; margin-bottom:15px; border:1px solid #ccc;">
-        <!-- Kartet fra hovedfanen vil bli brukt/sentrert, men vi kan ha en placeholder her -->
-        <p style="text-align:center; padding-top:100px;">Kartet vises på "Kart"-fanen.</p>
+    <!-- Seksjon 2: Kart for Geo-løp (vises kun for Post 7) -->
+    <div id="georun-map-in-post7-container" style="margin-top:15px; margin-bottom:15px;">
+        <p><strong>Kart for Geo-Løp:</strong></p>
+        <div id="georun-map-in-post7" style="width: 100%; height: 350px; border:1px solid #ccc; background-color: #e9e9e9;">
+            <!-- Lite kart lastes her av post7.js -->
+        </div>
     </div>
 
     <!-- Seksjon 3: Instruksjoner FØR man er klar til å trykke start -->
@@ -27,16 +29,15 @@
     <!-- Seksjon 5: Startknapp-seksjon -->
     <div class="geo-run-start-button-section" style="display: none; margin-bottom:20px;">
         <button id="start-georun-btn-post7" class="georun-button" disabled>Start Geo-Løp!</button>
-        <p style="font-size:0.8em; color:#777;">Knappen aktiveres når du er nær nok startpunktet.</p>
+        <p style="font-size:0.8em; color:#777;">Knappen aktiveres når du er nær nok startpunktet (Punkt 1).</p>
     </div>
 
     <!-- Seksjon 6: Aktivt løp -->
     <div class="geo-run-active-section" style="display: none;">
         <h3>Geo-Løp Pågår!</h3>
         <p id="georun-instructions-during-run" class="geo-run-instructions" style="margin-bottom:10px;"></p>
-        <p>Runde (kryssing): <span class="geo-run-current-lap">1</span> av <span id="georun-total-laps-display7">X</span>.</p>
+        <p>Kryssing: <span class="geo-run-current-lap">1</span> av <span id="georun-total-laps-display7">X</span>.</p>
         <p>Løp til: <strong class="geo-run-next-target">Vendepunkt...</strong>!</p>
-        <p style="font-size:0.8em; color:#777; margin-top:10px;">Følg med på kartet på "Kart"-fanen!</p>
     </div>
 
     <!-- Seksjon 7: Resultater -->
@@ -49,5 +50,4 @@
 
     <button class="dev-reset-button">Reset Spill</button>
 </div>
-<!-- Ingen <script src="posts/post7.js"></script> her -->
-<!-- Version: #53 -->
+<!-- Version: #54 -->
