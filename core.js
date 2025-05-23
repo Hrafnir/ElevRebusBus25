@@ -1,4 +1,4 @@
-/* Version: #58 */
+/* Version: #66 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -62,7 +62,6 @@ const CoreApp = {
             document.dispatchEvent(new CustomEvent('scoreUpdated'));
 
             const requiresManualProceed = ['manned_minigolf', 'manned_pyramid', 'georun'];
-            // Standardposter (inkludert standard_hint) går videre automatisk hvis de er fullført
             if (!requiresManualProceed.includes(postData.type)) {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
@@ -424,16 +423,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!postContentContainer) logToMobile("CRITICAL - postContentContainer is NULL! Dynamisk innhold vil ikke lastes.", "error");
 
     const TEAM_CONFIG = {
-        "LAG1": { name: "Lag 1", postSequence: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
-        "LAG2": { name: "Lag 2", postSequence: [2, 3, 4, 5, 6, 7, 8, 9, 10, 1] },
-        "LAG3": { name: "Lag 3", postSequence: [3, 4, 2, 5, 6, 7, 8, 9, 10, 1] },
-        "LAG4": { name: "Lag 4", postSequence: [4, 3, 2, 5, 6, 7, 8, 9, 10, 1] },
-        "LAG5": { name: "Lag 5", postSequence: [5, 6, 7, 8, 9, 10, 1, 2, 3, 4] },
-        "LAG6": { name: "Lag 6", postSequence: [6, 7, 8, 9, 10, 1, 2, 3, 4, 5] },
-        "LAG7": { name: "Lag 7", postSequence: [7, 8, 9, 10, 1, 2, 3, 4, 5, 6] },
-        "LAG8": { name: "Lag 8", postSequence: [8, 9, 10, 1, 2, 3, 4, 5, 6, 7] },
-        "LAG9": { name: "Lag 9", postSequence: [9, 10, 1, 2, 3, 4, 5, 6, 7, 8] },
-        "LAG10": { name: "Lag 10", postSequence: [10, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
+        "LAG1": { name: "Lag 1", postSequence: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], password: "SOL" },
+        "LAG2": { name: "Lag 2", postSequence: [2, 3, 4, 5, 6, 7, 8, 9, 10, 1], password: "MANE" },
+        "LAG3": { name: "Lag 3", postSequence: [3, 4, 2, 5, 6, 7, 8, 9, 10, 1], password: "STJERNE" },
+        "LAG4": { name: "Lag 4", postSequence: [4, 3, 2, 5, 6, 7, 8, 9, 10, 1], password: "HIMMEL" },
+        "LAG5": { name: "Lag 5", postSequence: [5, 6, 7, 8, 9, 10, 1, 2, 3, 4], password: "JORD" },
+        "LAG6": { name: "Lag 6", postSequence: [6, 7, 8, 9, 10, 1, 2, 3, 4, 5], password: "VANN" },
+        "LAG7": { name: "Lag 7", postSequence: [7, 8, 9, 10, 1, 2, 3, 4, 5, 6], password: "ILD" },
+        "LAG8": { name: "Lag 8", postSequence: [8, 9, 10, 1, 2, 3, 4, 5, 6, 7], password: "FJELL" },
+        "LAG9": { name: "Lag 9", postSequence: [9, 10, 1, 2, 3, 4, 5, 6, 7, 8], password: "SKOG" },
+        "LAG10": { name: "Lag 10", postSequence: [10, 1, 2, 3, 4, 5, 6, 7, 8, 9], password: "HAV" }
     };
 
     // === KJERNEFUNKSJONER (DOM-avhengige) ===
@@ -479,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mannedPostInstructionElement.textContent = postData.instructionsManned;
             }
         }
-         else if (postData.type === 'standard' || postData.type === 'standard_hint') { // Lagt til standard_hint
+         else if (postData.type === 'standard' || postData.type === 'standard_hint') {
             if (taskTitleElement) taskTitleElement.textContent = `Oppgave: ${postName}`;
             if (taskQuestionElement && postData.question) {
                 taskQuestionElement.textContent = postData.question;
@@ -544,11 +543,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!postContentContainer) { logToMobile("CRITICAL - postContentContainer is NULL in showRebusPage! Kan ikke laste innhold.", "error"); return; }
 
         const currentPostArrayIndex = currentTeamData ? currentTeamData.currentPostArrayIndex : -1;
-        const previousPostGlobalId = (currentTeamData && currentPostArrayIndex > -1 && currentTeamData.postSequence[currentPostArrayIndex] !== undefined) ?
-                                     currentTeamData.postSequence[currentPostArrayIndex] : null;
+        const previousPostGlobalIdIfNavigating = (currentTeamData && pageIdentifier !== `post-${currentTeamData.postSequence[currentPostArrayIndex]}`) ? currentTeamData.postSequence[currentPostArrayIndex] : null;
 
-        // Sjekk om vi navigerer *bort* fra GeoRun posten
-        if (previousPostGlobalId === GEO_RUN_POST_ID && pageIdentifier !== `post-${GEO_RUN_POST_ID}`) {
+        if (previousPostGlobalIdIfNavigating === GEO_RUN_POST_ID) {
             const geoRunPostData = CoreApp.getPostData(GEO_RUN_POST_ID);
             if (geoRunPostData && typeof geoRunPostData.cleanupUI === 'function') {
                 logToMobile("showRebusPage: Kaller cleanupUI for GeoRun (Post 7) fordi vi navigerer bort.", "debug");
@@ -762,6 +759,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (pageIdentifier === 'intro') {
             const teamCodeInput = context.querySelector('#team-code-input-dynamic');
             if (teamCodeInput) teamCodeInput.value = '';
+            const teamPasswordInput = context.querySelector('#team-password-input-dynamic'); // For passordfeltet
+            if (teamPasswordInput) teamPasswordInput.value = '';
             const teamCodeFeedback = context.querySelector('#team-code-feedback-dynamic');
             if (teamCodeFeedback) teamCodeFeedback.textContent = '';
             const startButton = context.querySelector('#start-with-team-code-button-dynamic');
@@ -778,11 +777,12 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile("resetAllPostUIs kalt.", "debug");
     }
 
-    async function initializeTeam(teamCode) {
+    async function initializeTeam(teamCode, teamPassword) { // Lagt til teamPassword
         logToMobile(`DEBUG_V54: initializeTeam kalt med kode: ${teamCode}`, "info");
+        const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic'); // Hent feedback-elementet
+
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
             logToMobile("initializeTeam: Ingen poster er registrert i CoreApp. Kan ikke starte lag.", "error");
-            const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
             if (feedbackElDynamic) {
                 feedbackElDynamic.textContent = "Systemfeil: Ingen poster lastet. Kontakt arrangør.";
                 feedbackElDynamic.className = "feedback error";
@@ -790,9 +790,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const teamConfig = TEAM_CONFIG[teamCode.toUpperCase()];
+        const teamCodeUpper = teamCode.toUpperCase();
+        const teamConfig = TEAM_CONFIG[teamCodeUpper];
+
         if (!teamConfig) {
-            const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
             if (feedbackElDynamic) {
                 feedbackElDynamic.textContent = "Ugyldig lagkode. Prøv igjen.";
                 feedbackElDynamic.className = "feedback error";
@@ -801,8 +802,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Sjekk passord (case-sensitivt)
+        if (teamPassword !== teamConfig.password) {
+            if (feedbackElDynamic) {
+                feedbackElDynamic.textContent = "Feil passord for valgt lag. Prøv igjen.";
+                feedbackElDynamic.className = "feedback error";
+            }
+            logToMobile(`Feil passord for lag ${teamCodeUpper}. Oppgitt: '${teamPassword}', Forventet: '${teamConfig.password}'`, "warn");
+            const passInput = document.getElementById('team-password-input-dynamic');
+            if (passInput) { passInput.value = ''; passInput.focus(); }
+            return;
+        }
+
+
         currentTeamData = {
-            teamCode: teamCode.toUpperCase(), teamName: teamConfig.name, postSequence: teamConfig.postSequence,
+            teamCode: teamCodeUpper, teamName: teamConfig.name, postSequence: teamConfig.postSequence,
             currentPostArrayIndex: 0, score: 0, startTime: Date.now(), endTime: null, totalTimeSeconds: null,
             completedPostsCount: 0, completedGlobalPosts: {}, unlockedPosts: {}, taskAttempts: {},
             taskCompletionTimes: {}, mannedPostTeacherVerified: {}, minigolfScores: {}, pyramidPoints: {},
@@ -823,6 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         saveState();
         logToMobile(`Lag ${currentTeamData.teamName} initialisert. Starter på post ${currentTeamData.postSequence[0]}. Antall registrerte poster: ${Object.keys(CoreApp.registeredPostsData).length}`, "info");
+        if (feedbackElDynamic) feedbackElDynamic.textContent = ''; // Tøm feedback ved suksess
 
         const firstPostId = currentTeamData.postSequence[0];
         await showRebusPage(`post-${firstPostId}`);
@@ -1040,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleTaskCheck(postNum, userAnswer) {
         const postData = CoreApp.getPostData(postNum);
-        if (!postData || (postData.type !== 'standard' && postData.type !== 'standard_hint')) return; // Endret til å inkludere standard_hint
+        if (!postData || (postData.type !== 'standard' && postData.type !== 'standard_hint')) return;
 
         const pageElement = document.getElementById(`post-${postNum}-content-wrapper`);
         if (!pageElement) return;
@@ -1082,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(attemptsEl) attemptsEl.textContent = `Post fullført! Poeng: ${pointsAwarded}`;
             logToMobile(`Post ${postNum} korrekt besvart på forsøk ${attemptsMade}. Poeng: ${pointsAwarded}.`, "info");
             CoreApp.markPostAsCompleted(postNum, pointsAwarded);
-        } else { // Feil svar
+        } else {
             const remainingAttempts = maxAttemptsForPost - attemptsMade;
             if(feedbackEl) {
                 feedbackEl.textContent = "Feil svar.";
@@ -1091,11 +1106,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if(inputEl) { inputEl.value = ""; inputEl.focus(); }
             logToMobile(`Post ${postNum} feil besvart. Forsøk ${attemptsMade} av ${maxAttemptsForPost}.`, "warn");
 
-            // Håndter hint for standard_hint type
             if (postData.type === 'standard_hint' && postData.hints && postData.hints.length > 0) {
-                if (typeof postData.initUI === 'function') { // Kall initUI for å vise neste hint
+                if (typeof postData.initUI === 'function') {
                     logToMobile(`Post ${postNum} (hint): Viser neste hint etter feil svar.`, "debug");
-                    postData.initUI(pageElement, currentTeamData);
+                    postData.initUI(pageElement, currentTeamData); // Kall initUI for å oppdatere hint-visning
                 }
             }
 
@@ -1107,7 +1121,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 logToMobile(`Post ${postNum}: Ingen flere forsøk. Markerer som fullført med 0 poeng.`, "info");
                 CoreApp.markPostAsCompleted(postNum, 0);
             } else {
-                if(feedbackEl && !(postData.type === 'standard_hint')) feedbackEl.textContent += ` Prøv igjen!`; // Ikke legg til "Prøv igjen" hvis hint vises
+                if(feedbackEl && !(postData.type === 'standard_hint' && postData.hints && postData.hints.length > attemptsMade)) { // Ikke legg til "Prøv igjen" hvis nytt hint vises
+                    feedbackEl.textContent += ` Prøv igjen!`;
+                }
                 if(attemptsEl) attemptsEl.textContent = `Forsøk igjen: ${remainingAttempts}`;
             }
             saveState();
@@ -1214,12 +1230,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const target = event.target;
             if (target.id === 'start-with-team-code-button-dynamic' && !target.disabled) {
                 const dynamicTeamCodeInput = postContentContainer.querySelector('#team-code-input-dynamic');
-                if (dynamicTeamCodeInput) { initializeTeam(dynamicTeamCodeInput.value); }
-                else { logToMobile("FEIL: Fant ikke team-code-input-dynamic.", "error"); }
+                const dynamicTeamPasswordInput = postContentContainer.querySelector('#team-password-input-dynamic'); // Hent passord
+                if (dynamicTeamCodeInput && dynamicTeamPasswordInput) {
+                    initializeTeam(dynamicTeamCodeInput.value, dynamicTeamPasswordInput.value.trim()); // Send med passord
+                } else {
+                    logToMobile("FEIL: Fant ikke team-code-input-dynamic eller team-password-input-dynamic.", "error");
+                }
             } else if (target.classList.contains('check-task-btn') && !target.disabled) {
                 const postNum = parseInt(target.getAttribute('data-post'));
                 const postData = CoreApp.getPostData(postNum);
-                if (postData && (postData.type === 'standard' || postData.type === 'standard_hint')) { // Endret
+                if (postData && (postData.type === 'standard' || postData.type === 'standard_hint')) {
                     const taskInput = postContentContainer.querySelector(`#post-${postNum}-task-input`);
                     if(taskInput) handleTaskCheck(postNum, taskInput.value.trim());
                 }
@@ -1293,17 +1313,19 @@ document.addEventListener('DOMContentLoaded', () => {
         postContentContainer.addEventListener('keypress', (event) => {
             const target = event.target;
             if (event.key === 'Enter') {
-                if (target.id === 'team-code-input-dynamic' && !target.disabled) {
+                if (target.id === 'team-code-input-dynamic' || target.id === 'team-password-input-dynamic') { // Sjekk begge feltene
                     event.preventDefault();
                     const dynamicStartButton = postContentContainer.querySelector('#start-with-team-code-button-dynamic');
-                    if (dynamicStartButton && !dynamicStartButton.disabled) { dynamicStartButton.click(); }
+                    if (dynamicStartButton && !dynamicStartButton.disabled) {
+                        dynamicStartButton.click();
+                    }
                 } else if (target.classList.contains('post-task-input') && !target.disabled) {
                     const postWrapperDiv = target.closest('div[id$="-content-wrapper"]');
                     if (postWrapperDiv) {
                         const pageId = postWrapperDiv.id.replace('-content-wrapper', '');
                         const postNum = parseInt(pageId.split('-')[1]);
                         const postData = CoreApp.getPostData(postNum);
-                        if (postData && (postData.type === 'standard' || postData.type === 'standard_hint')) { // Endret
+                        if (postData && (postData.type === 'standard' || postData.type === 'standard_hint')) {
                             event.preventDefault(); const taskButton = postWrapperDiv.querySelector(`.check-task-btn[data-post="${postNum}"]`);
                             if (taskButton && !taskButton.disabled) taskButton.click();
                         }
