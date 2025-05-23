@@ -1,4 +1,4 @@
-/* Version: #45 */
+/* Version: #48 */
 // Filnavn: posts/post1.js
 
 function definePost1() {
@@ -17,30 +17,44 @@ function definePost1() {
         pointsScale: { 8: 10, 9: 9, 10: 8, 11: 7, 12: 6, 13: 5, 14: 4, 15: 3, 16: 2, Infinity: 1 },
 
         initUI: function(pageElement, teamData) {
-            if (!pageElement) {
-                const logFunc = window.logToMobile || console.error;
-                logFunc(`Post ${POST_ID}: initUI kalt uten pageElement.`, "error");
+            const currentLog = window.logToMobile || console.debug;
+            if (!pageElement || typeof pageElement.querySelector !== 'function') { // Forsterket sjekk
+                currentLog(`Post ${POST_ID} initUI: pageElement er ugyldig. Type: ${typeof pageElement}`, "error");
                 return;
             }
-            const currentLog = window.logToMobile || console.debug;
-            // currentLog(`Post ${POST_ID}: Kaller initUI. Lærer verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}`, "debug"); // Kan være litt støyende
+            currentLog(`Post ${POST_ID} initUI: Kjører. Ulåst: ${teamData?.unlockedPosts?.[`post${POST_ID}`]}, Verifisert: ${teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]}, Fullført: ${teamData?.completedGlobalPosts?.[`post${POST_ID}`]}`, "debug");
 
             const postInfoSection = pageElement.querySelector('.post-info-section');
             const teacherPasswordSection = pageElement.querySelector('.teacher-password-section');
             const minigolfFormSection = pageElement.querySelector('.minigolf-form-section');
             const minigolfProceedButton = pageElement.querySelector('#minigolf-proceed-btn-post1');
 
+            currentLog(`Post ${POST_ID} initUI: postInfoSection: ${postInfoSection ? 'funnet' : 'IKKE funnet'}, teacherPasswordSection: ${teacherPasswordSection ? 'funnet' : 'IKKE funnet'}, minigolfFormSection: ${minigolfFormSection ? 'funnet' : 'IKKE funnet'}`, "debug");
+
+            // Skjul alt først for å unngå overlapp hvis initUI kalles flere ganger
             if(postInfoSection) postInfoSection.style.display = 'none';
             if(teacherPasswordSection) teacherPasswordSection.style.display = 'none';
             if(minigolfFormSection) minigolfFormSection.style.display = 'none';
             if(minigolfProceedButton) minigolfProceedButton.style.display = 'none';
 
             const teacherPassInput = pageElement.querySelector(`#teacher-password-input-post${POST_ID}`);
-            if (teacherPassInput) { teacherPassInput.value = ''; teacherPassInput.disabled = false; }
+            if (teacherPassInput) {
+                teacherPassInput.value = '';
+                teacherPassInput.disabled = false; // Standard til false
+                currentLog(`Post ${POST_ID} initUI: teacherPassInput funnet. Disabled satt til false.`, "debug");
+            } else {
+                currentLog(`Post ${POST_ID} initUI: teacherPassInput IKKE funnet.`, "warn");
+            }
             const teacherPassButton = pageElement.querySelector(`.submit-teacher-password-btn[data-post="${POST_ID}"]`);
-            if (teacherPassButton) teacherPassButton.disabled = false;
+            if (teacherPassButton) {
+                teacherPassButton.disabled = false; // Standard til false
+                currentLog(`Post ${POST_ID} initUI: teacherPassButton funnet. Disabled satt til false.`, "debug");
+            } else {
+                currentLog(`Post ${POST_ID} initUI: teacherPassButton IKKE funnet.`, "warn");
+            }
             const teacherPassFeedback = pageElement.querySelector(`#feedback-teacher-password-post${POST_ID}`);
             if (teacherPassFeedback) { teacherPassFeedback.textContent = ''; teacherPassFeedback.className = 'feedback feedback-teacher-password'; }
+
 
             const mannedInstrElement = pageElement.querySelector('.manned-post-instruction-placeholder');
             if (mannedInstrElement && this.instructionsManned) {
@@ -51,14 +65,16 @@ function definePost1() {
                 taskInstrElement.textContent = this.instructionsTask;
             }
 
-            if (teamData && teamData.completedGlobalPosts[`post${POST_ID}`]) { // Sjekk teamData først
+            // Logikk for å vise riktig seksjon
+            if (teamData && teamData.completedGlobalPosts && teamData.completedGlobalPosts[`post${POST_ID}`]) {
+                currentLog(`Post ${POST_ID} initUI: Viser fullført-seksjon.`, "debug");
                 if (minigolfFormSection) {
                     minigolfFormSection.style.display = 'block';
                     minigolfFormSection.querySelectorAll('input, button:not(#minigolf-proceed-btn-post1)').forEach(el => el.disabled = true);
                     const mgFeedback = pageElement.querySelector('#minigolf-results-feedback');
                     if(mgFeedback) {
-                        const savedGolfPoints = teamData.minigolfScores[`post${POST_ID}`]?.pointsAwarded;
-                        const savedGolfAverage = teamData.minigolfScores[`post${POST_ID}`]?.average;
+                        const savedGolfPoints = teamData.minigolfScores && teamData.minigolfScores[`post${POST_ID}`]?.pointsAwarded;
+                        const savedGolfAverage = teamData.minigolfScores && teamData.minigolfScores[`post${POST_ID}`]?.average;
                         if (savedGolfPoints !== undefined && savedGolfAverage !== undefined) {
                             mgFeedback.textContent = `Snitt: ${savedGolfAverage.toFixed(2)}. Poeng: ${savedGolfPoints}!`;
                         } else { mgFeedback.textContent = "Minigolf fullført! Poeng registrert."; }
@@ -66,8 +82,10 @@ function definePost1() {
                     }
                     if (minigolfProceedButton) { minigolfProceedButton.style.display = 'inline-block'; minigolfProceedButton.disabled = false; }
                 }
-            } else if (teamData && teamData.unlockedPosts[`post${POST_ID}`]) { // Sjekk teamData først
-                if (teamData.mannedPostTeacherVerified[`post${POST_ID}`]) {
+            } else if (teamData && teamData.unlockedPosts && teamData.unlockedPosts[`post${POST_ID}`]) {
+                currentLog(`Post ${POST_ID} initUI: Post er ulåst.`, "debug");
+                if (teamData.mannedPostTeacherVerified && teamData.mannedPostTeacherVerified[`post${POST_ID}`]) {
+                    currentLog(`Post ${POST_ID} initUI: Viser minigolf-skjema (lærer verifisert).`, "debug");
                     if (minigolfFormSection) {
                         minigolfFormSection.style.display = 'block';
                         for (let i = 1; i <= (this.maxPlayers || 6); i++) {
@@ -80,10 +98,22 @@ function definePost1() {
                         if(mgFeedback) { mgFeedback.textContent = ""; mgFeedback.className = "feedback";}
                         if(minigolfProceedButton) minigolfProceedButton.style.display = 'none';
                     }
-                } else if (teacherPasswordSection) { teacherPasswordSection.style.display = 'block'; }
-            } else if (postInfoSection) { postInfoSection.style.display = 'block'; }
+                } else if (teacherPasswordSection) {
+                    currentLog(`Post ${POST_ID} initUI: Viser lærerpassord-seksjon.`, "debug");
+                    teacherPasswordSection.style.display = 'block';
+                    // Inputs/knapper for passord er allerede håndtert øverst
+                } else {
+                     currentLog(`Post ${POST_ID} initUI: Ulåst, ikke verifisert, men fant ikke teacherPasswordSection. Faller tilbake til postInfo.`, "warn");
+                     if(postInfoSection) postInfoSection.style.display = 'block';
+                }
+            } else if (postInfoSection) {
+                currentLog(`Post ${POST_ID} initUI: Viser info-seksjon (ikke ulåst).`, "debug");
+                postInfoSection.style.display = 'block';
+            } else {
+                currentLog(`Post ${POST_ID} initUI: Ingen tilstand matchet for å vise en seksjon.`, "warn");
+            }
         }
     };
     return postData;
 }
-/* Version: #45 */
+/* Version: #48 */
