@@ -11,8 +11,8 @@ function definePost2() {
         question: "Hvor mange mursteiner er det i høyden på den store nord-veggen i Hunn kirke?",
         // For intervallsvar, kan vi definere det slik:
         answerRange: {
-            min: 125,
-            max: 131
+            min: 123,
+            max: 130
         },
         // correctAnswer kan fortsatt være det "ideelle" svaret for referanse, eller fjernes hvis answerRange brukes.
         // La oss beholde det for nå, men logikken vil bruke answerRange.
