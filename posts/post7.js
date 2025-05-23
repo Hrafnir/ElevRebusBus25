@@ -1,4 +1,4 @@
-/* Version: #54 */
+/* Version: #55 */
 // Filnavn: posts/post7.js
 
 // Globale variabler spesifikke for Post 7 sitt minimap
@@ -6,7 +6,7 @@ let geoRunMiniMapInstance = null;
 let geoRunMiniMapUserMarker = null;
 let geoRunMiniMapPoint1Marker = null;
 let geoRunMiniMapPoint2Marker = null;
-let geoRunMiniMapNextTargetMarker = null; // For å fremheve neste mål
+// let geoRunMiniMapNextTargetMarker = null; // Ikke i bruk, bruker ikonendring
 
 function definePost7() {
     const POST_ID = 7;
@@ -40,7 +40,6 @@ function definePost7() {
 
             const runState = teamData.geoRunState[`post${POST_ID}`];
 
-            // === Hent UI Elementer ===
             const initialInstructionsEl = pageElement.querySelector('#georun-instructions-initial');
             const beforeStartInstructionsEl = pageElement.querySelector('#georun-instructions-before-start');
             const startButtonSectionEl = pageElement.querySelector('.geo-run-start-button-section');
@@ -56,111 +55,59 @@ function definePost7() {
             const proceedButtonEl = pageElement.querySelector(`#geo-run-proceed-btn-post${POST_ID}`);
             const miniMapDiv = pageElement.querySelector(`#georun-map-in-post${POST_ID}`);
 
-            // === Skjul alle seksjoner som standard ===
             if(initialInstructionsEl) initialInstructionsEl.style.display = 'none';
             if(beforeStartInstructionsEl) beforeStartInstructionsEl.style.display = 'none';
             if(startButtonSectionEl) startButtonSectionEl.style.display = 'none';
             if(activeSectionEl) activeSectionEl.style.display = 'none';
             if(resultsSectionEl) resultsSectionEl.style.display = 'none';
             if(duringRunInstructionsEl) duringRunInstructionsEl.style.display = 'none';
-            if(miniMapDiv) miniMapDiv.style.display = 'block'; // Kartet skal vises
+            if(miniMapDiv) miniMapDiv.style.display = 'block';
 
             if(totalLapsDisplayEl) totalLapsDisplayEl.textContent = this.lapsToComplete;
 
-            // === Initialiser/Oppdater MiniMap ===
             if (miniMapDiv && typeof google !== 'undefined' && google.maps) {
-                if (!geoRunMiniMapInstance) { // Opprett kun hvis det ikke finnes
-                    currentLog(`Post ${POST_ID} initUI: Initialiserer GeoRun MiniMap.`, "debug");
+                if (!geoRunMiniMapInstance || !geoRunMiniMapInstance.getDiv() || geoRunMiniMapInstance.getDiv().id !== miniMapDiv.id ) { // Sjekk om kartet må reinitialiseres
+                    currentLog(`Post ${POST_ID} initUI: Initialiserer/Re-initialiserer GeoRun MiniMap.`, "debug");
+                    if (geoRunMiniMapInstance) { // Rydd opp gammel instans hvis den finnes
+                        this.cleanupUI(); // Kall cleanup for å fjerne gamle markører etc.
+                    }
                     const centerLat = (this.geoRunPoint1.lat + this.geoRunPoint2.lat) / 2;
                     const centerLng = (this.geoRunPoint1.lng + this.geoRunPoint2.lng) / 2;
                     geoRunMiniMapInstance = new google.maps.Map(miniMapDiv, {
                         center: { lat: centerLat, lng: centerLng },
-                        zoom: 17, // Juster zoom etter behov
+                        zoom: 17,
                         mapTypeId: google.maps.MapTypeId.HYBRID,
                         disableDefaultUI: true,
                         zoomControl: true,
                         draggable: true,
                         scrollwheel: true,
+                        styles: window.MAP_STYLES_NO_LABELS || [] // Bruk global stil
                     });
 
-                    // Legg til markører for Point1 og Point2
                     geoRunMiniMapPoint1Marker = new google.maps.Marker({
-                        position: this.geoRunPoint1,
-                        map: geoRunMiniMapInstance,
-                        title: this.geoRunPoint1.name,
-                        icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' // Standard rød
+                        position: this.geoRunPoint1, map: geoRunMiniMapInstance, title: this.geoRunPoint1.name,
+                        icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
                     });
                     geoRunMiniMapPoint2Marker = new google.maps.Marker({
-                        position: this.geoRunPoint2,
-                        map: geoRunMiniMapInstance,
-                        title: this.geoRunPoint2.name,
-                        icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' // Standard rød
+                        position: this.geoRunPoint2, map: geoRunMiniMapInstance, title: this.geoRunPoint2.name,
+                        icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
                     });
                 }
 
-                // Oppdater brukermarkør (hvis den finnes i hovedkartet)
+                // Kall updateMiniMap for å sette brukerposisjon og mål
+                let currentUserPosForMiniMap = null;
                 if (window.userPositionMarker && window.userPositionMarker.getPosition()) {
-                    const userPos = window.userPositionMarker.getPosition();
-                    if (geoRunMiniMapUserMarker) {
-                        geoRunMiniMapUserMarker.setPosition(userPos);
-                    } else {
-                        geoRunMiniMapUserMarker = new google.maps.Marker({
-                            position: userPos,
-                            map: geoRunMiniMapInstance,
-                            title: "Din Posisjon",
-                            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 1.5, strokeColor: "white" }
-                        });
-                    }
-                } else if (DEV_MODE_NO_GEOFENCE && geoRunMiniMapInstance) { // Vis dummy i dev mode hvis ingen ekte posisjon
-                     const dummyUserPos = this.geoRunPoint1; // Start på punkt 1 i dev mode
-                     if (geoRunMiniMapUserMarker) {
-                        geoRunMiniMapUserMarker.setPosition(dummyUserPos);
-                    } else {
-                        geoRunMiniMapUserMarker = new google.maps.Marker({
-                            position: dummyUserPos,
-                            map: geoRunMiniMapInstance,
-                            title: "Din Posisjon (DEV)",
-                            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#FFA500", fillOpacity: 1, strokeWeight: 1.5, strokeColor: "white" } // Oransje for dev
-                        });
-                    }
+                    currentUserPosForMiniMap = window.userPositionMarker.getPosition();
+                } else if (DEV_MODE_NO_GEOFENCE) { // global DEV_MODE_NO_GEOFENCE
+                    currentUserPosForMiniMap = new google.maps.LatLng(this.geoRunPoint1.lat, this.geoRunPoint1.lng);
                 }
-
-
-                // Fremhev neste mål
-                let nextTargetForMap = null;
-                if (runState.active && !runState.finished) {
-                    nextTargetForMap = (runState.lap % 2 !== 0) ? this.geoRunPoint2 : this.geoRunPoint1;
-                } else if (runState.awaitingGeoRunStartConfirmation || (!runState.active && !runState.finished)) {
-                    nextTargetForMap = this.geoRunPoint1; // Før start, mål er Point1
-                }
-
-                [geoRunMiniMapPoint1Marker, geoRunMiniMapPoint2Marker].forEach(marker => {
-                    if (marker) {
-                        const isActiveTarget = nextTargetForMap && marker.getPosition().lat() === nextTargetForMap.lat && marker.getPosition().lng() === nextTargetForMap.lng;
-                        marker.setIcon(isActiveTarget ? 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png');
-                        marker.setAnimation(isActiveTarget ? google.maps.Animation.BOUNCE : null);
-                        if (isActiveTarget && geoRunMiniMapInstance) {
-                           // Forsikre at kartet er panorert slik at aktivt mål er synlig, spesielt i dev mode
-                           // geoRunMiniMapInstance.panTo(marker.getPosition());
-                        }
-                    }
-                });
-                 if (geoRunMiniMapInstance && geoRunMiniMapUserMarker && geoRunMiniMapPoint1Marker && geoRunMiniMapPoint2Marker) {
-                    const bounds = new google.maps.LatLngBounds();
-                    bounds.extend(geoRunMiniMapUserMarker.getPosition());
-                    bounds.extend(geoRunMiniMapPoint1Marker.getPosition());
-                    bounds.extend(geoRunMiniMapPoint2Marker.getPosition());
-                    geoRunMiniMapInstance.fitBounds(bounds);
-                    if (geoRunMiniMapInstance.getZoom() > 18) geoRunMiniMapInstance.setZoom(18); // Ikke zoom for mye inn
-                }
+                if(currentUserPosForMiniMap) this.updateMiniMap(currentUserPosForMiniMap, teamData);
 
 
             } else if (miniMapDiv) {
-                miniMapDiv.innerHTML = "<p style='text-align:center; color:red;'>Google Maps API ikke lastet ennå.</p>";
+                miniMapDiv.innerHTML = "<p style='text-align:center; color:red;'>Google Maps API ikke lastet ennå, eller kart-div feil.</p>";
             }
 
-
-            // === Vis/skjul seksjoner basert på runState ===
             if (runState.finished) {
                 currentLog(`Post ${POST_ID} initUI: Løp fullført. Viser resultater.`, "debug");
                 if(resultsSectionEl) resultsSectionEl.style.display = 'block';
@@ -185,7 +132,7 @@ function definePost7() {
                 }
             } else if (runState.awaitingGeoRunStartConfirmation) {
                 currentLog(`Post ${POST_ID} initUI: Venter på startknapp-trykk.`, "debug");
-                 if(initialInstructionsEl) { // Vis også initielle instruksjoner
+                 if(initialInstructionsEl) {
                     initialInstructionsEl.textContent = this.instructionsInitial;
                     initialInstructionsEl.style.display = 'block';
                 }
@@ -195,13 +142,13 @@ function definePost7() {
                 }
                 if(startButtonSectionEl) startButtonSectionEl.style.display = 'block';
                 if(startButtonEl) startButtonEl.disabled = true;
-            } else { // Første ankomst, ikke ulåst for start ennå (dvs. unlockedPosts er true, men awaitingGeoRunStartConfirmation er ikke satt ennå)
+            } else {
                 currentLog(`Post ${POST_ID} initUI: Første ankomst / generelle instruksjoner (venter på geofence for startområdet).`, "debug");
                 if(initialInstructionsEl) {
                     initialInstructionsEl.textContent = this.instructionsInitial;
                     initialInstructionsEl.style.display = 'block';
                 }
-                 if(beforeStartInstructionsEl) { // Vis også disse for å lede brukeren
+                 if(beforeStartInstructionsEl) {
                     beforeStartInstructionsEl.textContent = this.instructionsBeforeStart;
                     beforeStartInstructionsEl.style.display = 'block';
                 }
@@ -209,42 +156,39 @@ function definePost7() {
                 if(startButtonEl) startButtonEl.disabled = true;
             }
         },
-        // Funksjon for å rydde opp minimap når man forlater post 7
         cleanupUI: function() {
             const currentLog = window.logToMobile || console.debug;
             currentLog(`Post ${POST_ID} (GeoRun) cleanupUI: Kjører.`, "debug");
             if (geoRunMiniMapInstance) {
-                // Fjern markører
                 if (geoRunMiniMapUserMarker) geoRunMiniMapUserMarker.setMap(null);
                 if (geoRunMiniMapPoint1Marker) geoRunMiniMapPoint1Marker.setMap(null);
                 if (geoRunMiniMapPoint2Marker) geoRunMiniMapPoint2Marker.setMap(null);
-                if (geoRunMiniMapNextTargetMarker) geoRunMiniMapNextTargetMarker.setMap(null); // Hvis vi hadde en egen
                 geoRunMiniMapUserMarker = null;
                 geoRunMiniMapPoint1Marker = null;
                 geoRunMiniMapPoint2Marker = null;
-                geoRunMiniMapNextTargetMarker = null;
 
-                // Nullstill kartinstansen
                 const mapDiv = document.getElementById(`georun-map-in-post${POST_ID}`);
-                if (mapDiv) mapDiv.innerHTML = ''; // Tøm div-en
-                geoRunMiniMapInstance = null;
+                if (mapDiv) mapDiv.innerHTML = '';
+                geoRunMiniMapInstance = null; // Viktig å nullstille for re-initialisering
                 currentLog(`Post ${POST_ID} (GeoRun) cleanupUI: MiniMap ryddet.`, "debug");
             }
         },
-        // Funksjon for å oppdatere minimap (kalles fra core.js)
         updateMiniMap: function(userLatLng, teamData) {
             if (!geoRunMiniMapInstance || !teamData || !teamData.geoRunState) return;
             const runState = teamData.geoRunState[`post${POST_ID}`];
             if (!runState) return;
 
-            if (geoRunMiniMapUserMarker) {
-                geoRunMiniMapUserMarker.setPosition(userLatLng);
-            } else if (geoRunMiniMapInstance) { // Lag hvis ikke finnes
-                 geoRunMiniMapUserMarker = new google.maps.Marker({
-                    position: userLatLng, map: geoRunMiniMapInstance, title: "Din Posisjon",
-                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 1.5, strokeColor: "white" }
-                });
+            if (userLatLng) { // Kun oppdater hvis vi har en gyldig userLatLng
+                if (geoRunMiniMapUserMarker) {
+                    geoRunMiniMapUserMarker.setPosition(userLatLng);
+                } else if (geoRunMiniMapInstance) {
+                     geoRunMiniMapUserMarker = new google.maps.Marker({
+                        position: userLatLng, map: geoRunMiniMapInstance, title: "Din Posisjon",
+                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: (DEV_MODE_NO_GEOFENCE && userLatLng.lat() === this.geoRunPoint1.lat && userLatLng.lng() === this.geoRunPoint1.lng) ? "#FFA500" : "#4285F4", fillOpacity: 1, strokeWeight: 1.5, strokeColor: "white" }
+                    });
+                }
             }
+
 
             let nextTargetForMap = null;
             if (runState.active && !runState.finished) {
@@ -258,16 +202,9 @@ function definePost7() {
                     const isActiveTarget = nextTargetForMap && marker.getPosition().lat().toFixed(6) === nextTargetForMap.lat.toFixed(6) && marker.getPosition().lng().toFixed(6) === nextTargetForMap.lng.toFixed(6);
                     const newIconUrl = isActiveTarget ? 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
                     if (marker.getIcon() !== newIconUrl) marker.setIcon(newIconUrl);
-                    
-                    const currentAnimation = marker.getAnimation();
-                    if (isActiveTarget && !currentAnimation) {
-                        // marker.setAnimation(google.maps.Animation.BOUNCE); // Bounce kan være irriterende
-                    } else if (!isActiveTarget && currentAnimation) {
-                        // marker.setAnimation(null);
-                    }
                 }
             });
-             if (geoRunMiniMapInstance && geoRunMiniMapUserMarker && geoRunMiniMapPoint1Marker && geoRunMiniMapPoint2Marker) {
+             if (geoRunMiniMapInstance && geoRunMiniMapUserMarker && geoRunMiniMapPoint1Marker && geoRunMiniMapPoint2Marker && geoRunMiniMapUserMarker.getPosition()) { // Sjekk at user marker har posisjon
                 const bounds = new google.maps.LatLngBounds();
                 bounds.extend(geoRunMiniMapUserMarker.getPosition());
                 bounds.extend(geoRunMiniMapPoint1Marker.getPosition());
@@ -279,4 +216,4 @@ function definePost7() {
     };
     return postData;
 }
-/* Version: #54 */
+/* Version: #55 */
