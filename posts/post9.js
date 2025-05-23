@@ -4,7 +4,7 @@
 function definePost9() {
     return {
         id: 9,
-        name: "Snublesteiner (Fjellhall-området)", // Navn justert for kontekst
+        name: "Sommerfeldts gate 3", // Navn justert for kontekst
         lat: 60.79501870985781, // Dine nye koordinater
         lng: 10.688823005153845, // Dine nye koordinater
         type: "standard", // Kan være standard, hintet er en del av spørsmålet
