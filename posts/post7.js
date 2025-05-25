@@ -1,11 +1,10 @@
-/* Version: #69 */
+/* Version: #71 */
 // Filnavn: posts/post7.js
 
 // Globale variabler spesifikke for Post 7 sitt minimap
 let geoRunMiniMapInstance = null;
 let geoRunMiniMapUserMarker = null;
-let geoRunMiniMapActiveTargetMarker = null;
-let geoRunAllPointMarkers = []; // For å holde alle faste punktmarkører (S, 1, 2, 3, 4)
+let geoRunMiniMapActiveTargetMarker = null; // Kun én aktiv målmarkør om gangen
 
 function definePost7() {
     const POST_ID = 7;
@@ -19,6 +18,13 @@ function definePost7() {
 
     const runTargetIndices = [1, 2, 3, 4, 0];
     const totalLegsToComplete = runTargetIndices.length;
+
+    const miniMapStyles = [ // Stiler for å fjerne POIs og etiketter
+        { featureType: "all", elementType: "labels", stylers: [{ visibility: "off" }] },
+        { featureType: "poi", elementType: "all", stylers: [{ visibility: "off" }] },
+        { featureType: "transit", elementType: "all", stylers: [{ visibility: "off" }] },
+        { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] }
+    ];
 
     return {
         id: POST_ID,
@@ -81,34 +87,31 @@ function definePost7() {
                     if (geoRunMiniMapInstance) { this.cleanupUI(); }
 
                     geoRunMiniMapInstance = new google.maps.Map(miniMapDiv, {
-                        // Senter og zoom settes av fitBounds nedenfor
-                        mapTypeId: google.maps.MapTypeId.HYBRID,
+                        mapTypeId: google.maps.MapTypeId.SATELLITE, // Endret til SATELLITE
                         disableDefaultUI: true,
                         zoomControl: true, draggable: true, scrollwheel: true,
-                        styles: window.MAP_STYLES_NO_LABELS || []
+                        styles: miniMapStyles // Bruker lokal, aggressiv stil
                     });
 
-                    geoRunAllPointMarkers.forEach(marker => marker.setMap(null)); // Rydd opp eventuelle gamle
-                    geoRunAllPointMarkers = [];
-
-                    // Opprett alle faste punktmarkører (S, 1, 2, 3, 4)
-                    // Disse vil alltid være på kartet, men fargen endres for aktivt mål
-                    this.geoRunPoints.forEach((point, index) => {
-                        const marker = new google.maps.Marker({
-                            position: point,
-                            map: geoRunMiniMapInstance,
-                            title: point.name,
-                            label: `${index === 0 ? 'S' : (index).toString()}`,
-                            icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' // Starter som rød
-                        });
-                        geoRunAllPointMarkers.push(marker);
-                    });
+                    // Sett initialt kartutsnitt til å dekke alle punkter
+                    const bounds = new google.maps.LatLngBounds();
+                    this.geoRunPoints.forEach(point => bounds.extend(point));
+                    if (!bounds.isEmpty()) {
+                        geoRunMiniMapInstance.fitBounds(bounds);
+                        // Du kan legge til en listener for 'idle' for å justere zoom etter fitBounds hvis nødvendig
+                        // google.maps.event.addListenerOnce(geoRunMiniMapInstance, 'idle', () => {
+                        // if (geoRunMiniMapInstance.getZoom() > 18) geoRunMiniMapInstance.setZoom(18);
+                        // });
+                    } else if (this.geoRunPoints[0]) { // Fallback hvis ingen punkter (usannsynlig)
+                        geoRunMiniMapInstance.setCenter(this.geoRunPoints[0]);
+                        geoRunMiniMapInstance.setZoom(17);
+                    }
                 }
 
                 let currentUserPosForMiniMap = null;
                 if (window.userPositionMarker && window.userPositionMarker.getPosition()) {
                     currentUserPosForMiniMap = window.userPositionMarker.getPosition();
-                } else if (DEV_MODE_NO_GEOFENCE) {
+                } else if (DEV_MODE_NO_GEOFENCE && this.geoRunPoints[0]) { // Bruk startpunktet som dummy
                     currentUserPosForMiniMap = new google.maps.LatLng(this.geoRunPoints[0].lat, this.geoRunPoints[0].lng);
                 }
                 this.updateMiniMapDisplay(currentUserPosForMiniMap, teamData);
@@ -173,14 +176,13 @@ function definePost7() {
             const runState = teamData.geoRunState[`post${POST_ID}`];
             if (!runState) return;
 
-            // Oppdater/opprett brukermarkør
             if (userLatLng) {
                 if (geoRunMiniMapUserMarker) {
                     geoRunMiniMapUserMarker.setPosition(userLatLng);
                 } else if (geoRunMiniMapInstance) {
                      geoRunMiniMapUserMarker = new google.maps.Marker({
                         position: userLatLng, map: geoRunMiniMapInstance, title: "Din Posisjon",
-                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: (DEV_MODE_NO_GEOFENCE && userLatLng.lat() === this.geoRunPoints[0].lat && userLatLng.lng() === this.geoRunPoints[0].lng) ? "#FFA500" : "#4285F4", fillOpacity: 1, strokeWeight: 1.5, strokeColor: "white" }
+                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: (DEV_MODE_NO_GEOFENCE && this.geoRunPoints[0] && userLatLng.lat() === this.geoRunPoints[0].lat && userLatLng.lng() === this.geoRunPoints[0].lng) ? "#FFA500" : "#4285F4", fillOpacity: 1, strokeWeight: 1.5, strokeColor: "white" }
                     });
                 }
             } else if (geoRunMiniMapUserMarker) {
@@ -188,68 +190,45 @@ function definePost7() {
                 geoRunMiniMapUserMarker = null;
             }
 
-            // Bestem neste målpunkt
+            if (geoRunMiniMapActiveTargetMarker) {
+                geoRunMiniMapActiveTargetMarker.setMap(null);
+                geoRunMiniMapActiveTargetMarker = null;
+            }
+
             let nextTargetPointData = null;
+            let targetLabel = '';
+
             if (runState.active && !runState.finished && runState.lap > 0 && runState.lap <= this.runTargetIndices.length) {
                 const targetIndex = this.runTargetIndices[runState.lap - 1];
                 nextTargetPointData = this.geoRunPoints[targetIndex];
+                targetLabel = targetIndex === 0 ? 'M' : (targetIndex).toString(); // M for Mål (som er Startpunktet)
             } else if (runState.awaitingGeoRunStartConfirmation || (!runState.active && !runState.finished)) {
-                nextTargetPointData = this.geoRunPoints[0]; // Før start, eller hvis ikke aktiv, er målet Startpunktet
+                nextTargetPointData = this.geoRunPoints[0];
+                targetLabel = 'S'; // S for Start
             } else if (runState.finished) {
-                nextTargetPointData = this.geoRunPoints[0]; // Etter målgang, vis målpunktet (Start/Mål)
+                nextTargetPointData = this.geoRunPoints[0]; // Vis Målpunktet
+                targetLabel = 'M';
             }
 
+            if (nextTargetPointData) {
+                geoRunMiniMapActiveTargetMarker = new google.maps.Marker({
+                    position: nextTargetPointData,
+                    map: geoRunMiniMapInstance,
+                    title: nextTargetPointData.name,
+                    icon: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+                    label: { text: targetLabel, color: "black", fontWeight: "bold" }
+                });
+            }
 
-            // Oppdater faste punktmarkører (S, 1, 2, 3, 4)
-            geoRunAllPointMarkers.forEach((marker, index) => {
-                if (marker) {
-                    const isThisMarkerTheNextTarget = nextTargetPointData &&
-                                                 marker.getPosition().lat().toFixed(6) === nextTargetPointData.lat.toFixed(6) &&
-                                                 marker.getPosition().lng().toFixed(6) === nextTargetPointData.lng.toFixed(6);
-
-                    // Hvis løpet ikke er startet eller venter på bekreftelse, vis kun startpunktet (S) tydelig.
-                    // Andre ytre punkter (1-4) skal ikke vises før løpet er aktivt og de er neste mål.
-                    let shouldBeVisible = false;
-                    if (index === 0) { // Start/Mål-punktet (S)
-                        shouldBeVisible = true; // Alltid synlig, farge endres
-                    } else if (runState.active && !runState.finished && isThisMarkerTheNextTarget) {
-                        shouldBeVisible = true; // Vis neste aktive mål
-                    } else if (runState.finished && index === 0){ // Vis målpunktet når ferdig
-                        shouldBeVisible = true;
-                    }
-
-
-                    if (shouldBeVisible) {
-                        marker.setMap(geoRunMiniMapInstance); // Sørg for at den er på kartet
-                        const newIconUrl = isThisMarkerTheNextTarget ? 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
-                        if (marker.getIcon() !== newIconUrl) marker.setIcon(newIconUrl);
-                    } else {
-                        marker.setMap(null); // Skjul markøren hvis den ikke skal vises
-                    }
-                }
-            });
-
-            // Juster kartutsnitt
-             if (geoRunMiniMapInstance) {
-                const bounds = new google.maps.LatLngBounds();
-                if (geoRunMiniMapUserMarker && geoRunMiniMapUserMarker.getPosition()) {
-                    bounds.extend(geoRunMiniMapUserMarker.getPosition());
-                }
-                // Inkluder kun det aktive målet i bounds, eller startpunktet hvis før løp/etter mål
-                if (nextTargetPointData) {
-                    bounds.extend(nextTargetPointData);
-                } else if (this.geoRunPoints[0]) { // Fallback til startpunktet hvis ingen aktivt mål
-                     bounds.extend(this.geoRunPoints[0]);
-                }
-
-
-                if (!bounds.isEmpty()) {
-                    geoRunMiniMapInstance.fitBounds(bounds);
-                    if (geoRunMiniMapInstance.getZoom() > 18) geoRunMiniMapInstance.setZoom(18); // Begrens maks zoom
-                } else if (this.geoRunPoints[0]) {
-                    geoRunMiniMapInstance.setCenter(this.geoRunPoints[0]);
-                    geoRunMiniMapInstance.setZoom(17);
-                }
+            // Ikke kall fitBounds her for å unngå konstant re-zooming under løpet.
+            // Panorer heller for å holde bruker og mål synlig om nødvendig.
+            if (geoRunMiniMapInstance && userLatLng && nextTargetPointData) {
+                const tempBounds = new google.maps.LatLngBounds();
+                tempBounds.extend(userLatLng);
+                tempBounds.extend(nextTargetPointData);
+                // Panorer slik at begge er synlige, men unngå å endre zoom for mye.
+                // Dette kan være komplekst. Enklere: panTo(userLatLng) eller panTo(nextTargetPointData)
+                // Eller la brukeren panorere selv. For nå, ingen automatisk panorering her.
             }
         },
 
@@ -258,11 +237,9 @@ function definePost7() {
             currentLog(`Post ${POST_ID} (GeoRun Stjerne) cleanupUI: Kjører.`, "debug");
             if (geoRunMiniMapInstance) {
                 if (geoRunMiniMapUserMarker) geoRunMiniMapUserMarker.setMap(null);
-                geoRunAllPointMarkers.forEach(marker => marker.setMap(null)); // Fjern alle faste punktmarkører
-                if (geoRunMiniMapActiveTargetMarker) geoRunMiniMapActiveTargetMarker.setMap(null); // Selv om dette er en av de i arrayen
-
+                if (geoRunMiniMapActiveTargetMarker) geoRunMiniMapActiveTargetMarker.setMap(null);
+                // geoRunAllPointMarkers er ikke lenger i bruk for å holde alle markører samtidig på kartet
                 geoRunMiniMapUserMarker = null;
-                geoRunAllPointMarkers = [];
                 geoRunMiniMapActiveTargetMarker = null;
 
                 const mapDiv = document.getElementById(`georun-map-in-post${POST_ID}`);
@@ -274,4 +251,4 @@ function definePost7() {
     };
     return postData;
 }
-/* Version: #69 */
+/* Version: #71 */
