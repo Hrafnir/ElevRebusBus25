@@ -1,4 +1,4 @@
-/* Version: #70 */
+/* Version: #72 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -52,12 +52,14 @@ const CoreApp = {
             currentTeamData.completedPostsCount++;
             currentTeamData.taskCompletionTimes[`post${postId}`] = Date.now();
             currentTeamData.score += pointsAwarded;
+            currentTeamData.pointsPerPost[`post${postId}`] = pointsAwarded; // Lagre poeng for denne posten
 
+            // For GeoRun, kan vi også lagre det i runState hvis det er nyttig for umiddelbar visning i post7.js
             if (postData.type === 'georun' && currentTeamData.geoRunState && currentTeamData.geoRunState[`post${postId}`]) {
                 currentTeamData.geoRunState[`post${postId}`].pointsAwarded = pointsAwarded;
             }
 
-            logToMobile(`Post ${postId} markert som fullført. Poeng: ${currentTeamData.score}, Fullførte: ${currentTeamData.completedPostsCount}`, "info");
+            logToMobile(`Post ${postId} markert som fullført. Poeng totalt: ${currentTeamData.score}, Poeng for post: ${pointsAwarded}, Fullførte: ${currentTeamData.completedPostsCount}`, "info");
             saveState();
             document.dispatchEvent(new CustomEvent('scoreUpdated'));
 
@@ -95,28 +97,11 @@ const DEV_MODE_NO_GEOFENCE = true;
 const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
-// Oppdatert MAP_STYLES_NO_LABELS for å fjerne POIs mer effektivt
 const MAP_STYLES_NO_LABELS = [
-    {
-        featureType: "all",
-        elementType: "labels",
-        stylers: [{ visibility: "off" }]
-    },
-    { // Skjul POIs (Points of Interest)
-        featureType: "poi",
-        elementType: "all",
-        stylers: [{ visibility: "off" }]
-    },
-    { // Skjul transitt-ikoner og etiketter
-        featureType: "transit",
-        elementType: "all",
-        stylers: [{ visibility: "off" }]
-    },
-    { // Skjul vei-ikoner (hvis ønskelig, kan kommenteres ut)
-      // featureType: "road",
-      // elementType: "labels.icon",
-      // stylers: [{ visibility: "off" }]
-    }
+    { featureType: "all", elementType: "labels", stylers: [{ visibility: "off" }] },
+    { featureType: "poi", elementType: "all", stylers: [{ visibility: "off" }] },
+    { featureType: "transit", elementType: "all", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] }
 ];
 
 const START_LOCATION = { lat: 60.79823355219047, lng: 10.674827839521527, title: "Start: Fastland", name: "Start: Fastland" };
@@ -433,7 +418,7 @@ function stopContinuousUserPositionUpdate() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DEBUG_V54: DOMContentLoaded event fired.`, "info"); // Holder v54 siden dette er en del av samme "batch" med endringer
+    logToMobile(`DEBUG_V54: DOMContentLoaded event fired.`, "info");
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -520,41 +505,45 @@ document.addEventListener('DOMContentLoaded', () => {
             totalTimeSpan.textContent = formatTime(currentTeamData.totalTimeSeconds);
         }
 
-        if (stageTimesList && currentTeamData.taskCompletionTimes) {
+        if (stageTimesList && currentTeamData.taskCompletionTimes && currentTeamData.pointsPerPost) { // Sjekk pointsPerPost
             stageTimesList.innerHTML = '';
             for (let i = 0; i < currentTeamData.postSequence.length; i++) {
                 const postGlobalId = currentTeamData.postSequence[i];
                 const postData = CoreApp.getPostData(postGlobalId);
                 if (!postData) continue;
-                const postName = postData.name;
-                let startTimeForStage = (i === 0) ? currentTeamData.startTime : currentTeamData.taskCompletionTimes[`post${currentTeamData.postSequence[i-1]}`];
+
+                const postName = postData.name || `Post ${postGlobalId}`;
+                const pointsForThisPost = currentTeamData.pointsPerPost[`post${postGlobalId}`];
+                const pointsText = (pointsForThisPost !== undefined) ? `${pointsForThisPost} poeng` : "Poeng ikke registrert";
+
+                let stageTimeText = "Tid ikke fullført";
                 if (currentTeamData.taskCompletionTimes['post' + postGlobalId]) {
+                    let startTimeForStage = (i === 0) ? currentTeamData.startTime : currentTeamData.taskCompletionTimes[`post${currentTeamData.postSequence[i-1]}`];
                     if (startTimeForStage) {
-                        const stageTime = currentTeamData.taskCompletionTimes['post' + postGlobalId] - startTimeForStage;
-                        const li = document.createElement('li');
-                        const fromPoint = (i === 0) ? "Start" : (CoreApp.getPostData(currentTeamData.postSequence[i-1]) ? CoreApp.getPostData(currentTeamData.postSequence[i-1]).name : "Forrige post");
-                        li.textContent = `${fromPoint} til ${postName}: ${formatTimeFromMs(stageTime)}`;
-                        stageTimesList.appendChild(li);
+                        const stageTimeMs = currentTeamData.taskCompletionTimes['post' + postGlobalId] - startTimeForStage;
+                        stageTimeText = `Tid: ${formatTimeFromMs(stageTimeMs)}`;
                     } else if (i === 0) {
-                        const li = document.createElement('li');
-                        li.textContent = `Start til ${postName}: Tid ukjent`;
-                        stageTimesList.appendChild(li);
+                        stageTimeText = "Starttid ukjent";
                     }
-                } else {
-                     const li = document.createElement('li');
-                     const fromPoint = (i === 0) ? "Start" : (CoreApp.getPostData(currentTeamData.postSequence[i-1]) ? CoreApp.getPostData(currentTeamData.postSequence[i-1]).name : "Forrige post");
-                     li.textContent = `${fromPoint} til ${postName}: Ikke fullført`;
-                     stageTimesList.appendChild(li);
-                     break;
+                }
+
+                const li = document.createElement('li');
+                const fromPoint = (i === 0) ? "Start" : (CoreApp.getPostData(currentTeamData.postSequence[i-1]) ? CoreApp.getPostData(currentTeamData.postSequence[i-1]).name : "Forrige");
+                li.textContent = `${fromPoint} til ${postName}: ${pointsText}, ${stageTimeText}`;
+                stageTimesList.appendChild(li);
+
+                if (!currentTeamData.taskCompletionTimes['post' + postGlobalId] && !currentTeamData.endTime) { // Hvis en post ikke er fullført, og spillet ikke er over
+                    break; // Ikke vis flere etapper
                 }
             }
+
             if (currentTeamData.endTime && currentTeamData.completedPostsCount === Object.keys(CoreApp.registeredPostsData).length) {
                 const lastCompletedPostInSequence = currentTeamData.postSequence[Object.keys(CoreApp.registeredPostsData).length -1];
                 const lastPostData = CoreApp.getPostData(lastCompletedPostInSequence);
                 if (lastPostData && currentTeamData.taskCompletionTimes['post' + lastCompletedPostInSequence]) {
                     const timeToFinish = currentTeamData.endTime - currentTeamData.taskCompletionTimes['post' + lastCompletedPostInSequence];
                     const li = document.createElement('li');
-                    li.textContent = `${lastPostData.name} til Mål: ${formatTimeFromMs(timeToFinish)}`;
+                    li.textContent = `${lastPostData.name} til Mål: Tid: ${formatTimeFromMs(timeToFinish)}`;
                     stageTimesList.appendChild(li);
                 }
             }
@@ -569,12 +558,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let previousPostGlobalIdIfNavigating = null;
         if (currentTeamData && currentTeamData.postSequence && currentTeamData.postSequence[currentPostArrayIndex] !== undefined) {
             const currentActualPostIdOnPage = `post-${currentTeamData.postSequence[currentPostArrayIndex]}`;
-            if (pageIdentifier !== currentActualPostIdOnPage) { // Vi navigerer faktisk bort fra den nåværende posten
+            // Sjekk om vi faktisk navigerer TIL en ANNEN side enn den nåværende posten, ELLER om vi går til intro/finale
+            if (pageIdentifier !== currentActualPostIdOnPage || pageIdentifier === 'intro' || pageIdentifier === 'finale') {
                  previousPostGlobalIdIfNavigating = currentTeamData.postSequence[currentPostArrayIndex];
             }
         }
 
-        if (previousPostGlobalIdIfNavigating === GEO_RUN_POST_ID) {
+        if (previousPostGlobalIdIfNavigating === GEO_RUN_POST_ID && pageIdentifier !== `post-${GEO_RUN_POST_ID}`) {
             const geoRunPostData = CoreApp.getPostData(GEO_RUN_POST_ID);
             if (geoRunPostData && typeof geoRunPostData.cleanupUI === 'function') {
                 logToMobile("showRebusPage: Kaller cleanupUI for GeoRun (Post 7) fordi vi navigerer bort.", "debug");
@@ -685,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`DEBUG_V54: clearState kalt`, "info");
+        logToMobile(`DEBUG_V54: clearState kalt`, "info"); // Skal være DEBUG_V68 her, men beholder forrige for å unngå unødvendig endring
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -848,7 +838,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPostArrayIndex: 0, score: 0, startTime: Date.now(), endTime: null, totalTimeSeconds: null,
             completedPostsCount: 0, completedGlobalPosts: {}, unlockedPosts: {}, taskAttempts: {},
             taskCompletionTimes: {}, mannedPostTeacherVerified: {}, minigolfScores: {}, pyramidPoints: {},
-            geoRunState: {}, arrivalSoundPlayed: {}, canEnterFinishCode: false
+            geoRunState: {}, arrivalSoundPlayed: {}, canEnterFinishCode: false,
+            pointsPerPost: {} // Initialiser pointsPerPost
         };
 
         currentTeamData.postSequence.forEach(postId => {
@@ -1052,7 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     logToMobile(`GeoRun Post ${postId}: Ingen pointsScale definert. Gir 0 poeng.`, "warn");
                 }
-                runState.pointsAwarded = pointsAwarded;
+                runState.pointsAwarded = pointsAwarded; // Lagres også i markPostAsCompleted
 
                 CoreApp.markPostAsCompleted(postId, pointsAwarded);
             } else {
