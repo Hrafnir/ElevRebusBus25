@@ -1,10 +1,10 @@
-/* Version: #71 */
+/* Version: #73 */
 // Filnavn: posts/post7.js
 
 // Globale variabler spesifikke for Post 7 sitt minimap
 let geoRunMiniMapInstance = null;
 let geoRunMiniMapUserMarker = null;
-let geoRunMiniMapActiveTargetMarker = null; // Kun én aktiv målmarkør om gangen
+let geoRunMiniMapActiveTargetMarker = null;
 
 function definePost7() {
     const POST_ID = 7;
@@ -19,7 +19,7 @@ function definePost7() {
     const runTargetIndices = [1, 2, 3, 4, 0];
     const totalLegsToComplete = runTargetIndices.length;
 
-    const miniMapStyles = [ // Stiler for å fjerne POIs og etiketter
+    const miniMapStyles = [
         { featureType: "all", elementType: "labels", stylers: [{ visibility: "off" }] },
         { featureType: "poi", elementType: "all", stylers: [{ visibility: "off" }] },
         { featureType: "transit", elementType: "all", stylers: [{ visibility: "off" }] },
@@ -28,14 +28,15 @@ function definePost7() {
 
     return {
         id: POST_ID,
-        name: "Geo-løp Stjerne (Kunstgresset)",
+        name: "Geo-løp: Store Kunstgress", // Oppdatert tittel
         lat: geoRunPointsData[0].lat,
         lng: geoRunPointsData[0].lng,
         type: "georun",
 
-        instructionsInitial: "Du har ankommet startområdet for Geo-løpet! Kartet nedenfor viser din posisjon og Startpunktet.",
-        instructionsBeforeStart: `Når du er innenfor ${GEO_RUN_START_RADIUS} meter av Startpunktet (se kart), vil 'Start Geo-Løp'-knappen nedenfor bli aktiv. Trykk på den for å starte tidtakingen.`,
-        instructionsDuringRun: `Løp til det GULE markerte vendepunktet på kartet. Du skal løpe fra punkt til punkt og avslutte tilbake ved startpunktet. Totalt ${totalLegsToComplete} etapper. Følg kartet!`,
+        // Oppdaterte instruksjoner
+        instructionsInitial: "Velkommen til Geo-løp på Store Kunstgress!\nKartet nedenfor viser din posisjon og Startpunktet for løpet.",
+        instructionsBeforeStart: `Gå til Startpunktet. Når du er innenfor ${GEO_RUN_START_RADIUS} meter, blir 'Start Geo-Løp'-knappen aktiv. Trykk på den for å begynne!`,
+        instructionsDuringRun: `Løp til det GULE punktet på kartet! Når du kommer frem (innenfor ${GEO_RUN_WAYPOINT_RADIUS} meter), vil neste punkt i løypa automatisk vises. Fortsett slik til du er tilbake ved Startpunktet (som da er Mål). Gi gass!`,
 
         geoRunPoints: geoRunPointsData,
         runTargetIndices: runTargetIndices,
@@ -87,22 +88,20 @@ function definePost7() {
                     if (geoRunMiniMapInstance) { this.cleanupUI(); }
 
                     geoRunMiniMapInstance = new google.maps.Map(miniMapDiv, {
-                        mapTypeId: google.maps.MapTypeId.SATELLITE, // Endret til SATELLITE
+                        mapTypeId: google.maps.MapTypeId.SATELLITE,
                         disableDefaultUI: true,
                         zoomControl: true, draggable: true, scrollwheel: true,
-                        styles: miniMapStyles // Bruker lokal, aggressiv stil
+                        styles: miniMapStyles
                     });
 
-                    // Sett initialt kartutsnitt til å dekke alle punkter
                     const bounds = new google.maps.LatLngBounds();
                     this.geoRunPoints.forEach(point => bounds.extend(point));
                     if (!bounds.isEmpty()) {
                         geoRunMiniMapInstance.fitBounds(bounds);
-                        // Du kan legge til en listener for 'idle' for å justere zoom etter fitBounds hvis nødvendig
-                        // google.maps.event.addListenerOnce(geoRunMiniMapInstance, 'idle', () => {
-                        // if (geoRunMiniMapInstance.getZoom() > 18) geoRunMiniMapInstance.setZoom(18);
-                        // });
-                    } else if (this.geoRunPoints[0]) { // Fallback hvis ingen punkter (usannsynlig)
+                         google.maps.event.addListenerOnce(geoRunMiniMapInstance, 'idle', () => {
+                           if (geoRunMiniMapInstance.getZoom() > 18) geoRunMiniMapInstance.setZoom(18); // Begrens maks zoom etter fitBounds
+                         });
+                    } else if (this.geoRunPoints[0]) {
                         geoRunMiniMapInstance.setCenter(this.geoRunPoints[0]);
                         geoRunMiniMapInstance.setZoom(17);
                     }
@@ -111,7 +110,7 @@ function definePost7() {
                 let currentUserPosForMiniMap = null;
                 if (window.userPositionMarker && window.userPositionMarker.getPosition()) {
                     currentUserPosForMiniMap = window.userPositionMarker.getPosition();
-                } else if (DEV_MODE_NO_GEOFENCE && this.geoRunPoints[0]) { // Bruk startpunktet som dummy
+                } else if (DEV_MODE_NO_GEOFENCE && this.geoRunPoints[0]) {
                     currentUserPosForMiniMap = new google.maps.LatLng(this.geoRunPoints[0].lat, this.geoRunPoints[0].lng);
                 }
                 this.updateMiniMapDisplay(currentUserPosForMiniMap, teamData);
@@ -120,7 +119,6 @@ function definePost7() {
                 miniMapDiv.innerHTML = "<p style='text-align:center; color:red;'>Google Maps API ikke lastet ennå, eller kart-div feil.</p>";
             }
 
-            // UI-seksjoner basert på tilstand
             if (runState.finished) {
                 currentLog(`Post ${POST_ID} initUI: Løp fullført. Viser resultater.`, "debug");
                 if(resultsSectionEl) resultsSectionEl.style.display = 'block';
@@ -201,12 +199,12 @@ function definePost7() {
             if (runState.active && !runState.finished && runState.lap > 0 && runState.lap <= this.runTargetIndices.length) {
                 const targetIndex = this.runTargetIndices[runState.lap - 1];
                 nextTargetPointData = this.geoRunPoints[targetIndex];
-                targetLabel = targetIndex === 0 ? 'M' : (targetIndex).toString(); // M for Mål (som er Startpunktet)
+                targetLabel = targetIndex === 0 ? 'M' : (targetIndex).toString();
             } else if (runState.awaitingGeoRunStartConfirmation || (!runState.active && !runState.finished)) {
                 nextTargetPointData = this.geoRunPoints[0];
-                targetLabel = 'S'; // S for Start
+                targetLabel = 'S';
             } else if (runState.finished) {
-                nextTargetPointData = this.geoRunPoints[0]; // Vis Målpunktet
+                nextTargetPointData = this.geoRunPoints[0];
                 targetLabel = 'M';
             }
 
@@ -219,17 +217,8 @@ function definePost7() {
                     label: { text: targetLabel, color: "black", fontWeight: "bold" }
                 });
             }
-
-            // Ikke kall fitBounds her for å unngå konstant re-zooming under løpet.
-            // Panorer heller for å holde bruker og mål synlig om nødvendig.
-            if (geoRunMiniMapInstance && userLatLng && nextTargetPointData) {
-                const tempBounds = new google.maps.LatLngBounds();
-                tempBounds.extend(userLatLng);
-                tempBounds.extend(nextTargetPointData);
-                // Panorer slik at begge er synlige, men unngå å endre zoom for mye.
-                // Dette kan være komplekst. Enklere: panTo(userLatLng) eller panTo(nextTargetPointData)
-                // Eller la brukeren panorere selv. For nå, ingen automatisk panorering her.
-            }
+            // Ingen automatisk fitBounds eller panTo her lenger, for å la brukeren styre under løp.
+            // Det initielle utsnittet fra initUI bør være dekkende.
         },
 
         cleanupUI: function() {
@@ -238,7 +227,6 @@ function definePost7() {
             if (geoRunMiniMapInstance) {
                 if (geoRunMiniMapUserMarker) geoRunMiniMapUserMarker.setMap(null);
                 if (geoRunMiniMapActiveTargetMarker) geoRunMiniMapActiveTargetMarker.setMap(null);
-                // geoRunAllPointMarkers er ikke lenger i bruk for å holde alle markører samtidig på kartet
                 geoRunMiniMapUserMarker = null;
                 geoRunMiniMapActiveTargetMarker = null;
 
@@ -251,4 +239,4 @@ function definePost7() {
     };
     return postData;
 }
-/* Version: #71 */
+/* Version: #73 */
