@@ -332,13 +332,15 @@ function handlePositionUpdate(position) {
         const runState = currentTeamData.geoRunState[`post${currentGlobalIdOriginal}`];
         if (runState.awaitingGeoRunStartConfirmation && targetLocationDetails.globalId === 'geoRunButtonEnable') {
             const startButton = document.getElementById(`start-georun-btn-post${currentGlobalIdOriginal}`);
-            if (startButton) { // NY LOGG
+            if (startButton) {
                 const prevDisabledState = startButton.disabled;
                 startButton.disabled = !isEffectivelyWithinRange;
                 if (prevDisabledState && !startButton.disabled) {
                     logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} er nå AKTIVERT. (Effektivt innenfor: ${isEffectivelyWithinRange})`, "info");
-                } else if (!prevDisabledState && startButton.disabled) {
-                    logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} er nå DEAKTIVERT. (Effektivt innenfor: ${isEffectivelyWithinRange})`, "info");
+                } else if (!prevDisabledState && startButton.disabled && isEffectivelyWithinRange) { // Hvis den var aktiv, men nå deaktiveres selv om man er innenfor (bør ikke skje ofte)
+                    // logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} ble deaktivert, men er innenfor rekkevidde.`, "debug");
+                } else if (!prevDisabledState && startButton.disabled && !isEffectivelyWithinRange) {
+                    // logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} er nå DEAKTIVERT (utenfor rekkevidde).`, "info");
                 }
             }
             canCurrentlyInteract = isEffectivelyWithinRange;
@@ -425,7 +427,7 @@ function stopContinuousUserPositionUpdate() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DEBUG_V68: DOMContentLoaded event fired.`, "info"); // Oppdatert versjonsnummer
+    logToMobile(`DEBUG_V77: DOMContentLoaded event fired.`, "info");
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -502,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`DEBUG_V68: Displaying final results.`, "info"); // Oppdatert
+        logToMobile(`DEBUG_V77: Displaying final results.`, "info"); // Oppdatert
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -521,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const postName = postData.name || `Post ${postGlobalId}`;
                 const pointsForThisPost = currentTeamData.pointsPerPost[`post${postGlobalId}`];
-                const pointsText = (pointsForThisPost !== undefined) ? `${pointsForThisPost} poeng` : "0 poeng"; // Default til 0 hvis ikke satt
+                const pointsText = (pointsForThisPost !== undefined) ? `${pointsForThisPost} poeng` : "0 poeng";
 
                 let stageTimeText = "Tid ikke fullført";
                 if (currentTeamData.taskCompletionTimes['post' + postGlobalId]) {
@@ -529,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (startTimeForStage) {
                         const stageTimeMs = currentTeamData.taskCompletionTimes['post' + postGlobalId] - startTimeForStage;
                         stageTimeText = `Tid: ${formatTimeFromMs(stageTimeMs)}`;
-                    } else if (i === 0) { // Første post, tid fra start til post
+                    } else if (i === 0) {
                         const stageTimeMs = currentTeamData.taskCompletionTimes['post' + postGlobalId] - currentTeamData.startTime;
                         stageTimeText = `Tid: ${formatTimeFromMs(stageTimeMs)}`;
                     }
@@ -682,7 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`DEBUG_V54: clearState kalt`, "info");
+        logToMobile(`DEBUG_V77: clearState kalt`, "info"); // Oppdatert
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -804,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`DEBUG_V54: initializeTeam kalt med kode: ${teamCode}`, "info");
+        logToMobile(`DEBUG_V77: initializeTeam kalt med kode: ${teamCode}`, "info"); // Oppdatert
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -1067,7 +1069,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let currentUserPosForMiniMap = null;
                     if (window.userPositionMarker && window.userPositionMarker.getPosition()) {
                         currentUserPosForMiniMap = window.userPositionMarker.getPosition();
-                    } else if (DEV_MODE_NO_GEOFENCE) {
+                    } else if (DEV_MODE_NO_GEOFENCE && postData.geoRunPoints && postData.geoRunPoints[0]) {
                         currentUserPosForMiniMap = new google.maps.LatLng(postData.geoRunPoints[0].lat, postData.geoRunPoints[0].lng);
                     }
                     postData.updateMiniMapDisplay(currentUserPosForMiniMap, currentTeamData);
@@ -1277,9 +1279,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             else if (target.id === `pyramid-proceed-btn-post8` && !target.disabled) { window.proceedToNextPostOrFinishGlobal(); }
             else if (target.id.startsWith('start-georun-btn-post') && !target.disabled) {
+                logToMobile(`GeoRun Startknapp klikket: ID ${target.id}`, "debug"); // NY LOGG
                 const postId = parseInt(target.id.split('-').pop());
                 const postData = CoreApp.getPostData(postId);
-                const runState = currentTeamData.geoRunState[`post${postId}`];
+                const runState = currentTeamData ? currentTeamData.geoRunState[`post${postId}`] : null;
+
+                logToMobile(`GeoRun Startknapp: postId=${postId}, postData=${!!postData}, runState=${!!runState}`, "debug"); // NY LOGG
+                if (runState) {
+                    logToMobile(`GeoRun Startknapp: runState.awaitingGeoRunStartConfirmation = ${runState.awaitingGeoRunStartConfirmation}`, "debug"); // NY LOGG
+                }
+
                 if (postData && runState && runState.awaitingGeoRunStartConfirmation) {
                     logToMobile(`GeoRun Post ${postId}: Startknapp trykket! Løpet starter NÅ!`, "info");
                     runState.active = true;
@@ -1319,7 +1328,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         playGeoRunStartSoundSequence();
                         saveState();
+                    } else {
+                        logToMobile(`GeoRun Post ${postId} Start: Fant ikke pageElement.`, "error");
                     }
+                } else {
+                     logToMobile(`GeoRun Post ${postId} Start: Betingelse for start feilet. postData: ${!!postData}, runState: ${!!runState}, awaiting: ${runState ? runState.awaitingGeoRunStartConfirmation : 'N/A'}`, "warn");
                 }
             }
             else if (target.id.startsWith('geo-run-proceed-btn-post') && !target.disabled) { window.proceedToNextPostOrFinishGlobal(); }
@@ -1471,4 +1484,4 @@ document.addEventListener('DOMContentLoaded', () => {
         postContentContainer.innerHTML = `<p class="feedback error">En kritisk feil oppstod under lasting av spillets data. Prøv å laste siden på nytt, eller kontakt en arrangør.</p>`;
     });
 });
-/* Version: #76 */
+/* Version: #77 */
