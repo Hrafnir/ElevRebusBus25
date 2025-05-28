@@ -337,7 +337,7 @@ function handlePositionUpdate(position) {
                 startButton.disabled = !isEffectivelyWithinRange;
                 if (prevDisabledState && !startButton.disabled) {
                     logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} er nå AKTIVERT. (Effektivt innenfor: ${isEffectivelyWithinRange})`, "info");
-                } else if (!prevDisabledState && startButton.disabled && isEffectivelyWithinRange) { // Hvis den var aktiv, men nå deaktiveres selv om man er innenfor (bør ikke skje ofte)
+                } else if (!prevDisabledState && startButton.disabled && isEffectivelyWithinRange) {
                     // logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} ble deaktivert, men er innenfor rekkevidde.`, "debug");
                 } else if (!prevDisabledState && startButton.disabled && !isEffectivelyWithinRange) {
                     // logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} er nå DEAKTIVERT (utenfor rekkevidde).`, "info");
@@ -504,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`DEBUG_V77: Displaying final results.`, "info"); // Oppdatert
+        logToMobile(`DEBUG_V77: Displaying final results.`, "info");
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -684,7 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`DEBUG_V77: clearState kalt`, "info"); // Oppdatert
+        logToMobile(`DEBUG_V77: clearState kalt`, "info");
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -806,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`DEBUG_V77: initializeTeam kalt med kode: ${teamCode}`, "info"); // Oppdatert
+        logToMobile(`DEBUG_V77: initializeTeam kalt med kode: ${teamCode}`, "info");
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -1279,14 +1279,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             else if (target.id === `pyramid-proceed-btn-post8` && !target.disabled) { window.proceedToNextPostOrFinishGlobal(); }
             else if (target.id.startsWith('start-georun-btn-post') && !target.disabled) {
-                logToMobile(`GeoRun Startknapp klikket: ID ${target.id}`, "debug"); // NY LOGG
-                const postId = parseInt(target.id.split('-').pop());
+                logToMobile(`GeoRun Startknapp klikket: ID ${target.id}`, "debug");
+                // Korrigert parsing av postId
+                const postIdString = target.id.replace('start-georun-btn-post', '');
+                const postId = parseInt(postIdString);
+
                 const postData = CoreApp.getPostData(postId);
                 const runState = currentTeamData ? currentTeamData.geoRunState[`post${postId}`] : null;
 
-                logToMobile(`GeoRun Startknapp: postId=${postId}, postData=${!!postData}, runState=${!!runState}`, "debug"); // NY LOGG
+                logToMobile(`GeoRun Startknapp: postId=${postId}, postData=${!!postData}, runState=${!!runState}`, "debug");
                 if (runState) {
-                    logToMobile(`GeoRun Startknapp: runState.awaitingGeoRunStartConfirmation = ${runState.awaitingGeoRunStartConfirmation}`, "debug"); // NY LOGG
+                    logToMobile(`GeoRun Startknapp: runState.awaitingGeoRunStartConfirmation = ${runState.awaitingGeoRunStartConfirmation}`, "debug");
                 }
 
                 if (postData && runState && runState.awaitingGeoRunStartConfirmation) {
