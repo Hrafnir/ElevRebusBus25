@@ -1,4 +1,4 @@
-/* Version: #77 */
+/* Version: #82 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -67,13 +67,14 @@ const CoreApp = {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
             } else {
-                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI.`, "debug");
+                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #82_DEBUG_A)`, "debug");
                 const currentPageId = `post-${postId}`;
                 const pageElement = document.getElementById(`${currentPageId}-content-wrapper`);
                 if (pageElement) {
+                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #82_DEBUG_B)`, "debug");
                     resetPageUI(currentPageId, pageElement);
                 } else {
-                    logToMobile(`Sideelement for post ${postId} ikke funnet for umiddelbar UI-oppdatering etter markPostAsCompleted.`, "warn");
+                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #82_DEBUG_C)`, "warn");
                 }
             }
 
@@ -92,7 +93,7 @@ const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25;
 const GEO_RUN_START_RADIUS = 20;
 const GEO_RUN_WAYPOINT_RADIUS = 5;
-const DEV_MODE_NO_GEOFENCE = false;
+const DEV_MODE_NO_GEOFENCE = false; // Satt til false som per brukerinstruksjon
 const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
@@ -427,7 +428,7 @@ function stopContinuousUserPositionUpdate() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DEBUG_V77: DOMContentLoaded event fired.`, "info");
+    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #82_core_init)`, "info"); 
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -504,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`DEBUG_V77: Displaying final results.`, "info");
+        logToMobile(`displayFinalResults kalt. (SVAR_ID: #82_core_displayFinalResults)`, "info"); 
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -684,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`DEBUG_V77: clearState kalt`, "info");
+        logToMobile(`clearState kalt. (SVAR_ID: #82_core_clearState)`, "info"); 
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -705,6 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetPageUI(pageIdentifier, pageElementContext = null) {
+        logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #82_DEBUG_D)`, "debug");
         const context = pageElementContext || postContentContainer;
         if (!context || typeof context.querySelector !== 'function') {
             logToMobile(`resetPageUI: Ugyldig kontekst (${typeof context}) for ${pageIdentifier}. Kan ikke fortsette.`, "error");
@@ -806,7 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`DEBUG_V77: initializeTeam kalt med kode: ${teamCode}`, "info");
+        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #82_core_initTeam)`, "info"); 
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -1487,4 +1489,4 @@ document.addEventListener('DOMContentLoaded', () => {
         postContentContainer.innerHTML = `<p class="feedback error">En kritisk feil oppstod under lasting av spillets data. Prøv å laste siden på nytt, eller kontakt en arrangør.</p>`;
     });
 });
-/* Version: #77 */
+/* Version: #82 */
