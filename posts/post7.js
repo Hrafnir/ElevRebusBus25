@@ -1,4 +1,4 @@
-/* Version: #78 */
+/* Version: #79 */
 // Filnavn: posts/post7.js
 
 // Globale variabler spesifikke for Post 7 sitt minimap
@@ -9,23 +9,23 @@ let geoRunMiniMapActiveTargetMarker = null;
 function definePost7() {
     const POST_ID = 7;
 
-    // === NYE MIDLERTIDIGE KOORDINATER FOR LOKAL TESTING (v2) ===
-    const geoRunPointsData_Test_v2 = [
-        { lat: 60.79469118198659,  lng: 10.694824003180502, name: "Test v2 Start / Mål" },   // Indeks 0
-        { lat: 60.794613308261624, lng: 10.695022056739647, name: "Test v2 Vendepunkt 1" },  // Indeks 1
-        { lat: 60.79472589671861,  lng: 10.695170116196484, name: "Test v2 Vendepunkt 2" },  // Indeks 2
-        { lat: 60.79476248788191,  lng: 10.695000905388671, name: "Test v2 Vendepunkt 3" },  // Indeks 3
-        { lat: 60.79460580235043,  lng: 10.695072050841956, name: "Test v2 Vendepunkt 4" }   // Indeks 4
+    // === NYESTE MIDLERTIDIGE KOORDINATER FOR LOKAL TESTING (v3) ===
+    const geoRunPointsData_Test_v3 = [
+        { lat: 60.7962070145891,  lng: 10.671000235856763, name: "Test v3 Start / Mål" },   // Indeks 0
+        { lat: 60.796185555247746, lng: 10.67127995809284,  name: "Test v3 Vendepunkt 1" },  // Indeks 1
+        { lat: 60.79620787296244,  lng: 10.671174402532056, name: "Test v3 Vendepunkt 2" },  // Indeks 2
+        { lat: 60.79626366718118,  lng: 10.671140976604477, name: "Test v3 Vendepunkt 3" },  // Indeks 3
+        { lat: 60.79624478299495,  lng: 10.67123773586853,  name: "Test v3 Vendepunkt 4" }   // Indeks 4
     ];
 
     // === FORRIGE MIDLERTIDIGE KOORDINATER (BEHOLDES FOR REFERANSE) ===
     /*
-    const geoRunPointsData_Test_v1 = [
-        { lat: 60.81286562370762, lng: 10.67318320334532, name: "Test Start / Mål (NÅVÆRENDE POS)" },
-        { lat: 60.81351808494966,  lng: 10.672979594515702, name: "Test Vendepunkt 1" },
-        { lat: 60.813318858891186, lng: 10.672486589950358, name: "Test Vendepunkt 2" },
-        { lat: 60.81335332424741,  lng: 10.673091641007826, name: "Test Vendepunkt 3" },
-        { lat: 60.81348193854172,  lng: 10.672417638262901, name: "Test Vendepunkt 4" }
+    const geoRunPointsData_Test_v2 = [
+        { lat: 60.81286562370762, lng: 10.67318320334532, name: "Test v2 Start / Mål" },
+        { lat: 60.81351808494966,  lng: 10.672979594515702, name: "Test v2 Vendepunkt 1" },
+        { lat: 60.813318858891186, lng: 10.672486589950358, name: "Test v2 Vendepunkt 2" },
+        { lat: 60.81335332424741,  lng: 10.673091641007826, name: "Test v2 Vendepunkt 3" },
+        { lat: 60.81348193854172,  lng: 10.672417638262901, name: "Test v2 Vendepunkt 4" }
     ];
     */
 
@@ -39,7 +39,7 @@ function definePost7() {
     ];
 
     // VELG HVILKET SETT MED KOORDINATER SOM SKAL BRUKES:
-    const activeGeoRunPoints = geoRunPointsData_Test_v2; // Endre her for å bytte
+    const activeGeoRunPoints = geoRunPointsData_Test_v3; // Endre her for å bytte
 
     const runTargetIndices = [1, 2, 3, 4, 0];
     const totalLegsToComplete = runTargetIndices.length;
@@ -53,7 +53,7 @@ function definePost7() {
 
     return {
         id: POST_ID,
-        name: "Geo-løp Stjerne (Test v2)", // Oppdatert navn for test
+        name: "Geo-løp Stjerne (Test v3)", // Oppdatert navn for test
         lat: activeGeoRunPoints[0].lat,
         lng: activeGeoRunPoints[0].lng,
         type: "georun",
@@ -66,13 +66,13 @@ function definePost7() {
         runTargetIndices: runTargetIndices,
         lapsToComplete: totalLegsToComplete,
 
-        pointsScale: { // Disse tidene må kanskje justeres for test-koordinatene v2
+        pointsScale: { // Disse tidene må kanskje justeres for test-koordinatene v3
             30: 10, 45: 8, 60: 6, 90: 4, 120: 2, Infinity: 1
         },
 
         initUI: function(pageElement, teamData) {
             const currentLog = window.logToMobile || console.debug;
-            // currentLog(`Post ${POST_ID} (GeoRun Stjerne - Test Mode v2) initUI: Kjører.`, "debug"); // Redusert logging
+            // currentLog(`Post ${POST_ID} (GeoRun Stjerne - Test Mode v3) initUI: Kjører.`, "debug");
 
             if (!pageElement || !teamData || !teamData.geoRunState || !teamData.geoRunState[`post${POST_ID}`]) {
                 currentLog(`Post ${POST_ID} initUI: Mangler pageElement, teamData eller geoRunState. Avbryter.`, "warn");
@@ -90,16 +90,19 @@ function definePost7() {
             const currentLapEl = pageElement.querySelector('.geo-run-current-lap');
             const totalLapsDisplayEl = pageElement.querySelector(`#georun-total-laps-display${POST_ID}`);
             const nextTargetEl = pageElement.querySelector('.geo-run-next-target');
+            const processingResultsMsgEl = pageElement.querySelector('#georun-processing-results-msg'); // NYTT
             const resultsSectionEl = pageElement.querySelector('.geo-run-results-section');
             const totalTimeEl = pageElement.querySelector('.geo-run-total-time');
             const pointsAwardedEl = pageElement.querySelector('.geo-run-points-awarded');
             const proceedButtonEl = pageElement.querySelector(`#geo-run-proceed-btn-post${POST_ID}`);
             const miniMapDiv = pageElement.querySelector(`#georun-map-in-post${POST_ID}`);
 
+            // Skjul alle seksjoner som kan endre synlighet
             if(initialInstructionsEl) initialInstructionsEl.style.display = 'none';
             if(beforeStartInstructionsEl) beforeStartInstructionsEl.style.display = 'none';
             if(startButtonSectionEl) startButtonSectionEl.style.display = 'none';
             if(activeSectionEl) activeSectionEl.style.display = 'none';
+            if(processingResultsMsgEl) processingResultsMsgEl.style.display = 'none'; // NYTT
             if(resultsSectionEl) resultsSectionEl.style.display = 'none';
             if(duringRunInstructionsEl) duringRunInstructionsEl.style.display = 'none';
             if(miniMapDiv) miniMapDiv.style.display = 'block';
@@ -108,16 +111,12 @@ function definePost7() {
 
             if (miniMapDiv && typeof google !== 'undefined' && google.maps) {
                 if (!geoRunMiniMapInstance || !geoRunMiniMapInstance.getDiv() || geoRunMiniMapInstance.getDiv().id !== miniMapDiv.id ) {
-                    // currentLog(`Post ${POST_ID} initUI: Initialiserer/Re-initialiserer GeoRun MiniMap.`, "debug");
                     if (geoRunMiniMapInstance) { this.cleanupUI(); }
-
                     geoRunMiniMapInstance = new google.maps.Map(miniMapDiv, {
                         mapTypeId: google.maps.MapTypeId.SATELLITE,
-                        disableDefaultUI: true,
-                        zoomControl: true, draggable: true, scrollwheel: true,
+                        disableDefaultUI: true, zoomControl: true, draggable: true, scrollwheel: true,
                         styles: miniMapStyles
                     });
-
                     const bounds = new google.maps.LatLngBounds();
                     this.geoRunPoints.forEach(point => bounds.extend(point));
                     if (!bounds.isEmpty()) {
@@ -130,7 +129,6 @@ function definePost7() {
                         geoRunMiniMapInstance.setZoom(18);
                     }
                 }
-
                 let currentUserPosForMiniMap = null;
                 if (window.userPositionMarker && window.userPositionMarker.getPosition()) {
                     currentUserPosForMiniMap = window.userPositionMarker.getPosition();
@@ -138,13 +136,13 @@ function definePost7() {
                     currentUserPosForMiniMap = new google.maps.LatLng(this.geoRunPoints[0].lat, this.geoRunPoints[0].lng);
                 }
                 this.updateMiniMapDisplay(currentUserPosForMiniMap, teamData);
-
             } else if (miniMapDiv) {
-                miniMapDiv.innerHTML = "<p style='text-align:center; color:red;'>Google Maps API ikke lastet ennå, eller kart-div feil.</p>";
+                miniMapDiv.innerHTML = "<p style='text-align:center; color:red;'>Google Maps API ikke lastet.</p>";
             }
 
-            if (runState.finished) {
-                // currentLog(`Post ${POST_ID} initUI: Løp fullført. Viser resultater.`, "debug");
+            // Logikk for å vise UI-seksjoner
+            if (runState.finished) { // Løpet er helt ferdig, poeng er beregnet
+                currentLog(`Post ${POST_ID} initUI: Løp helt fullført. Viser endelige resultater.`, "debug");
                 if(resultsSectionEl) resultsSectionEl.style.display = 'block';
                 if(totalTimeEl && runState.endTime && runState.startTime) {
                     totalTimeEl.textContent = formatTimeFromMs(runState.endTime - runState.startTime);
@@ -153,9 +151,11 @@ function definePost7() {
                     pointsAwardedEl.textContent = runState.pointsAwarded !== undefined ? runState.pointsAwarded : "0";
                 }
                 if(proceedButtonEl) proceedButtonEl.style.display = 'inline-block';
-
-            } else if (runState.active) {
-                // currentLog(`Post ${POST_ID} initUI: Løp aktivt. Viser aktiv seksjon.`, "debug");
+            } else if (runState.processingResults) { // Løpingen er ferdig, venter på poengberegning/visning
+                currentLog(`Post ${POST_ID} initUI: Løp fullført, behandler resultater.`, "debug");
+                if(processingResultsMsgEl) processingResultsMsgEl.style.display = 'block';
+            } else if (runState.active) { // Løpet pågår
+                currentLog(`Post ${POST_ID} initUI: Løp aktivt. Viser aktiv seksjon.`, "debug");
                 if(activeSectionEl) activeSectionEl.style.display = 'block';
                 if(duringRunInstructionsEl) {
                     duringRunInstructionsEl.textContent = this.instructionsDuringRun;
@@ -166,34 +166,23 @@ function definePost7() {
                     const targetPointIndex = this.runTargetIndices[runState.lap - 1];
                     nextTargetEl.textContent = this.geoRunPoints[targetPointIndex].name;
                 }
-            } else if (runState.awaitingGeoRunStartConfirmation) {
-                // currentLog(`Post ${POST_ID} initUI: Venter på startknapp-trykk.`, "debug");
-                 if(initialInstructionsEl) {
-                    initialInstructionsEl.textContent = this.instructionsInitial;
-                    initialInstructionsEl.style.display = 'block';
-                }
-                if(beforeStartInstructionsEl) {
-                    beforeStartInstructionsEl.textContent = this.instructionsBeforeStart;
-                    beforeStartInstructionsEl.style.display = 'block';
-                }
+            } else if (runState.awaitingGeoRunStartConfirmation) { // Venter på at bruker trykker start
+                currentLog(`Post ${POST_ID} initUI: Venter på startknapp-trykk.`, "debug");
+                 if(initialInstructionsEl) { initialInstructionsEl.textContent = this.instructionsInitial; initialInstructionsEl.style.display = 'block'; }
+                if(beforeStartInstructionsEl) { beforeStartInstructionsEl.textContent = this.instructionsBeforeStart; beforeStartInstructionsEl.style.display = 'block'; }
                 if(startButtonSectionEl) startButtonSectionEl.style.display = 'block';
-                if(startButtonEl) startButtonEl.disabled = true;
-            } else {
-                // currentLog(`Post ${POST_ID} initUI: Første ankomst / generelle instruksjoner.`, "debug");
-                if(initialInstructionsEl) {
-                    initialInstructionsEl.textContent = this.instructionsInitial;
-                    initialInstructionsEl.style.display = 'block';
-                }
-                 if(beforeStartInstructionsEl) {
-                    beforeStartInstructionsEl.textContent = this.instructionsBeforeStart;
-                    beforeStartInstructionsEl.style.display = 'block';
-                }
+                if(startButtonEl) startButtonEl.disabled = true; // Aktiveres av core.js
+            } else { // Første ankomst til posten
+                currentLog(`Post ${POST_ID} initUI: Første ankomst / generelle instruksjoner.`, "debug");
+                if(initialInstructionsEl) { initialInstructionsEl.textContent = this.instructionsInitial; initialInstructionsEl.style.display = 'block'; }
+                 if(beforeStartInstructionsEl) { beforeStartInstructionsEl.textContent = this.instructionsBeforeStart; beforeStartInstructionsEl.style.display = 'block'; }
                 if(startButtonSectionEl) startButtonSectionEl.style.display = 'block';
                 if(startButtonEl) startButtonEl.disabled = true;
             }
         },
 
         updateMiniMapDisplay: function(userLatLng, teamData) {
+            // ... (denne funksjonen er uendret fra v71)
             if (!geoRunMiniMapInstance || !teamData || !teamData.geoRunState || !this.geoRunPoints || !this.runTargetIndices) return;
             const runState = teamData.geoRunState[`post${POST_ID}`];
             if (!runState) return;
@@ -224,13 +213,14 @@ function definePost7() {
                 const targetIndex = this.runTargetIndices[runState.lap - 1];
                 nextTargetPointData = this.geoRunPoints[targetIndex];
                 targetLabel = targetIndex === 0 ? 'M' : (targetIndex).toString();
-            } else if (runState.awaitingGeoRunStartConfirmation || (!runState.active && !runState.finished)) {
+            } else if (runState.awaitingGeoRunStartConfirmation || (!runState.active && !runState.finished && !runState.processingResults)) { // Ikke vis mål hvis vi behandler resultater
                 nextTargetPointData = this.geoRunPoints[0];
                 targetLabel = 'S';
-            } else if (runState.finished) {
+            } else if (runState.finished || runState.processingResults) { // Hvis ferdig eller behandler, vis målpunktet
                 nextTargetPointData = this.geoRunPoints[0];
                 targetLabel = 'M';
             }
+
 
             if (nextTargetPointData) {
                 geoRunMiniMapActiveTargetMarker = new google.maps.Marker({
@@ -261,4 +251,4 @@ function definePost7() {
     };
     return postData;
 }
-/* Version: #75 */
+/* Version: #79 */
