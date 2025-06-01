@@ -52,7 +52,8 @@ const CoreApp = {
             currentTeamData.completedPostsCount++;
             currentTeamData.taskCompletionTimes[`post${postId}`] = Date.now();
             currentTeamData.score += pointsAwarded;
-            currentTeamData.pointsPerPost[`post${postId}`] = pointsAwarded;
+            // Denne linjen for pointsPerPost ble introdusert i v79/v81, men for å gå tilbake til v77-base, kommenterer vi den ut foreløpig.
+            // currentTeamData.pointsPerPost[`post${postId}`] = pointsAwarded; 
 
             if (postData.type === 'georun' && currentTeamData.geoRunState && currentTeamData.geoRunState[`post${postId}`]) {
                 currentTeamData.geoRunState[`post${postId}`].pointsAwarded = pointsAwarded;
@@ -90,9 +91,9 @@ const CoreApp = {
 // === GLOBAL KONFIGURASJON ===
 const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25;
-const GEO_RUN_START_RADIUS = 20;
+const GEO_RUN_START_RADIUS = 20; // Beholdt fra v76
 const GEO_RUN_WAYPOINT_RADIUS = 5;
-const DEV_MODE_NO_GEOFENCE = true; // Tilbake til true for enklere testing av grunnleggende flyt
+const DEV_MODE_NO_GEOFENCE = true;  // Satt tilbake til true som i v77-basen
 const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
@@ -428,7 +429,7 @@ function stopContinuousUserPositionUpdate() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DEBUG_V81: DOMContentLoaded event fired.`, "info");
+    logToMobile(`DEBUG_V82: DOMContentLoaded event fired.`, "info");
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -457,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateScoreDisplay() { /* ... (uendret) ... */ }
     function updatePageText(pageElement, teamPostNumber, globalPostId) { /* ... (uendret) ... */ }
     function displayFinalResults() { /* ... (uendret, men DEBUG-logg oppdatert) ... */
-        logToMobile(`DEBUG_V81: Displaying final results.`, "info");
+        logToMobile(`DEBUG_V82: Displaying final results.`, "info");
         // ... (resten av funksjonen uendret)
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
@@ -518,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showTabContent(tabId) { /* ... (uendret) ... */ }
     function loadState() { /* ... (uendret) ... */ }
     function clearState() { /* ... (uendret, men DEBUG-logg oppdatert) ... */
-        logToMobile(`DEBUG_V81: clearState kalt`, "info");
+        logToMobile(`DEBUG_V82: clearState kalt`, "info");
         // ... (resten uendret)
         currentTeamData = null;
         saveState();
@@ -542,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetAllPostUIs() { /* ... (uendret) ... */ }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`DEBUG_V81: initializeTeam kalt med kode: ${teamCode}`, "info");
+        logToMobile(`DEBUG_V82: initializeTeam kalt med kode: ${teamCode}`, "info");
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -822,4 +823,4 @@ document.addEventListener('DOMContentLoaded', () => {
         postContentContainer.innerHTML = `<p class="feedback error">En kritisk feil oppstod under lasting av spillets data. Prøv å laste siden på nytt, eller kontakt en arrangør.</p>`;
     });
 });
-/* Version: #81 */
+/* Version: #82 */
