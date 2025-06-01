@@ -1,14 +1,12 @@
 <!-- Filnavn: posts/post7.html -->
-<!-- Version: #54 -->
+<!-- Version: #79 -->
 <div id="post-7-content-wrapper">
     <h2 class="post-title-placeholder">Post 7: Geo-Løp</h2>
 
-    <!-- Seksjon 1: Første ankomst til området (håndteres av core.js/resetPageUI) -->
     <div class="post-info-section" style="display: block;">
         <p class="post-info-placeholder">[Laster generell post-info...]</p>
     </div>
 
-    <!-- Seksjon 2: Kart for Geo-løp (vises kun for Post 7) -->
     <div id="georun-map-in-post7-container" style="margin-top:15px; margin-bottom:15px;">
         <p><strong>Kart for Geo-Løp:</strong></p>
         <div id="georun-map-in-post7" style="width: 100%; height: 350px; border:1px solid #ccc; background-color: #e9e9e9;">
@@ -16,33 +14,35 @@
         </div>
     </div>
 
-    <!-- Seksjon 3: Instruksjoner FØR man er klar til å trykke start -->
     <div id="georun-instructions-initial" class="geo-run-instructions" style="display: none; margin-bottom:15px;">
         <!-- Tekst settes av post7.js initUI -->
     </div>
 
-    <!-- Seksjon 4: Instruksjoner NÅR man er klar til å trykke start -->
     <div id="georun-instructions-before-start" class="geo-run-instructions" style="display: none; margin-bottom:10px;">
         <!-- Tekst settes av post7.js initUI -->
     </div>
 
-    <!-- Seksjon 5: Startknapp-seksjon -->
     <div class="geo-run-start-button-section" style="display: none; margin-bottom:20px;">
         <button id="start-georun-btn-post7" class="georun-button" disabled>Start Geo-Løp!</button>
         <p style="font-size:0.8em; color:#777;">Knappen aktiveres når du er nær nok startpunktet (Punkt 1).</p>
     </div>
 
-    <!-- Seksjon 6: Aktivt løp -->
     <div class="geo-run-active-section" style="display: none;">
         <h3>Geo-Løp Pågår!</h3>
         <p id="georun-instructions-during-run" class="geo-run-instructions" style="margin-bottom:10px;"></p>
-        <p>Kryssing: <span class="geo-run-current-lap">1</span> av <span id="georun-total-laps-display7">X</span>.</p>
+        <p>Etappe: <span class="geo-run-current-lap">1</span> av <span id="georun-total-laps-display7">X</span>.</p>
         <p>Løp til: <strong class="geo-run-next-target">Vendepunkt...</strong>!</p>
     </div>
 
-    <!-- Seksjon 7: Resultater -->
+    <!-- NY SEKSJON for melding etter løp, før resultater -->
+    <div id="georun-processing-results-msg" style="display: none; margin-top: 20px; padding: 15px; background-color: #e6f7ff; border: 1px solid #b3e0ff; border-radius: 4px; text-align: center;">
+        <h3>Løp Fullført!</h3>
+        <p>Godt jobbet! Beregner resultater...</p>
+        <!-- Optional: Add a spinner/loading animation here -->
+    </div>
+
     <div class="geo-run-results-section" style="display: none;">
-        <h3>Geo-Løp Fullført!</h3>
+        <h3>Geo-Løp Resultater:</h3>
         <p>Din totale tid: <strong class="geo-run-total-time">00:00</strong></p>
         <p>Poeng tildelt: <strong class="geo-run-points-awarded">0</strong></p>
         <button id="geo-run-proceed-btn-post7" class="proceed-button" style="margin-top: 15px;">Gå Videre til Neste Post</button>
@@ -50,4 +50,4 @@
 
     <button class="dev-reset-button">Reset Spill</button>
 </div>
-<!-- Version: #54 -->
+<!-- Version: #79 -->
