@@ -1,4 +1,4 @@
-/* Version: #29 */
+/* Version: #93 */
 /* === GENERELLE STILER - NYTT DESIGN === */
 
 /* Importer font fra Google Fonts */
@@ -259,14 +259,10 @@ button:disabled {
 #start-with-team-code-button:hover { background-color: #27ae60; } 
 #start-with-team-code-button:active { background-color: #1e8449; }
 
-.dev-reset-button { 
-    background-color: var(--text-light); 
-    font-size: 0.85rem; 
-    padding: 8px 15px; 
-    margin-top: 30px; 
+/* Skjul dev-reset-knappen */
+.dev-reset-button {
+    display: none !important; 
 }
-.dev-reset-button:hover { background-color: #707b7c; }
-.dev-reset-button:active { background-color: #5d6d7e; }
 
 
 /* === TILBAKEMELDINGER (FEEDBACK) === */
@@ -322,7 +318,7 @@ button:disabled {
     border-color: #d6d8db;
     color: #383d41;
 }
-#geofence-feedback.geofence-info.dev-mode { 
+#geofence-feedback.geofence-info.dev-mode { /* Denne vil ikke lenger vises hvis knappen er skjult, men beholdes for fullstendighet */
     background-color: var(--accent-color);
     border-color: #dab10d;
     color: #333;
@@ -395,7 +391,7 @@ button:disabled {
     margin-top: 25px;
     padding: 15px;
     border: 1px solid var(--input-border-color);
-    background-color: #f0f2f5; /* Litt mørkere enn body for kontrast */
+    background-color: #f0f2f5; 
     border-radius: var(--border-radius-md);
 }
 #mobile-log-container h4 {
@@ -404,7 +400,7 @@ button:disabled {
     color: var(--text-color);
     font-weight: 600;
 }
-#mobile-log-container button { /* Generell styling for logg-knapper */
+#mobile-log-container button { 
     margin-top: 0;
     padding: 6px 12px;
     font-size: 0.85em;
@@ -420,27 +416,27 @@ button:disabled {
     background-color: var(--error-color);
 }
 #clear-mobile-log:hover {
-    background-color: #c0392b; /* Mørkere rød */
+    background-color: #c0392b; 
 }
 
 #mobile-log-output {
-    max-height: 150px; /* Begrenset høyde */
+    max-height: 150px; 
     overflow-y: auto;
     background-color: var(--container-bg);
     border: 1px solid var(--input-border-color);
     border-radius: var(--border-radius-sm);
     padding: 10px;
-    font-size: 0.75em; /* Mindre font for logg */
+    font-size: 0.75em; 
     line-height: 1.4;
     text-align: left;
-    display: block; /* Starter synlig, kan endres av JS hvis ønskelig */
-    white-space: pre-wrap; /* Bevarer linjeskift og mellomrom */
-    word-break: break-all; /* Bryt lange ord */
+    display: block; 
+    white-space: pre-wrap; 
+    word-break: break-all; 
 }
 .log-entry {
     padding: 2px 0;
     border-bottom: 1px dotted #eee;
-    font-family: 'Courier New', Courier, monospace; /* Monospace for logg */
+    font-family: 'Courier New', Courier, monospace; 
 }
 .log-entry:last-child {
     border-bottom: none;
@@ -450,5 +446,4 @@ button:disabled {
 .log-level-error { color: #a94442; font-weight: bold; }
 .log-level-debug { color: #777; }
 
-
-/* Version: #29 */
+/* Version: #93 */
