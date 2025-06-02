@@ -1,4 +1,4 @@
-/* Version: #85 */
+/* Version: #89 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -17,6 +17,7 @@ let preRunPipTimerId = null;
 let mobileLogContainer = null;
 let postContentContainer = null;
 let devModePositionUpdateIntervalId = null;
+let targetLocationDetailsForLogging = null; // For å logge forrige mål
 
 // === CoreApp Objekt DEFINERT GLOBALT ===
 const CoreApp = {
@@ -69,14 +70,14 @@ const CoreApp = {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
             } else {
-                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #85_DEBUG_A)`, "debug");
+                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #89_DEBUG_A)`, "debug");
                 const currentPageId = `post-${postId}`;
                 const pageElement = document.getElementById(`${currentPageId}-content-wrapper`);
                 if (pageElement) {
-                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #85_DEBUG_B)`, "debug");
+                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #89_DEBUG_B)`, "debug");
                     resetPageUI(currentPageId, pageElement); 
                 } else {
-                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #85_DEBUG_C)`, "warn");
+                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #89_DEBUG_C)`, "warn");
                 }
             }
 
@@ -95,7 +96,7 @@ const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25;
 const GEO_RUN_START_RADIUS = 20;
 const GEO_RUN_WAYPOINT_RADIUS = 5;
-const DEV_MODE_NO_GEOFENCE = true; 
+const DEV_MODE_NO_GEOFENCE = true; // Bekreftet satt til true
 const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
@@ -251,13 +252,16 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
 
 
 function handlePositionUpdate(position) {
+    // NY LOGGLINJE HER:
+    logToMobile(`handlePositionUpdate KALT. Nåværende post i teamData: ${currentTeamData ? currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] : 'Ingen teamdata/post'}, Mål-ID forrige sjekk: ${targetLocationDetailsForLogging ? targetLocationDetailsForLogging.globalId : 'Ingen forrige mål'} (SVAR_ID: #89_DEBUG_HPU_ENTRY)`, "debug");
+
     updateUserPositionOnMap(position);
 
     if (!currentTeamData || !currentTeamData.postSequence || currentTeamData.endTime) {
         updateGeofenceFeedback(null, false, true, null, false); return;
     }
 
-    let targetLocationDetails = null;
+    let targetLocationDetails = null; // Endret fra global til lokal
     let isCurrentTargetTheFinishLine = false;
     let isGeoRunActiveForCurrentPost = false;
     let currentGeofenceRadius = GEOFENCE_RADIUS;
@@ -312,6 +316,8 @@ function handlePositionUpdate(position) {
             } else { logToMobile(`handlePositionUpdate: Kunne ikke finne data eller koordinater for post ${currentGlobalId}.`, "warn"); }
         } else { logToMobile("handlePositionUpdate: Ingen registrerte poster, kan ikke bestemme mål.", "warn"); }
     }
+    
+    targetLocationDetailsForLogging = targetLocationDetails; // Oppdater for neste logg-kall
 
     if (!targetLocationDetails) {
         updateGeofenceFeedback(null, false, false, null, false, GEOFENCE_RADIUS); return;
@@ -340,10 +346,6 @@ function handlePositionUpdate(position) {
                 startButton.disabled = !isEffectivelyWithinRange;
                 if (prevDisabledState && !startButton.disabled) {
                     logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} er nå AKTIVERT. (Effektivt innenfor: ${isEffectivelyWithinRange})`, "info");
-                } else if (!prevDisabledState && startButton.disabled && isEffectivelyWithinRange) {
-                    // logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} ble deaktivert, men er innenfor rekkevidde.`, "debug");
-                } else if (!prevDisabledState && startButton.disabled && !isEffectivelyWithinRange) {
-                    // logToMobile(`GeoRun Startknapp for post ${currentGlobalIdOriginal} er nå DEAKTIVERT (utenfor rekkevidde).`, "info");
                 }
             }
             canCurrentlyInteract = isEffectivelyWithinRange;
@@ -385,7 +387,6 @@ function handlePositionUpdate(position) {
     }
 
     updateGeofenceFeedback(distance, isEffectivelyWithinRange, false, targetLocationDetails.name, canCurrentlyInteract, currentGeofenceRadius);
-
 }
 
 function startContinuousUserPositionUpdate() {
@@ -430,7 +431,7 @@ function stopContinuousUserPositionUpdate() {
 
 // === resetPageUI FLYTTET TIL GLOBALT SKOP ===
 function resetPageUI(pageIdentifier, pageElementContext = null) {
-    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #85_DEBUG_D)`, "debug");
+    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #89_DEBUG_D)`, "debug");
     const context = pageElementContext || postContentContainer; 
     if (!context || typeof context.querySelector !== 'function') {
         logToMobile(`resetPageUI: Ugyldig kontekst (${typeof context}) for ${pageIdentifier}. Kan ikke fortsette.`, "error");
@@ -473,7 +474,7 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
                 pyramidPointsSection.style.display = 'block';
             } else if (postData.type === 'georun' && geoRunResultsSection) {
                 geoRunResultsSection.style.display = 'block';
-            } else if (postInfoSection) { // Fallback for andre fullførte typer
+            } else if (postInfoSection) { 
                 postInfoSection.style.display = 'block';
                 postInfoSection.innerHTML = `<p>Du har fullført denne posten.</p>`;
             }
@@ -498,16 +499,15 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
             } else if (postData.type === 'manned_pyramid') {
                 if (isTeacherVerified && pyramidPointsSection) pyramidPointsSection.style.display = 'block';
                 else if (teacherPasswordSection) teacherPasswordSection.style.display = 'block';
-            } else if (postData.type === 'georun') { // For georun, initUI håndterer visning av start/aktiv/resultat
-                // La postData.initUI håndtere dette, men info-seksjonen kan vises som default hvis ingenting annet er aktivt
+            } else if (postData.type === 'georun') { 
                 if (postInfoSection) postInfoSection.style.display = 'block'; 
             }
-        } else if (postInfoSection) { // Hvis ikke låst opp og ikke fullført
+        } else if (postInfoSection) { 
             postInfoSection.style.display = 'block';
         }
 
         if (typeof postData.initUI === 'function') {
-            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI. (SVAR_ID: #85_DEBUG_INIT_CALL)`, "debug");
+            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI. (SVAR_ID: #89_DEBUG_INIT_CALL)`, "debug");
             postData.initUI(context, currentTeamData);
         }
 
@@ -541,14 +541,12 @@ function dev_simulateAllPostsCompleted() {
 
     logToMobile("dev_simulateAllPostsCompleted: Simulerer at alle poster er fullført...", "info");
     
-    // Markerer alle poster i lagets sekvens som fullført (uten poeng for enkelhet)
-    // og setter en dummy tid for hver post for finaleresultat-visning
-    let pseudoTime = Date.now() - (currentTeamData.postSequence.length * 60000); // Start for X minutter siden
+    let pseudoTime = Date.now() - (currentTeamData.postSequence.length * 60000); 
     currentTeamData.postSequence.forEach((postId, index) => {
         if (!currentTeamData.completedGlobalPosts[`post${postId}`]) {
             currentTeamData.completedGlobalPosts[`post${postId}`] = true;
             currentTeamData.pointsPerPost[`post${postId}`] = 0; 
-            pseudoTime += (Math.random() * 5000 + 30000); // Legg til 30-35 sek per post
+            pseudoTime += (Math.random() * 5000 + 30000); 
             currentTeamData.taskCompletionTimes[`post${postId}`] = pseudoTime;
         }
     });
@@ -559,13 +557,12 @@ function dev_simulateAllPostsCompleted() {
     logToMobile(`Alle ${currentTeamData.completedPostsCount} poster er nå markert som fullført for ${currentTeamData.teamName}.`, "info");
     saveState();
     
-    // Nødvendige UI-oppdateringer:
-    showRebusPage('finale');        // Vis finalesiden
-    updateMapMarker(null, true);    // Vis målmarkør på kartet
-    updateScoreDisplay();           // Oppdater poengsummen (vil være 0 i dette tilfellet)
+    showRebusPage('finale');        
+    updateMapMarker(null, true);    
+    updateScoreDisplay();           
 
-    stopContinuousUserPositionUpdate(); // Stopp GPS
-    if (geofenceFeedbackElement) {      // Skjul geofence feedback
+    stopContinuousUserPositionUpdate(); 
+    if (geofenceFeedbackElement) {      
         geofenceFeedbackElement.style.display = 'none';
     }
     logToMobile("dev_simulateAllPostsCompleted: Ferdig. Du skal nå være på finalesiden.", "info");
@@ -574,7 +571,7 @@ function dev_simulateAllPostsCompleted() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #85_core_init)`, "info"); 
+    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #89_core_init)`, "info"); 
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -651,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`displayFinalResults kalt. (SVAR_ID: #85_core_displayFinalResults)`, "info"); 
+        logToMobile(`displayFinalResults kalt. (SVAR_ID: #89_core_displayFinalResults)`, "info"); 
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -831,7 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`clearState kalt. (SVAR_ID: #85_core_clearState)`, "info"); 
+        logToMobile(`clearState kalt. (SVAR_ID: #89_core_clearState)`, "info"); 
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -856,7 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #85_core_initTeam)`, "info"); 
+        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #89_core_initTeam)`, "info"); 
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -1539,4 +1536,4 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile("Initial page setup complete.", "info");
     });
 });
-/* Version: #85 */
+/* Version: #89 */
