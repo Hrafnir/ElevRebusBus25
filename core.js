@@ -1,4 +1,4 @@
-/* Version: #84 */
+/* Version: #85 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -69,14 +69,14 @@ const CoreApp = {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
             } else {
-                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #84_DEBUG_A)`, "debug");
+                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #85_DEBUG_A)`, "debug");
                 const currentPageId = `post-${postId}`;
                 const pageElement = document.getElementById(`${currentPageId}-content-wrapper`);
                 if (pageElement) {
-                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #84_DEBUG_B)`, "debug");
-                    resetPageUI(currentPageId, pageElement); // resetPageUI er nå global
+                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #85_DEBUG_B)`, "debug");
+                    resetPageUI(currentPageId, pageElement); 
                 } else {
-                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #84_DEBUG_C)`, "warn");
+                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #85_DEBUG_C)`, "warn");
                 }
             }
 
@@ -430,8 +430,8 @@ function stopContinuousUserPositionUpdate() {
 
 // === resetPageUI FLYTTET TIL GLOBALT SKOP ===
 function resetPageUI(pageIdentifier, pageElementContext = null) {
-    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #84_DEBUG_D)`, "debug");
-    const context = pageElementContext || postContentContainer; // postContentContainer må være definert globalt eller initialisert før dette
+    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #85_DEBUG_D)`, "debug");
+    const context = pageElementContext || postContentContainer; 
     if (!context || typeof context.querySelector !== 'function') {
         logToMobile(`resetPageUI: Ugyldig kontekst (${typeof context}) for ${pageIdentifier}. Kan ikke fortsette.`, "error");
         return;
@@ -442,8 +442,7 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
         postNum = parseInt(pageIdentifier.split('-')[1]);
     }
 
-    const postData = postNum ? CoreApp.getPostData(postNum) : null; // CoreApp må være definert globalt
-    // currentTeamData må være definert globalt
+    const postData = postNum ? CoreApp.getPostData(postNum) : null; 
     const isUnlocked = postData && currentTeamData && currentTeamData.unlockedPosts && currentTeamData.unlockedPosts[`post${postNum}`];
     const isCompleted = postData && currentTeamData && currentTeamData.completedGlobalPosts && currentTeamData.completedGlobalPosts[`post${postNum}`];
     const isTeacherVerified = postData && currentTeamData && currentTeamData.mannedPostTeacherVerified && currentTeamData.mannedPostTeacherVerified[`post${postNum}`];
@@ -474,7 +473,7 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
                 pyramidPointsSection.style.display = 'block';
             } else if (postData.type === 'georun' && geoRunResultsSection) {
                 geoRunResultsSection.style.display = 'block';
-            } else if (postInfoSection) {
+            } else if (postInfoSection) { // Fallback for andre fullførte typer
                 postInfoSection.style.display = 'block';
                 postInfoSection.innerHTML = `<p>Du har fullført denne posten.</p>`;
             }
@@ -499,15 +498,16 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
             } else if (postData.type === 'manned_pyramid') {
                 if (isTeacherVerified && pyramidPointsSection) pyramidPointsSection.style.display = 'block';
                 else if (teacherPasswordSection) teacherPasswordSection.style.display = 'block';
-            } else if (postData.type === 'georun') {
-                if (postInfoSection) postInfoSection.style.display = 'block';
+            } else if (postData.type === 'georun') { // For georun, initUI håndterer visning av start/aktiv/resultat
+                // La postData.initUI håndtere dette, men info-seksjonen kan vises som default hvis ingenting annet er aktivt
+                if (postInfoSection) postInfoSection.style.display = 'block'; 
             }
-        } else if (postInfoSection) {
+        } else if (postInfoSection) { // Hvis ikke låst opp og ikke fullført
             postInfoSection.style.display = 'block';
         }
 
         if (typeof postData.initUI === 'function') {
-            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI.`, "debug");
+            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI. (SVAR_ID: #85_DEBUG_INIT_CALL)`, "debug");
             postData.initUI(context, currentTeamData);
         }
 
@@ -528,10 +528,50 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
     }
 }
 
+// === DEV FUNKSJON FOR Å TESTE MÅLGANG ===
+function dev_simulateAllPostsCompleted() {
+    if (!currentTeamData) {
+        logToMobile("dev_simulateAllPostsCompleted: Ingen aktivt lag. Start et lag først.", "warn");
+        return;
+    }
+    if (Object.keys(CoreApp.registeredPostsData).length === 0) {
+        logToMobile("dev_simulateAllPostsCompleted: Ingen poster registrert.", "warn");
+        return;
+    }
+
+    logToMobile("dev_simulateAllPostsCompleted: Simulerer at alle poster er fullført...", "info");
+    
+    // Markerer alle poster i lagets sekvens som fullført (uten poeng for enkelhet)
+    currentTeamData.postSequence.forEach(postId => {
+        if (!currentTeamData.completedGlobalPosts[`post${postId}`]) {
+            currentTeamData.completedGlobalPosts[`post${postId}`] = true;
+            currentTeamData.pointsPerPost[`post${postId}`] = 0; // Gir 0 poeng for simuleringen
+            currentTeamData.taskCompletionTimes[`post${postId}`] = Date.now() - Math.random() * 100000; // Setter en tilfeldig tid
+        }
+    });
+    
+    currentTeamData.completedPostsCount = currentTeamData.postSequence.length;
+    currentTeamData.canEnterFinishCode = true; // Tillat inntasting av kode
+    
+    logToMobile(`Alle ${currentTeamData.completedPostsCount} poster er nå markert som fullført for ${currentTeamData.teamName}.`, "info");
+    saveState();
+    
+    showRebusPage('finale');
+    updateMapMarker(null, true); // Vis målmarkør
+    updateScoreDisplay(); // Oppdater poengvisning (vil vise summen av 0-poengene)
+
+    // Stopp GPS hvis den kjører, siden vi er "i mål"
+    stopContinuousUserPositionUpdate();
+    if (geofenceFeedbackElement) {
+        geofenceFeedbackElement.style.display = 'none';
+    }
+    logToMobile("dev_simulateAllPostsCompleted: Ferdig. Du skal nå være på finalesiden.", "info");
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #84_core_init)`, "info"); 
+    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #85_core_init)`, "info"); 
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -539,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoreDisplayElement = document.getElementById('score-display');
     const currentScoreSpan = document.getElementById('current-score');
     geofenceFeedbackElement = document.getElementById('geofence-feedback');
-    postContentContainer = document.getElementById('post-content-container'); // Nå globalt tilgjengelig for resetPageUI
+    postContentContainer = document.getElementById('post-content-container'); 
 
     if (!postContentContainer) logToMobile("CRITICAL - postContentContainer is NULL! Dynamisk innhold vil ikke lastes.", "error");
 
@@ -556,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "LAG10": { name: "Lag 10", postSequence: [10, 1, 2, 3, 4, 5, 6, 7, 8, 9], password: "HAV" }
     };
 
-    // === KJERNEFUNKSJONER (DOM-avhengige) ===
+    // === KJERNEFUNKSJONER (DOM-avhengige, men definert globalt via hoisting eller plassering) ===
     function updateScoreDisplay() {
         if (currentTeamData && scoreDisplayElement && currentScoreSpan) {
             currentScoreSpan.textContent = currentTeamData.score;
@@ -608,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`displayFinalResults kalt. (SVAR_ID: #84_core_displayFinalResults)`, "info"); 
+        logToMobile(`displayFinalResults kalt. (SVAR_ID: #85_core_displayFinalResults)`, "info"); 
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -731,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            resetPageUI(pageIdentifier, loadedPageElement); // resetPageUI er nå global
+            resetPageUI(pageIdentifier, loadedPageElement); 
 
             if (currentTeamData && pageIdentifier !== 'intro') { updateScoreDisplay(); }
             else if (scoreDisplayElement) { scoreDisplayElement.style.display = 'none'; }
@@ -788,7 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`clearState kalt. (SVAR_ID: #84_core_clearState)`, "info"); 
+        logToMobile(`clearState kalt. (SVAR_ID: #85_core_clearState)`, "info"); 
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -796,7 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearMapMarker(); clearFinishMarker();
         if (map && START_LOCATION) map.panTo(START_LOCATION);
         if (scoreDisplayElement) scoreDisplayElement.style.display = 'none';
-        resetAllPostUIs(); // Er nå global
+        resetAllPostUIs(); 
         if (geofenceFeedbackElement) geofenceFeedbackElement.style.display = 'none';
 
         const geoRunPostData = CoreApp.getPostData(GEO_RUN_POST_ID);
@@ -808,15 +848,12 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile("All state og UI nullstilt.", "info");
     }
     
-    function resetAllPostUIs() { // Denne var definert inne i DOMContentLoaded før, men brukes sjelden. Kan forbli global.
+    function resetAllPostUIs() { 
         logToMobile("resetAllPostUIs kalt.", "debug");
-        // Denne funksjonen er ment å iterere over alle kjente post-HTML-elementer og kalle resetPageUI på dem.
-        // Siden vi laster HTML dynamisk, er dette mindre relevant med mindre vi cacher alle post-DOM-elementer.
-        // For nå er den tom, men logglinjen er nyttig for å se om den kalles.
     }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #84_core_initTeam)`, "info"); 
+        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #85_core_initTeam)`, "info"); 
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -905,7 +942,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentTeamData.mannedPostTeacherVerified[`post${postNum}`] = true;
             saveState();
             logToMobile(`Lærerpassord korrekt for post ${postNum}.`, "info");
-            resetPageUI(`post-${postNum}`, document.getElementById(`post-${postNum}-content-wrapper`)); // resetPageUI er nå global
+            resetPageUI(`post-${postNum}`, document.getElementById(`post-${postNum}-content-wrapper`)); 
         } else {
             feedbackEl.textContent = "Feil passord. Prøv igjen.";
             feedbackEl.className = "feedback error shake";
@@ -1406,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const pageElement = document.getElementById(event.detail.pageId + "-content-wrapper");
             if (pageElement) {
                 logToMobile(`postReached event: pageElement ${pageElement.id} funnet. Kaller resetPageUI.`, "debug");
-                resetPageUI(event.detail.pageId, pageElement); // resetPageUI er nå global
+                resetPageUI(event.detail.pageId, pageElement); 
             } else {
                 logToMobile(`postReached event: Kunne ikke finne pageElement for ${event.detail.pageId}-content-wrapper`, "error");
             }
@@ -1499,4 +1536,4 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile("Initial page setup complete.", "info");
     });
 });
-/* Version: #84 */
+/* Version: #85 */
