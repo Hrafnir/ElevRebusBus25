@@ -1,4 +1,4 @@
-/* Version: #82 */
+/* Version: #93 */
 // Filnavn: posts/post7.js
 
 // Globale variabler spesifikke for Post 7 sitt minimap
@@ -9,19 +9,30 @@ let geoRunMiniMapActiveTargetMarker = null;
 function definePost7() {
     const POST_ID = 7;
 
-    // === NYESTE MIDLERTIDIGE KOORDINATER FOR LOKAL TESTING (v3) ===
-    const geoRunPointsData_Test_v3 = [
-        { lat: 60.7962070145891,  lng: 10.671000235856763, name: "Test v3 Start / Mål" },   // Indeks 0
-        { lat: 60.796185555247746, lng: 10.67127995809284,  name: "Test v3 Vendepunkt 1" },  // Indeks 1
-        { lat: 60.79620787296244,  lng: 10.671174402532056, name: "Test v3 Vendepunkt 2" },  // Indeks 2
-        { lat: 60.79626366718118,  lng: 10.671140976604477, name: "Test v3 Vendepunkt 3" },  // Indeks 3
-        { lat: 60.79624478299495,  lng: 10.67123773586853,  name: "Test v3 Vendepunkt 4" }   // Indeks 4
+    // === OPPRINNELIGE KOORDINATER ===
+    const geoRunPointsData_Original = [
+        { lat: 60.80063153980609, lng: 10.68346857893824, name: "Start / Mål" },
+        { lat: 60.80016284763752, lng: 10.683027279834748, name: "Vendepunkt 1" },
+        { lat: 60.80044715403525, lng: 10.68399856015822, name: "Vendepunkt 2" },
+        { lat: 60.800418311472285, lng: 10.682976604339615, name: "Vendepunkt 3" },
+        { lat: 60.800194780728354, lng: 10.684047124174391, name: "Vendepunkt 4" }
     ];
 
-    // VELG HVILKET SETT MED KOORDINATER SOM SKAL BRUKES:
-    const activeGeoRunPoints = geoRunPointsData_Original; 
+    // === MIDLERTIDIGE TESTKOORDINATER (BEHOLDES FOR REFERANSE) ===
+    /*
+    const geoRunPointsData_Test_v3 = [
+        { lat: 60.7962070145891,  lng: 10.671000235856763, name: "Test v3 Start / Mål" },
+        { lat: 60.796185555247746, lng: 10.67127995809284,  name: "Test v3 Vendepunkt 1" },
+        { lat: 60.79620787296244,  lng: 10.671174402532056, name: "Test v3 Vendepunkt 2" },
+        { lat: 60.79626366718118,  lng: 10.671140976604477, name: "Test v3 Vendepunkt 3" },
+        { lat: 60.79624478299495,  lng: 10.67123773586853,  name: "Test v3 Vendepunkt 4" }
+    ];
+    */
 
-    const runTargetIndices = [1, 2, 3, 4, 0];
+    // VELG HVILKET SETT MED KOORDINATER SOM SKAL BRUKES:
+    const activeGeoRunPoints = geoRunPointsData_Original; // Satt til de originale nå
+
+    const runTargetIndices = [1, 2, 3, 4, 0]; // Samme rekkefølge for begge sett
     const totalLegsToComplete = runTargetIndices.length;
 
     const miniMapStyles = [
@@ -31,9 +42,9 @@ function definePost7() {
         { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] }
     ];
 
-    return {
+    const postData = { // Definerer postData objektet
         id: POST_ID,
-        name: "Geo-løp", 
+        name: "Geo-løp Stjerne", // Tilbake til originalt navn, eller det du foretrekker
         lat: activeGeoRunPoints[0].lat,
         lng: activeGeoRunPoints[0].lng,
         type: "georun",
@@ -46,14 +57,21 @@ function definePost7() {
         runTargetIndices: runTargetIndices,
         lapsToComplete: totalLegsToComplete,
 
-        pointsScale: { 
-            30: 10, 45: 8, 60: 6, 90: 4, 120: 2, Infinity: 1
+        pointsScale: { // Disse tidene er basert på de originale koordinatene.
+            180: 10, // 3 min
+            240: 8,  // 4 min
+            300: 6,  // 5 min
+            360: 4,  // 6 min
+            420: 2,  // 7 min
+            Infinity: 1 
         },
 
         initUI: function(pageElement, teamData) {
             const currentLog = window.logToMobile || console.debug;
-            // NY LOGGLINJE lagt til her for å matche core.js #81 sin debug-ID E
-            currentLog(`Post ${POST_ID} initUI KALT. runState.finished: ${teamData?.geoRunState?.[`post${POST_ID}`]?.finished}, runState.active: ${teamData?.geoRunState?.[`post${POST_ID}`]?.active}. (SVAR_ID: #82_DEBUG_E)`, "debug");
+            const isUnlocked = teamData?.unlockedPosts?.[`post${POST_ID}`];
+            const isTeacherVerified = teamData?.mannedPostTeacherVerified?.[`post${POST_ID}`]; // Ikke relevant for georun, men for konsistens
+            const isCompleted = teamData?.completedGlobalPosts?.[`post${POST_ID}`];
+            currentLog(`Post ${POST_ID} initUI KALT. Ulåst: ${isUnlocked}, Verifisert: ${isTeacherVerified}, Fullført: ${isCompleted}. (SVAR_ID: #93_DEBUG_INIT)`, "debug");
 
 
             if (!pageElement || !teamData || !teamData.geoRunState || !teamData.geoRunState[`post${POST_ID}`]) {
@@ -79,7 +97,6 @@ function definePost7() {
             const proceedButtonEl = pageElement.querySelector(`#geo-run-proceed-btn-post${POST_ID}`);
             const miniMapDiv = pageElement.querySelector(`#georun-map-in-post${POST_ID}`);
 
-            // Skjul alle seksjoner som kan endre synlighet
             if(initialInstructionsEl) initialInstructionsEl.style.display = 'none';
             if(beforeStartInstructionsEl) beforeStartInstructionsEl.style.display = 'none';
             if(startButtonSectionEl) startButtonSectionEl.style.display = 'none';
@@ -104,11 +121,11 @@ function definePost7() {
                     if (!bounds.isEmpty()) {
                         geoRunMiniMapInstance.fitBounds(bounds);
                          google.maps.event.addListenerOnce(geoRunMiniMapInstance, 'idle', () => {
-                           if (geoRunMiniMapInstance.getZoom() > 19) geoRunMiniMapInstance.setZoom(19);
+                           if (geoRunMiniMapInstance.getZoom() > 19) geoRunMiniMapInstance.setZoom(19); // Juster zoom for originale punkter
                          });
                     } else if (this.geoRunPoints[0]) {
                         geoRunMiniMapInstance.setCenter(this.geoRunPoints[0]);
-                        geoRunMiniMapInstance.setZoom(18);
+                        geoRunMiniMapInstance.setZoom(18); // Juster zoom for originale punkter
                     }
                 }
                 let currentUserPosForMiniMap = null;
@@ -122,7 +139,6 @@ function definePost7() {
                 miniMapDiv.innerHTML = "<p style='text-align:center; color:red;'>Google Maps API ikke lastet.</p>";
             }
 
-            // Logikk for å vise UI-seksjoner
             if (runState.finished) { 
                 currentLog(`Post ${POST_ID} initUI: Løp helt fullført. Viser endelige resultater.`, "debug");
                 if(resultsSectionEl) resultsSectionEl.style.display = 'block';
@@ -243,6 +259,6 @@ function definePost7() {
             }
         }
     };
-    // return postData; // Denne var kommentert ut i v79, men bør være aktiv. Aktivert i v80.
+    return postData;
 }
-/* Version: #82 */
+/* Version: #93 */
