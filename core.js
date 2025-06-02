@@ -542,27 +542,30 @@ function dev_simulateAllPostsCompleted() {
     logToMobile("dev_simulateAllPostsCompleted: Simulerer at alle poster er fullført...", "info");
     
     // Markerer alle poster i lagets sekvens som fullført (uten poeng for enkelhet)
-    currentTeamData.postSequence.forEach(postId => {
+    // og setter en dummy tid for hver post for finaleresultat-visning
+    let pseudoTime = Date.now() - (currentTeamData.postSequence.length * 60000); // Start for X minutter siden
+    currentTeamData.postSequence.forEach((postId, index) => {
         if (!currentTeamData.completedGlobalPosts[`post${postId}`]) {
             currentTeamData.completedGlobalPosts[`post${postId}`] = true;
-            currentTeamData.pointsPerPost[`post${postId}`] = 0; // Gir 0 poeng for simuleringen
-            currentTeamData.taskCompletionTimes[`post${postId}`] = Date.now() - Math.random() * 100000; // Setter en tilfeldig tid
+            currentTeamData.pointsPerPost[`post${postId}`] = 0; 
+            pseudoTime += (Math.random() * 5000 + 30000); // Legg til 30-35 sek per post
+            currentTeamData.taskCompletionTimes[`post${postId}`] = pseudoTime;
         }
     });
     
     currentTeamData.completedPostsCount = currentTeamData.postSequence.length;
-    currentTeamData.canEnterFinishCode = true; // Tillat inntasting av kode
+    currentTeamData.canEnterFinishCode = true; 
     
     logToMobile(`Alle ${currentTeamData.completedPostsCount} poster er nå markert som fullført for ${currentTeamData.teamName}.`, "info");
     saveState();
     
-    showRebusPage('finale');
-    updateMapMarker(null, true); // Vis målmarkør
-    updateScoreDisplay(); // Oppdater poengvisning (vil vise summen av 0-poengene)
+    // Nødvendige UI-oppdateringer:
+    showRebusPage('finale');        // Vis finalesiden
+    updateMapMarker(null, true);    // Vis målmarkør på kartet
+    updateScoreDisplay();           // Oppdater poengsummen (vil være 0 i dette tilfellet)
 
-    // Stopp GPS hvis den kjører, siden vi er "i mål"
-    stopContinuousUserPositionUpdate();
-    if (geofenceFeedbackElement) {
+    stopContinuousUserPositionUpdate(); // Stopp GPS
+    if (geofenceFeedbackElement) {      // Skjul geofence feedback
         geofenceFeedbackElement.style.display = 'none';
     }
     logToMobile("dev_simulateAllPostsCompleted: Ferdig. Du skal nå være på finalesiden.", "info");
