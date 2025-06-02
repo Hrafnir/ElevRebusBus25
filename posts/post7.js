@@ -19,7 +19,7 @@ function definePost7() {
     ];
 
     // VELG HVILKET SETT MED KOORDINATER SOM SKAL BRUKES:
-    const activeGeoRunPoints = geoRunPointsData_Test_v3; 
+    const activeGeoRunPoints = geoRunPointsData_Original; 
 
     const runTargetIndices = [1, 2, 3, 4, 0];
     const totalLegsToComplete = runTargetIndices.length;
@@ -33,7 +33,7 @@ function definePost7() {
 
     return {
         id: POST_ID,
-        name: "Geo-løp Stjerne (Test v3)", 
+        name: "Geo-løp", 
         lat: activeGeoRunPoints[0].lat,
         lng: activeGeoRunPoints[0].lng,
         type: "georun",
