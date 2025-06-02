@@ -1,4 +1,4 @@
-/* Version: #91 */
+/* Version: #92 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -70,14 +70,14 @@ const CoreApp = {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
             } else {
-                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #91_DEBUG_A)`, "debug");
+                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #92_DEBUG_A)`, "debug");
                 const currentPageId = `post-${postId}`;
                 const pageElement = document.getElementById(`${currentPageId}-content-wrapper`);
                 if (pageElement) {
-                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #91_DEBUG_B)`, "debug");
+                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #92_DEBUG_B)`, "debug");
                     resetPageUI(currentPageId, pageElement); 
                 } else {
-                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #91_DEBUG_C)`, "warn");
+                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #92_DEBUG_C)`, "warn");
                 }
             }
 
@@ -96,7 +96,7 @@ const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25;
 const GEO_RUN_START_RADIUS = 20;
 const GEO_RUN_WAYPOINT_RADIUS = 5;
-const DEV_MODE_NO_GEOFENCE = true; 
+const DEV_MODE_NO_GEOFENCE = false; // Endret til false
 const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
@@ -161,23 +161,8 @@ function handleGeolocationError(error, isFromWatchPosition = true) {
         geofenceFeedbackElement.style.display = 'block';
     }
 
-    if (DEV_MODE_NO_GEOFENCE && isFromWatchPosition && error.code !== error.PERMISSION_DENIED) {
-        logToMobile("DEV_MODE: GPS feilet, men ikke pga. manglende tillatelse. Starter fallback interval for posisjonsoppdateringer.", "info");
-        if (devModePositionUpdateIntervalId === null) {
-            const dummyPosition = {
-                coords: {
-                    latitude: START_LOCATION.lat,
-                    longitude: START_LOCATION.lng,
-                    accuracy: 100, altitude: null, altitudeAccuracy: null, heading: null, speed: null
-                },
-                timestamp: Date.now()
-            };
-            updateUserPositionOnMap(dummyPosition);
-            devModePositionUpdateIntervalId = setInterval(() => {
-                handlePositionUpdate(dummyPosition);
-            }, 5000);
-        }
-    } else if (error.code === error.PERMISSION_DENIED) {
+    // Fallback for dev mode er fjernet herfra, da DEV_MODE_NO_GEOFENCE = false
+    if (error.code === error.PERMISSION_DENIED) {
         stopContinuousUserPositionUpdate();
     }
 }
@@ -216,12 +201,7 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
     geofenceFeedbackElement.style.display = 'block';
     geofenceFeedbackElement.classList.remove('permanent');
 
-    if (DEV_MODE_NO_GEOFENCE) {
-        geofenceFeedbackElement.textContent = `DEV MODE: Geofence deaktivert. (Reell avstand: ${distance !== null ? Math.round(distance) + 'm' : 'ukjent'})`;
-        geofenceFeedbackElement.className = 'geofence-info dev-mode';
-        return;
-    }
-
+    // DEV_MODE_NO_GEOFENCE sjekk fjernet herfra, da den er false
     if (distance === null) {
         geofenceFeedbackElement.textContent = `Leter etter ${targetName.toLowerCase()}...`;
         geofenceFeedbackElement.className = 'geofence-info';
@@ -229,7 +209,7 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
     }
 
     const distanceFormatted = Math.round(distance);
-    if (isEffectivelyWithinRange) {
+    if (isEffectivelyWithinRange) { // isEffectivelyWithinRange vil nå kun være true hvis isWithinRange er true
         if (canInteractWithTarget) {
             let message = `Du er ved ${targetName.toLowerCase()} (${distanceFormatted}m). `;
             if (targetName.toLowerCase().includes("mål")) {
@@ -252,7 +232,7 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
 
 
 function handlePositionUpdate(position) {
-    logToMobile(`handlePositionUpdate KALT. Nåværende post i teamData: ${currentTeamData ? currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] : 'Ingen teamdata/post'}, Mål-ID forrige sjekk: ${targetLocationDetailsForLogging ? targetLocationDetailsForLogging.globalId : 'Ingen forrige mål'} (SVAR_ID: #91_DEBUG_HPU_ENTRY)`, "debug");
+    logToMobile(`handlePositionUpdate KALT. Nåværende post i teamData: ${currentTeamData ? currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] : 'Ingen teamdata/post'}, Mål-ID forrige sjekk: ${targetLocationDetailsForLogging ? targetLocationDetailsForLogging.globalId : 'Ingen forrige mål'} (SVAR_ID: #92_DEBUG_HPU_ENTRY)`, "debug");
 
     updateUserPositionOnMap(position);
 
@@ -325,7 +305,8 @@ function handlePositionUpdate(position) {
     const userLat = position.coords.latitude; const userLng = position.coords.longitude;
     const distance = calculateDistance(userLat, userLng, targetLocationDetails.location.lat, targetLocationDetails.location.lng);
     const isWithinRange = distance <= currentGeofenceRadius;
-    const isEffectivelyWithinRange = DEV_MODE_NO_GEOFENCE || isWithinRange;
+    // DEV_MODE_NO_GEOFENCE er nå false, så isEffectivelyWithinRange vil være lik isWithinRange
+    const isEffectivelyWithinRange = isWithinRange; 
     let canCurrentlyInteract = false;
 
     if (isCurrentTargetTheFinishLine) {
@@ -402,17 +383,7 @@ function startContinuousUserPositionUpdate() {
         (error) => { handleGeolocationError(error, true); },
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
-    if (DEV_MODE_NO_GEOFENCE) {
-        setTimeout(() => {
-            if (mapPositionWatchId !== null && !userPositionMarker && devModePositionUpdateIntervalId === null) {
-                logToMobile("DEV_MODE: watchPosition aktiv, men ingen posisjon mottatt. Simulerer en feil for å potensielt starte fallback.", "debug");
-                const permDeniedMsg = "Du må tillate posisjonstilgang.";
-                if (!geofenceFeedbackElement || !geofenceFeedbackElement.textContent.includes(permDeniedMsg)) {
-                    handleGeolocationError({ code: navigator.geolocation.TIMEOUT, message: "Simulert timeout for DEV_MODE fallback" }, true);
-                }
-            }
-        }, 12000);
-    }
+    // Fallback for dev mode er fjernet herfra, da DEV_MODE_NO_GEOFENCE = false
 }
 
 function stopContinuousUserPositionUpdate() {
@@ -421,7 +392,7 @@ function stopContinuousUserPositionUpdate() {
         mapPositionWatchId = null;
         logToMobile("Stoppet kontinuerlig GPS sporing (ekte).", "info");
     }
-    if (devModePositionUpdateIntervalId !== null) {
+    if (devModePositionUpdateIntervalId !== null) { // Denne bør nå aldri bli satt hvis DEV_MODE_NO_GEOFENCE er false
         clearInterval(devModePositionUpdateIntervalId);
         devModePositionUpdateIntervalId = null;
         logToMobile("Stoppet fallback intervall for posisjonsoppdateringer (DEV_MODE).", "info");
@@ -430,7 +401,7 @@ function stopContinuousUserPositionUpdate() {
 
 // === resetPageUI FLYTTET TIL GLOBALT SKOP ===
 function resetPageUI(pageIdentifier, pageElementContext = null) {
-    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #91_DEBUG_D)`, "debug");
+    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #92_DEBUG_D)`, "debug");
     const context = pageElementContext || postContentContainer; 
     if (!context || typeof context.querySelector !== 'function') {
         logToMobile(`resetPageUI: Ugyldig kontekst (${typeof context}) for ${pageIdentifier}. Kan ikke fortsette.`, "error");
@@ -506,7 +477,7 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
         }
 
         if (typeof postData.initUI === 'function') {
-            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI. (SVAR_ID: #91_DEBUG_INIT_CALL)`, "debug");
+            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI. (SVAR_ID: #92_DEBUG_INIT_CALL)`, "debug");
             postData.initUI(context, currentTeamData);
         }
 
@@ -528,6 +499,7 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
 }
 
 // === DEV FUNKSJON FOR Å TESTE MÅLGANG ===
+// Denne funksjonen bør fjernes eller kommenteres ut før produksjon
 function dev_simulateAllPostsCompleted() {
     if (!currentTeamData) {
         logToMobile("dev_simulateAllPostsCompleted: Ingen aktivt lag. Start et lag først.", "warn");
@@ -570,7 +542,7 @@ function dev_simulateAllPostsCompleted() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #91_core_init)`, "info"); 
+    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #92_core_init)`, "info"); 
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -647,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`displayFinalResults kalt. (SVAR_ID: #91_core_displayFinalResults)`, "info"); 
+        logToMobile(`displayFinalResults kalt. (SVAR_ID: #92_core_displayFinalResults)`, "info"); 
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -772,7 +744,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             resetPageUI(pageIdentifier, loadedPageElement); 
 
-            // === JUSTERT KODE FOR DEV_MODE UMIDDELBAR OPPDATERING ===
             if (DEV_MODE_NO_GEOFENCE && currentTeamData && 
                 (pageIdentifier.startsWith('post-') || pageIdentifier === 'finale')) { 
                 logToMobile(`DEV_MODE: Tvinger handlePositionUpdate for ${pageIdentifier} etter lasting.`, "debug");
@@ -790,7 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 handlePositionUpdate(dummyPosition);
             }
-            // === SLUTT PÅ JUSTERT KODE ===
 
 
             if (currentTeamData && pageIdentifier !== 'intro') { updateScoreDisplay(); }
@@ -848,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`clearState kalt. (SVAR_ID: #91_core_clearState)`, "info"); 
+        logToMobile(`clearState kalt. (SVAR_ID: #92_core_clearState)`, "info"); 
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -873,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #91_core_initTeam)`, "info"); 
+        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #92_core_initTeam)`, "info"); 
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -1296,7 +1266,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateMapMarker(null, true);
             const finaleContentWrapper = document.getElementById('finale-content-wrapper');
             if (finaleContentWrapper) {
-                showRebusPage('finale'); // Kaller showRebusPage for å oppdatere finalesiden til "fullført" visning
+                showRebusPage('finale'); 
             }
 
         } else {
@@ -1520,8 +1490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile(`Post-registrering fullført. Antall registrerte poster: ${Object.keys(CoreApp.registeredPostsData).length}.`, "info");
         CoreApp.setReady();
 
-        if (DEV_MODE_NO_GEOFENCE) { if (geofenceFeedbackElement) { geofenceFeedbackElement.textContent = "DEV MODE: Geofence deaktivert."; geofenceFeedbackElement.className = 'geofence-info dev-mode'; geofenceFeedbackElement.style.display = 'block'; } }
-
+        // DEV_MODE_NO_GEOFENCE sjekk for geofenceFeedbackElement flyttet til etter loadState for å sikre at elementet er der
         if (loadState()) {
             logToMobile("Tilstand lastet fra localStorage.", "info");
             showTabContent('rebus');
@@ -1553,7 +1522,19 @@ document.addEventListener('DOMContentLoaded', () => {
             showTabContent('rebus');
             await showRebusPage('intro');
         }
+        
+        // Flyttet denne hit for å sikre at geofenceFeedbackElement er tilgjengelig
+        if (DEV_MODE_NO_GEOFENCE && geofenceFeedbackElement) { 
+            geofenceFeedbackElement.textContent = "DEV MODE: Geofence deaktivert."; 
+            geofenceFeedbackElement.className = 'geofence-info dev-mode'; 
+            geofenceFeedbackElement.style.display = 'block'; 
+        }
+
         logToMobile("Initial page setup complete.", "info");
+    })
+    .catch(error => {
+        logToMobile(`Alvorlig feil under lasting av post-skript: ${error.message}. Applikasjonen kan være ustabil.`, "error");
+        postContentContainer.innerHTML = `<p class="feedback error">En kritisk feil oppstod under lasting av spillets data. Prøv å laste siden på nytt, eller kontakt en arrangør.</p>`;
     });
 });
-/* Version: #91 */
+/* Version: #92 */
