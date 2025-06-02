@@ -1,4 +1,4 @@
-/* Version: #89 */
+/* Version: #90 */
 // Filnavn: core.js
 
 // === GLOBALE VARIABLER ===
@@ -17,7 +17,7 @@ let preRunPipTimerId = null;
 let mobileLogContainer = null;
 let postContentContainer = null;
 let devModePositionUpdateIntervalId = null;
-let targetLocationDetailsForLogging = null; // For å logge forrige mål
+let targetLocationDetailsForLogging = null; 
 
 // === CoreApp Objekt DEFINERT GLOBALT ===
 const CoreApp = {
@@ -70,14 +70,14 @@ const CoreApp = {
                 logToMobile(`Post ${postId} (type: ${postData.type}) går automatisk videre.`, "debug");
                 document.dispatchEvent(new CustomEvent('requestProceedToNext'));
             } else {
-                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #89_DEBUG_A)`, "debug");
+                logToMobile(`Post ${postId} (type: ${postData.type}) krever manuell 'Gå Videre'. Viser resultat/ferdig-UI. (SVAR_ID: #90_DEBUG_A)`, "debug");
                 const currentPageId = `post-${postId}`;
                 const pageElement = document.getElementById(`${currentPageId}-content-wrapper`);
                 if (pageElement) {
-                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #89_DEBUG_B)`, "debug");
+                    logToMobile(`Sideelement ${pageElement.id} FUNNET for post ${postId}. Kaller resetPageUI. (SVAR_ID: #90_DEBUG_B)`, "debug");
                     resetPageUI(currentPageId, pageElement); 
                 } else {
-                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #89_DEBUG_C)`, "warn");
+                    logToMobile(`Sideelement for post ${postId} (${currentPageId}-content-wrapper) IKKE funnet for umiddelbar UI-oppdatering etter markPostAsCompleted. (SVAR_ID: #90_DEBUG_C)`, "warn");
                 }
             }
 
@@ -96,7 +96,7 @@ const TOTAL_POSTS = 10;
 const GEOFENCE_RADIUS = 25;
 const GEO_RUN_START_RADIUS = 20;
 const GEO_RUN_WAYPOINT_RADIUS = 5;
-const DEV_MODE_NO_GEOFENCE = true; // Bekreftet satt til true
+const DEV_MODE_NO_GEOFENCE = true; 
 const FINISH_UNLOCK_CODE = "FASTLAND24";
 const GEO_RUN_POST_ID = 7;
 
@@ -252,8 +252,7 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
 
 
 function handlePositionUpdate(position) {
-    // NY LOGGLINJE HER:
-    logToMobile(`handlePositionUpdate KALT. Nåværende post i teamData: ${currentTeamData ? currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] : 'Ingen teamdata/post'}, Mål-ID forrige sjekk: ${targetLocationDetailsForLogging ? targetLocationDetailsForLogging.globalId : 'Ingen forrige mål'} (SVAR_ID: #89_DEBUG_HPU_ENTRY)`, "debug");
+    logToMobile(`handlePositionUpdate KALT. Nåværende post i teamData: ${currentTeamData ? currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] : 'Ingen teamdata/post'}, Mål-ID forrige sjekk: ${targetLocationDetailsForLogging ? targetLocationDetailsForLogging.globalId : 'Ingen forrige mål'} (SVAR_ID: #90_DEBUG_HPU_ENTRY)`, "debug");
 
     updateUserPositionOnMap(position);
 
@@ -261,7 +260,7 @@ function handlePositionUpdate(position) {
         updateGeofenceFeedback(null, false, true, null, false); return;
     }
 
-    let targetLocationDetails = null; // Endret fra global til lokal
+    let targetLocationDetails = null; 
     let isCurrentTargetTheFinishLine = false;
     let isGeoRunActiveForCurrentPost = false;
     let currentGeofenceRadius = GEOFENCE_RADIUS;
@@ -317,7 +316,7 @@ function handlePositionUpdate(position) {
         } else { logToMobile("handlePositionUpdate: Ingen registrerte poster, kan ikke bestemme mål.", "warn"); }
     }
     
-    targetLocationDetailsForLogging = targetLocationDetails; // Oppdater for neste logg-kall
+    targetLocationDetailsForLogging = targetLocationDetails; 
 
     if (!targetLocationDetails) {
         updateGeofenceFeedback(null, false, false, null, false, GEOFENCE_RADIUS); return;
@@ -431,7 +430,7 @@ function stopContinuousUserPositionUpdate() {
 
 // === resetPageUI FLYTTET TIL GLOBALT SKOP ===
 function resetPageUI(pageIdentifier, pageElementContext = null) {
-    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #89_DEBUG_D)`, "debug");
+    logToMobile(`resetPageUI KALT for pageIdentifier: '${pageIdentifier}'. pageElementContext ID: ${pageElementContext ? pageElementContext.id : 'NULL'}. (SVAR_ID: #90_DEBUG_D)`, "debug");
     const context = pageElementContext || postContentContainer; 
     if (!context || typeof context.querySelector !== 'function') {
         logToMobile(`resetPageUI: Ugyldig kontekst (${typeof context}) for ${pageIdentifier}. Kan ikke fortsette.`, "error");
@@ -507,7 +506,7 @@ function resetPageUI(pageIdentifier, pageElementContext = null) {
         }
 
         if (typeof postData.initUI === 'function') {
-            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI. (SVAR_ID: #89_DEBUG_INIT_CALL)`, "debug");
+            logToMobile(`resetPageUI for ${pageIdentifier}: Kaller postData.initUI. (SVAR_ID: #90_DEBUG_INIT_CALL)`, "debug");
             postData.initUI(context, currentTeamData);
         }
 
@@ -571,7 +570,7 @@ function dev_simulateAllPostsCompleted() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mobileLogContainer = document.getElementById('mobile-log-output');
-    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #89_core_init)`, "info"); 
+    logToMobile(`DOMContentLoaded event fired. (SVAR_ID: #90_core_init)`, "info"); 
     initializeSounds();
 
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -648,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFinalResults() {
-        logToMobile(`displayFinalResults kalt. (SVAR_ID: #89_core_displayFinalResults)`, "info"); 
+        logToMobile(`displayFinalResults kalt. (SVAR_ID: #90_core_displayFinalResults)`, "info"); 
         const finalScoreSpan = document.getElementById('final-score');
         const totalTimeSpan = document.getElementById('total-time');
         const stageTimesList = document.getElementById('stage-times-list');
@@ -773,6 +772,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             resetPageUI(pageIdentifier, loadedPageElement); 
 
+            // === NY KODE FOR DEV_MODE UMIDDELBAR OPPDATERING ===
+            if (DEV_MODE_NO_GEOFENCE && currentTeamData && pageIdentifier.startsWith('post-')) {
+                logToMobile(`DEV_MODE: Tvinger handlePositionUpdate for ${pageIdentifier} etter lasting.`, "debug");
+                let currentPosCoords;
+                if (userPositionMarker && userPositionMarker.getPosition()) {
+                    const gMapsPos = userPositionMarker.getPosition();
+                    currentPosCoords = { latitude: gMapsPos.lat(), longitude: gMapsPos.lng(), accuracy: 20 };
+                } else {
+                    currentPosCoords = { latitude: START_LOCATION.lat, longitude: START_LOCATION.lng, accuracy: 100 };
+                }
+                const dummyPosition = {
+                    coords: currentPosCoords,
+                    timestamp: Date.now()
+                };
+                handlePositionUpdate(dummyPosition);
+            }
+            // === SLUTT PÅ NY KODE ===
+
+
             if (currentTeamData && pageIdentifier !== 'intro') { updateScoreDisplay(); }
             else if (scoreDisplayElement) { scoreDisplayElement.style.display = 'none'; }
 
@@ -828,7 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearState() {
-        logToMobile(`clearState kalt. (SVAR_ID: #89_core_clearState)`, "info"); 
+        logToMobile(`clearState kalt. (SVAR_ID: #90_core_clearState)`, "info"); 
         currentTeamData = null;
         saveState();
         stopContinuousUserPositionUpdate();
@@ -853,7 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeTeam(teamCode, teamPassword) {
-        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #89_core_initTeam)`, "info"); 
+        logToMobile(`initializeTeam kalt med kode: ${teamCode}. (SVAR_ID: #90_core_initTeam)`, "info"); 
         const feedbackElDynamic = document.getElementById('team-code-feedback-dynamic');
 
         if (Object.keys(CoreApp.registeredPostsData).length === 0) {
@@ -1536,4 +1554,4 @@ document.addEventListener('DOMContentLoaded', () => {
         logToMobile("Initial page setup complete.", "info");
     });
 });
-/* Version: #89 */
+/* Version: #90 */
