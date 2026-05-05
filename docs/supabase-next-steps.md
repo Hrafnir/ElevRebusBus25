@@ -4,17 +4,9 @@ This app is moving from local JSON storage to Supabase.
 
 ## Project choice
 
-Supabase projects found through the plugin:
+Create or select a Supabase project for the app, then apply the migrations in `supabase/migrations/`.
 
-- `OS-Link` (`hguzwdtquhgnruhegrjm`) - inactive
-- `Bjørnsveen MAS` (`dwiynoqqhvtlxwcofwif`) - inactive
-- `Music Collector V2` (`nrzrcydayakkgakyhznr`) - active
-
-Selected project:
-
-- `Rebus Platform` (`mbdfibkufvpssbemkylq`) - active
-
-The initial schema migration has been applied to this project.
+Do not commit project secrets. Keep `SUPABASE_SERVICE_ROLE_KEY` only in local/server environment variables.
 
 ## What is ready locally
 
@@ -23,9 +15,7 @@ The initial schema migration has been applied to this project.
 - Environment template:
   - `.env.example`
 
-Applied Supabase migration:
-
-- `20260505074201_rebus_platform_schema`
+Applied Supabase migrations are tracked in your Supabase project history after you run them.
 
 ## Recommended Supabase Auth setup
 
