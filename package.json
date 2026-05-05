@@ -1,0 +1,14 @@
+{
+  "name": "rebus-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plattform for lærerstyrte rebuser med adminside, elevside og backend.",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "dev": "node src/server/index.js",
+    "check": "node --check src/server/index.js && node --check public/admin/app.js && node --check public/student/app.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -119,7 +119,18 @@ function formatTimeFromMs(ms) { if (ms === null || ms === undefined || ms < 0) r
 function logToMobile(message, level = 'log') { console[level](message); if (mobileLogContainer) { const logEntry = document.createElement('div'); logEntry.textContent = `[${level.toUpperCase()}] ${new Date().toLocaleTimeString()}: ${message}`; logEntry.classList.add('log-entry'); logEntry.classList.add(`log-level-${level}`); mobileLogContainer.appendChild(logEntry); mobileLogContainer.scrollTop = mobileLogContainer.scrollHeight; } }
 
 // === Globale State Management Funksjoner ===
-function saveState() { if (currentTeamData) { localStorage.setItem('activeTeamData_Skolerebus', JSON.stringify(currentTeamData)); logToMobile("State saved.", "info"); } else { localStorage.removeItem('activeTeamData_Skolerebus'); logToMobile("State cleared (no team data).", "info"); } }
+function saveState() {
+    if (currentTeamData) {
+        localStorage.setItem('activeTeamData_Skolerebus', JSON.stringify(currentTeamData));
+        if (window.BackendSync && typeof window.BackendSync.saveTeamState === 'function') {
+            window.BackendSync.saveTeamState(currentTeamData);
+        }
+        logToMobile("State saved.", "info");
+    } else {
+        localStorage.removeItem('activeTeamData_Skolerebus');
+        logToMobile("State cleared (no team data).", "info");
+    }
+}
 
 // === LYDFUNKSJONER ===
 function initializeSounds() { try { generalArrivalAudio = new Audio('audio/arrival_medium_pip.wav'); shortPipAudio = new Audio('audio/short_high_pip.wav'); longPipAudio = new Audio('audio/long_high_pip.wav'); logToMobile("Lydobjekter initialisert med faktiske filer.", "info"); if(generalArrivalAudio) generalArrivalAudio.load(); if(shortPipAudio) shortPipAudio.load(); if(longPipAudio) longPipAudio.load(); } catch (e) { logToMobile(`Kunne ikke initialisere Audio objekter: ${e.message}`, "error"); generalArrivalAudio = null; shortPipAudio = null; longPipAudio = null; } }
@@ -233,6 +244,10 @@ function updateGeofenceFeedback(distance, isEffectivelyWithinRange, isFullyCompl
 
 function handlePositionUpdate(position) {
     logToMobile(`handlePositionUpdate KALT. Nåværende post i teamData: ${currentTeamData ? currentTeamData.postSequence[currentTeamData.currentPostArrayIndex] : 'Ingen teamdata/post'}, Mål-ID forrige sjekk: ${targetLocationDetailsForLogging ? targetLocationDetailsForLogging.globalId : 'Ingen forrige mål'} (SVAR_ID: #92_DEBUG_HPU_ENTRY)`, "debug");
+
+    if (window.BackendSync && typeof window.BackendSync.saveLocation === 'function') {
+        window.BackendSync.saveLocation(currentTeamData, position);
+    }
 
     updateUserPositionOnMap(position);
 

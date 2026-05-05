@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skolerebus admin</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <header class="admin-header">
+        <div>
+            <h1>Skolerebus admin</h1>
+            <p>Live oversikt over lag, progresjon og siste GPS-posisjon.</p>
+        </div>
+        <div class="admin-actions">
+            <input id="admin-token" type="password" placeholder="Admin-token">
+            <button id="connect-button">Koble til</button>
+            <button id="reset-button" class="danger">Nullstill</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="summary-grid">
+            <div class="summary-item">
+                <span>Aktive lag</span>
+                <strong id="active-teams">0</strong>
+            </div>
+            <div class="summary-item">
+                <span>Fullført</span>
+                <strong id="finished-teams">0</strong>
+            </div>
+            <div class="summary-item">
+                <span>Sist oppdatert</span>
+                <strong id="last-updated">-</strong>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>Lagstatus</h2>
+                <span id="connection-status">Ikke tilkoblet</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Lag</th>
+                            <th>Post</th>
+                            <th>Poeng</th>
+                            <th>Fremdrift</th>
+                            <th>Sist sett</th>
+                            <th>GPS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="team-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>Hendelser</h2>
+            </div>
+            <ol id="event-list" class="event-list"></ol>
+        </section>
+    </main>
+
+    <script src="admin.js"></script>
+</body>
+</html>
