@@ -499,17 +499,22 @@
         const groupName = groupDisplayName(student);
         const username = student.username || '';
         const password = groupPassword(student);
+        const suggestedPassword = password || generateAccessCode();
         return `
-          <article class="task-card group-card">
+          <article class="task-card group-card ${password ? '' : 'missing-code'}">
             <div>
               <strong>${escapeHtml(groupName)}</strong>
-              <p class="muted">Brukernavn: <code>${escapeHtml(username || '-')}</code></p>
-              <p class="muted">Kode: <code>${escapeHtml(password || 'Mangler kode')}</code></p>
+              <dl class="group-login-details">
+                <div><dt>Brukernavn</dt><dd><code>${escapeHtml(username || '-')}</code></dd></div>
+                <div><dt>Kode</dt><dd><code>${escapeHtml(password || suggestedPassword)}</code></dd></div>
+              </dl>
+              ${password ? '' : '<p class="notice compact-notice">Denne gruppen manglet kode. Ny kode er foreslått i feltet til høyre. Trykk “Lagre kode”.</p>'}
             </div>
             <div class="group-password-tools">
-              <input data-group-password="${escapeHtml(student.id)}" placeholder="Ny kode">
+              <input data-group-password="${escapeHtml(student.id)}" value="${password ? '' : escapeHtml(suggestedPassword)}" placeholder="Ny kode">
               <button class="ghost compact" type="button" data-generate-password="${escapeHtml(student.id)}">Generer</button>
               <button class="compact" type="button" data-save-password="${escapeHtml(student.id)}">Lagre kode</button>
+              <button class="ghost compact" type="button" data-copy-login="${escapeHtml(student.id)}">Kopier</button>
             </div>
           </article>
         `;
@@ -525,6 +530,19 @@
     document.querySelectorAll('[data-save-password]').forEach(button => {
       button.addEventListener('click', () => updateGroupPassword(button.dataset.savePassword).catch(error => alert(error.message)));
     });
+    document.querySelectorAll('[data-copy-login]').forEach(button => {
+      button.addEventListener('click', () => copyGroupLogin(button.dataset.copyLogin).catch(error => alert(error.message)));
+    });
+  }
+
+  async function copyGroupLogin(studentId) {
+    const student = state.selectedRebus?.students?.find(item => item.id === studentId);
+    if (!student) return;
+    const input = document.querySelector(`[data-group-password="${cssEscape(studentId)}"]`);
+    const password = groupPassword(student) || input?.value || '';
+    const text = `${groupDisplayName(student)}\nBrukernavn: ${student.username || ''}\nKode: ${password}`;
+    await navigator.clipboard.writeText(text);
+    alert('Innlogging kopiert.');
   }
 
   function exportGroups() {
