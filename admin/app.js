@@ -133,6 +133,7 @@
     updateAuthStatus();
     renderOrganizations();
     renderRebusList();
+    renderEmptyRebus();
   }
 
   async function logout() {
@@ -465,12 +466,25 @@
     if (!rebus) return;
     $('selected-title').textContent = rebus.title;
     $('selected-description').textContent = rebus.description || 'Ingen beskrivelse.';
+    $('rebus-settings').hidden = false;
+    $('edit-rebus-title').value = rebus.title || '';
+    $('edit-rebus-description').value = rebus.description || '';
     $('task-list').innerHTML = rebus.tasks.length
       ? renderTasksGroupedByStop(rebus)
       : '<p class="muted">Ingen oppgaver ennå. Trykk “Ny oppgave” for å lage den første. Første oppgave blir start, siste blir mål.</p>';
     renderGroupList();
     setDefaultGroupFields();
     bindTaskListActions();
+  }
+
+  function renderEmptyRebus() {
+    $('selected-title').textContent = 'Velg en rebus';
+    $('selected-description').textContent = 'Når en rebus er valgt kan du legge til oppgaver, grupper og se live status.';
+    $('rebus-settings').hidden = true;
+    $('task-list').innerHTML = '';
+    $('group-list').innerHTML = '';
+    $('live-body').innerHTML = '<tr><td colspan="5" class="muted">Velg en rebus først.</td></tr>';
+    renderStopSelect();
   }
 
   function renderGroupList() {
@@ -593,6 +607,53 @@
     $('rebus-title').value = '';
     $('rebus-description').value = '';
     await loadRebuses();
+  }
+
+  async function updateRebus() {
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const title = $('edit-rebus-title').value.trim() || 'Ny rebus';
+    const description = $('edit-rebus-description').value.trim();
+
+    if (state.mode === 'supabase') {
+      const { error } = await state.supabase
+        .from('rebuses')
+        .update({ title, description })
+        .eq('id', state.selectedRebus.id);
+      if (error) throw error;
+    } else {
+      await localApi(`/api/admin/rebuses/${state.selectedRebus.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title, description })
+      });
+    }
+
+    await selectRebus(state.selectedRebus.id);
+    await loadRebuses();
+  }
+
+  async function deleteRebus() {
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const title = state.selectedRebus.title;
+    const confirmed = confirm(`Slette "${title}"? Dette fjerner rebusen, oppgaver, grupper og progresjon.`);
+    if (!confirmed) return;
+
+    if (state.mode === 'supabase') {
+      const { error } = await state.supabase
+        .from('rebuses')
+        .delete()
+        .eq('id', state.selectedRebus.id);
+      if (error) throw error;
+    } else {
+      await localApi(`/api/admin/rebuses/${state.selectedRebus.id}`, {
+        method: 'DELETE'
+      });
+    }
+
+    state.selectedRebus = null;
+    state.selectedStopId = '';
+    renderEmptyRebus();
+    await loadRebuses();
+    await loadLive();
   }
 
   async function createTask() {
@@ -1322,6 +1383,8 @@
     $('group-password').value = generateAccessCode();
   });
   $('create-rebus-button').addEventListener('click', () => createRebus().catch(error => alert(error.message)));
+  $('save-rebus-button').addEventListener('click', () => updateRebus().catch(error => alert(error.message)));
+  $('delete-rebus-button').addEventListener('click', () => deleteRebus().catch(error => alert(error.message)));
   $('create-task-button').addEventListener('click', () => createTask().catch(error => alert(error.message)));
   $('create-student-button').addEventListener('click', () => createStudent().catch(error => alert(error.message)));
   $('use-current-location-button').addEventListener('click', useCurrentLocation);

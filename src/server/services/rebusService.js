@@ -76,6 +76,36 @@ function createRebus(teacherId, input) {
   });
 }
 
+function updateRebus(teacherId, rebusId, input) {
+  return updateDatabase(db => {
+    const rebus = db.rebuses.find(item => item.id === rebusId && item.ownerTeacherId === teacherId);
+    if (!rebus) return null;
+    rebus.title = String(input.title || '').trim() || rebus.title;
+    rebus.description = String(input.description || '').trim();
+    rebus.updatedAt = nowIso();
+    db.events.push(createEvent('rebus_updated', rebus.id, `Rebus oppdatert: ${rebus.title}`));
+    return rebus;
+  });
+}
+
+function deleteRebus(teacherId, rebusId) {
+  return updateDatabase(db => {
+    const rebus = db.rebuses.find(item => item.id === rebusId && item.ownerTeacherId === teacherId);
+    if (!rebus) return null;
+    const taskIds = new Set(db.tasks.filter(task => task.rebusId === rebusId).map(task => task.id));
+    const studentIds = new Set(db.students.filter(student => student.rebusId === rebusId).map(student => student.id));
+    db.rebuses = db.rebuses.filter(item => item.id !== rebusId);
+    db.tasks = db.tasks.filter(task => task.rebusId !== rebusId);
+    db.students = db.students.filter(student => student.rebusId !== rebusId);
+    db.sessions = db.sessions.filter(session => !studentIds.has(session.studentId));
+    db.progress = db.progress.filter(progress => progress.rebusId !== rebusId && !taskIds.has(progress.taskId));
+    db.locations = db.locations.filter(location => location.rebusId !== rebusId);
+    db.submissions = db.submissions.filter(submission => submission.rebusId !== rebusId);
+    db.events.push(createEvent('rebus_deleted', rebusId, `Rebus slettet: ${rebus.title}`));
+    return rebus;
+  });
+}
+
 function createTask(teacherId, rebusId, input) {
   return updateDatabase(db => {
     const rebus = db.rebuses.find(item => item.id === rebusId && item.ownerTeacherId === teacherId);
@@ -352,6 +382,8 @@ module.exports = {
   listRebuses,
   getRebusDetails,
   createRebus,
+  updateRebus,
+  deleteRebus,
   createTask,
   createStudent,
   updateStudentPassword,

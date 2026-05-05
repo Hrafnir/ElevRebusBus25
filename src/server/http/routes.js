@@ -5,6 +5,8 @@ const {
   listRebuses,
   getRebusDetails,
   createRebus,
+  updateRebus,
+  deleteRebus,
   createTask,
   createStudent,
   updateStudentPassword,
@@ -109,6 +111,22 @@ async function handleApi(req, res, url) {
   if (rebusMatch && req.method === 'GET') {
     if (!teacher) return unauthorized(res), true;
     const rebus = getRebusDetails(rebusMatch[1], teacher.id);
+    if (!rebus) return notFound(res), true;
+    json(res, 200, { rebus });
+    return true;
+  }
+
+  if (rebusMatch && req.method === 'PATCH') {
+    if (!teacher) return unauthorized(res), true;
+    const rebus = updateRebus(teacher.id, rebusMatch[1], await parseJson(req));
+    if (!rebus) return notFound(res), true;
+    json(res, 200, { rebus });
+    return true;
+  }
+
+  if (rebusMatch && req.method === 'DELETE') {
+    if (!teacher) return unauthorized(res), true;
+    const rebus = deleteRebus(teacher.id, rebusMatch[1]);
     if (!rebus) return notFound(res), true;
     json(res, 200, { rebus });
     return true;

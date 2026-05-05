@@ -56,6 +56,18 @@
           <p id="selected-description" class="muted">Når en rebus er valgt kan du legge til oppgaver, grupper og se live status.</p>
         </div>
 
+        <section id="rebus-settings" class="builder-section stack" hidden>
+          <div class="builder-heading">
+            <h3>Rebusinnstillinger</h3>
+            <button id="delete-rebus-button" class="danger" type="button">Slett rebus</button>
+          </div>
+          <div class="form-grid">
+            <label><span>Navn</span><input id="edit-rebus-title" placeholder="Navn på rebusen"></label>
+            <label><span>Beskrivelse</span><input id="edit-rebus-description" placeholder="Kort beskrivelse"></label>
+          </div>
+          <button id="save-rebus-button" type="button">Lagre navn og beskrivelse</button>
+        </section>
+
         <div class="notice" id="maps-status">
           Setter opp kartvelger...
         </div>
