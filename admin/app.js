@@ -16,6 +16,8 @@
     editingTaskId: null,
     map: null,
     marker: null,
+    liveMap: null,
+    liveMarkers: new Map(),
     autocomplete: null,
     loadedMapsKey: '',
     optionRows: [],
@@ -517,7 +519,8 @@
         return `
           <article class="task-card group-card ${password ? '' : 'missing-code'}">
             <div>
-              <strong>${escapeHtml(groupName)}</strong>
+              <label><span>Gruppenavn</span><input data-group-name="${escapeHtml(student.id)}" value="${escapeHtml(groupName)}"></label>
+              <label><span>Brukernavn</span><input data-group-username="${escapeHtml(student.id)}" value="${escapeHtml(username)}"></label>
               <dl class="group-login-details">
                 <div><dt>Brukernavn</dt><dd><code>${escapeHtml(username || '-')}</code></dd></div>
                 <div><dt>Kode</dt><dd><code>${escapeHtml(password || suggestedPassword)}</code></dd></div>
@@ -529,6 +532,8 @@
               <button class="ghost compact" type="button" data-generate-password="${escapeHtml(student.id)}">Generer</button>
               <button class="compact" type="button" data-save-password="${escapeHtml(student.id)}">Lagre kode</button>
               <button class="ghost compact" type="button" data-copy-login="${escapeHtml(student.id)}">Kopier</button>
+              <button class="ghost compact" type="button" data-save-group="${escapeHtml(student.id)}">Lagre gruppe</button>
+              <button class="danger compact" type="button" data-delete-group="${escapeHtml(student.id)}">Slett</button>
             </div>
           </article>
         `;
@@ -546,6 +551,12 @@
     });
     document.querySelectorAll('[data-copy-login]').forEach(button => {
       button.addEventListener('click', () => copyGroupLogin(button.dataset.copyLogin).catch(error => alert(error.message)));
+    });
+    document.querySelectorAll('[data-save-group]').forEach(button => {
+      button.addEventListener('click', () => updateGroup(button.dataset.saveGroup).catch(error => alert(error.message)));
+    });
+    document.querySelectorAll('[data-delete-group]').forEach(button => {
+      button.addEventListener('click', () => deleteGroup(button.dataset.deleteGroup).catch(error => alert(error.message)));
     });
   }
 
@@ -1263,6 +1274,52 @@
     alert('Koden er oppdatert.');
   }
 
+  async function updateGroup(studentId) {
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const name = document.querySelector(`[data-group-name="${cssEscape(studentId)}"]`)?.value.trim();
+    const username = document.querySelector(`[data-group-username="${cssEscape(studentId)}"]`)?.value.trim().toLowerCase();
+    if (!name || !username) return alert('Gruppenavn og brukernavn må fylles ut.');
+
+    if (state.mode === 'supabase') {
+      const { error } = await state.supabase
+        .from('students')
+        .update({ display_name: name, team_name: name, username })
+        .eq('id', studentId)
+        .eq('rebus_id', state.selectedRebus.id);
+      if (error) throw error;
+    } else {
+      await localApi(`/api/admin/rebuses/${state.selectedRebus.id}/students/${studentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ displayName: name, teamName: name, username })
+      });
+    }
+
+    await selectRebus(state.selectedRebus.id);
+  }
+
+  async function deleteGroup(studentId) {
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const student = state.selectedRebus.students.find(item => item.id === studentId);
+    const name = student ? groupDisplayName(student) : 'gruppen';
+    if (!confirm(`Slette ${name}? Dette fjerner gruppen og progresjonen deres.`)) return;
+
+    if (state.mode === 'supabase') {
+      const { error } = await state.supabase
+        .from('students')
+        .delete()
+        .eq('id', studentId)
+        .eq('rebus_id', state.selectedRebus.id);
+      if (error) throw error;
+    } else {
+      await localApi(`/api/admin/rebuses/${state.selectedRebus.id}/students/${studentId}`, {
+        method: 'DELETE'
+      });
+    }
+
+    await selectRebus(state.selectedRebus.id);
+    await loadLive();
+  }
+
   async function createStopFromCurrentLocation() {
     if (state.mode !== 'supabase') return alert('Stopp krever Supabase-modus.');
     if (!state.selectedRebus) return alert('Velg en rebus først.');
@@ -1306,7 +1363,9 @@
       const submissions = [...(student.submissions || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       const latestSubmission = submissions[submissions.length - 1] || null;
       return {
+        id: student.id,
         displayName: student.display_name,
+        username: student.username,
         score: progress.reduce((sum, item) => sum + (item.points_awarded || 0), 0),
         completedCount: progress.filter(item => item.correct !== false).length,
         latestLocation: locations.length ? {
@@ -1335,6 +1394,67 @@
         return `<tr><td>${escapeHtml(participant.displayName)}</td><td>${participant.score}</td><td>${participant.completedCount}</td><td>${locText}</td><td>${submissionText}</td></tr>`;
       }).join('')
       : '<tr><td colspan="5" class="muted">Ingen aktive elever ennå.</td></tr>';
+    renderLiveMap(participants);
+  }
+
+  function renderLiveMap(participants) {
+    const mapElement = $('live-map');
+    if (!mapElement) return;
+    const positioned = participants.filter(participant => participant.latestLocation);
+    if (!positioned.length) {
+      if (!state.liveMap) mapElement.textContent = 'Live-kart vises når grupper sender posisjon.';
+      state.liveMarkers.forEach(marker => marker.setMap(null));
+      state.liveMarkers.clear();
+      return;
+    }
+    if (!window.google?.maps) {
+      mapElement.textContent = 'Kartet lastes når Google Maps er klart.';
+      return;
+    }
+    mapElement.classList.add('is-live');
+    if (!state.liveMap) {
+      state.liveMap = new google.maps.Map(mapElement, {
+        center: positioned[0].latestLocation,
+        zoom: 15,
+        mapTypeControl: true,
+        streetViewControl: false
+      });
+    }
+
+    const bounds = new google.maps.LatLngBounds();
+    const activeIds = new Set();
+    positioned.forEach((participant, index) => {
+      const id = participant.id || participant.displayName || String(index);
+      activeIds.add(id);
+      const position = participant.latestLocation;
+      bounds.extend(position);
+      const label = participant.displayName || `Gruppe ${index + 1}`;
+      let marker = state.liveMarkers.get(id);
+      if (!marker) {
+        marker = new google.maps.Marker({
+          map: state.liveMap,
+          position,
+          label: String(index + 1),
+          title: label
+        });
+        state.liveMarkers.set(id, marker);
+      }
+      marker.setPosition(position);
+      marker.setTitle(label);
+      marker.setLabel(String(index + 1));
+    });
+    state.liveMarkers.forEach((marker, id) => {
+      if (!activeIds.has(id)) {
+        marker.setMap(null);
+        state.liveMarkers.delete(id);
+      }
+    });
+    if (positioned.length === 1) {
+      state.liveMap.setCenter(positioned[0].latestLocation);
+      state.liveMap.setZoom(16);
+    } else {
+      state.liveMap.fitBounds(bounds);
+    }
   }
 
   function loadScript(src, id = null) {

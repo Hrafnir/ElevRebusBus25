@@ -9,6 +9,8 @@ const {
   deleteRebus,
   createTask,
   createStudent,
+  updateStudent,
+  deleteStudent,
   updateStudentPassword,
   loginStudent,
   getStudentSession,
@@ -157,6 +159,24 @@ async function handleApi(req, res, url) {
     const body = await parseJson(req);
     if (!body.password) return badRequest(res, 'Mangler ny kode.'), true;
     const student = updateStudentPassword(teacher.id, studentPasswordMatch[1], studentPasswordMatch[2], body.password);
+    if (!student) return notFound(res), true;
+    json(res, 200, { student });
+    return true;
+  }
+
+  const studentDetailMatch = url.pathname.match(/^\/api\/admin\/rebuses\/([^/]+)\/students\/([^/]+)$/);
+  if (studentDetailMatch && req.method === 'PATCH') {
+    if (!teacher) return unauthorized(res), true;
+    const student = updateStudent(teacher.id, studentDetailMatch[1], studentDetailMatch[2], await parseJson(req));
+    if (!student) return notFound(res), true;
+    if (student.error) return badRequest(res, student.error), true;
+    json(res, 200, { student });
+    return true;
+  }
+
+  if (studentDetailMatch && req.method === 'DELETE') {
+    if (!teacher) return unauthorized(res), true;
+    const student = deleteStudent(teacher.id, studentDetailMatch[1], studentDetailMatch[2]);
     if (!student) return notFound(res), true;
     json(res, 200, { student });
     return true;

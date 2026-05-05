@@ -160,6 +160,39 @@ function createStudent(teacherId, rebusId, input) {
   });
 }
 
+function updateStudent(teacherId, rebusId, studentId, input) {
+  return updateDatabase(db => {
+    const rebus = db.rebuses.find(item => item.id === rebusId && item.ownerTeacherId === teacherId);
+    if (!rebus) return null;
+    const student = db.students.find(item => item.id === studentId && item.rebusId === rebusId);
+    if (!student) return null;
+    const username = String(input.username || student.username).trim().toLowerCase();
+    if (!username) return { error: 'Brukernavn mangler.' };
+    const usernameTaken = db.students.some(item => item.id !== studentId && item.rebusId === rebusId && item.username === username);
+    if (usernameTaken) return { error: 'Brukernavnet finnes allerede.' };
+    student.displayName = input.displayName || student.displayName;
+    student.teamName = input.teamName || student.teamName || null;
+    student.username = username;
+    return publicStudentWithPassword(student);
+  });
+}
+
+function deleteStudent(teacherId, rebusId, studentId) {
+  return updateDatabase(db => {
+    const rebus = db.rebuses.find(item => item.id === rebusId && item.ownerTeacherId === teacherId);
+    if (!rebus) return null;
+    const student = db.students.find(item => item.id === studentId && item.rebusId === rebusId);
+    if (!student) return null;
+    db.students = db.students.filter(item => item.id !== studentId);
+    db.sessions = db.sessions.filter(session => session.studentId !== studentId);
+    db.progress = db.progress.filter(progress => progress.studentId !== studentId);
+    db.locations = db.locations.filter(location => location.studentId !== studentId);
+    db.submissions = db.submissions.filter(submission => submission.studentId !== studentId);
+    db.events.push(createEvent('student_deleted', rebus.id, `Gruppe slettet: ${student.displayName}`, { studentId }));
+    return publicStudentWithPassword(student);
+  });
+}
+
 function updateStudentPassword(teacherId, rebusId, studentId, password) {
   return updateDatabase(db => {
     const rebus = db.rebuses.find(item => item.id === rebusId && item.ownerTeacherId === teacherId);
@@ -168,7 +201,7 @@ function updateStudentPassword(teacherId, rebusId, studentId, password) {
     if (!student) return null;
     student.password = String(password || '');
     db.events.push(createEvent('student_password_updated', rebus.id, `Kode oppdatert for: ${student.displayName}`, { studentId: student.id }));
-    return publicStudent(student);
+    return publicStudentWithPassword(student);
   });
 }
 
@@ -367,6 +400,13 @@ function createInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function publicStudentWithPassword(student) {
+  return {
+    ...publicStudent(student),
+    password: student.password || ''
+  };
+}
+
 function createEvent(type, rebusId, message, details = {}) {
   return {
     id: createId('event'),
@@ -389,6 +429,8 @@ module.exports = {
   deleteRebus,
   createTask,
   createStudent,
+  updateStudent,
+  deleteStudent,
   updateStudentPassword,
   loginStudent,
   getStudentSession,

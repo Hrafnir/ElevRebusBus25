@@ -505,7 +505,7 @@ button.compact {
 
 .group-password-tools {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto auto auto;
+  grid-template-columns: minmax(120px, 1fr) auto auto auto auto auto;
   gap: 8px;
 }
 
@@ -533,6 +533,10 @@ button.compact {
   min-height: 360px;
   padding: 0;
   border-style: solid;
+}
+
+.live-map {
+  min-height: 360px;
 }
 
 .map-tools input {
