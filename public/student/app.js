@@ -12,6 +12,7 @@
   let locationWatchId = null;
   let messagePollId = null;
   const seenAdminMessageIds = new Set();
+  const seenScoreAdjustmentIds = new Set();
 
   const $ = id => document.getElementById(id);
 
@@ -49,6 +50,7 @@
       });
     }
     localStorage.setItem('studentSessionToken', session.token);
+    markKnownSessionEvents();
     renderSession();
     startLocationSending();
     startMessagePolling();
@@ -66,6 +68,7 @@
       if (!response.ok) return;
       session = await response.json();
     }
+    markKnownSessionEvents();
     renderSession();
     startLocationSending();
     startMessagePolling();
@@ -91,6 +94,13 @@
     document.querySelectorAll('[data-logout]').forEach(button => {
       button.addEventListener('click', logout);
     });
+  }
+
+  function markKnownSessionEvents() {
+    (session.messages || []).forEach(message => {
+      if (message.senderType === 'admin' || message.sender_type === 'admin') seenAdminMessageIds.add(message.id);
+    });
+    (session.scoreAdjustments || []).forEach(item => seenScoreAdjustmentIds.add(item.id));
   }
 
   function renderStudentMessages() {
@@ -425,6 +435,7 @@
       !(message.readByStudentAt || message.read_by_student_at) &&
       !seenAdminMessageIds.has(message.id)
     );
+    const newAdjustments = (session.scoreAdjustments || []).filter(item => !seenScoreAdjustmentIds.has(item.id));
     unreadAdminMessages.forEach(message => {
       seenAdminMessageIds.add(message.id);
       if (notify) {
@@ -432,10 +443,17 @@
         playNotificationSound();
       }
     });
+    newAdjustments.forEach(item => {
+      seenScoreAdjustmentIds.add(item.id);
+      if (notify) {
+        showScoreNotification(Number(item.points || 0), item.reason || '');
+        playNotificationSound();
+      }
+    });
     if (unreadAdminMessages.length && mode === 'supabase') {
       await supabase.rpc('student_mark_messages_read', { raw_token: session.token });
     }
-    if (sessionSignature() !== previousSignature || unreadAdminMessages.length) renderSession();
+    if (sessionSignature() !== previousSignature || unreadAdminMessages.length || newAdjustments.length) renderSession();
   }
 
   function sessionSignature() {
@@ -443,7 +461,8 @@
     return JSON.stringify({
       tasks: (session.tasks || []).map(task => task.id),
       progress: (session.progress || []).map(item => `${item.taskId}:${item.correct}:${item.pointsAwarded}`),
-      messages: (session.messages || []).map(message => `${message.id}:${message.readByStudentAt || message.read_by_student_at || ''}`)
+      messages: (session.messages || []).map(message => `${message.id}:${message.readByStudentAt || message.read_by_student_at || ''}`),
+      adjustments: (session.scoreAdjustments || []).map(item => `${item.id}:${item.points}`)
     });
   }
 
@@ -453,6 +472,7 @@
     lastGateKey = '';
     currentCoords = null;
     seenAdminMessageIds.clear();
+    seenScoreAdjustmentIds.clear();
     if (messagePollId) {
       clearInterval(messagePollId);
       messagePollId = null;
@@ -701,6 +721,18 @@
     item.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(body)}</p>`;
     stack.appendChild(item);
     setTimeout(() => item.remove(), 9000);
+  }
+
+  function showScoreNotification(points, reason) {
+    const stack = $('notification-stack');
+    const positive = Number(points) > 0;
+    const title = `${positive ? 'Belønning' : 'Straff'} ${positive ? '+' : ''}${points} poeng!`;
+    if (!stack) return alert(`${title}\n${reason}`);
+    const item = document.createElement('div');
+    item.className = `app-notification score-popup ${positive ? 'reward-popup' : 'penalty-popup'}`;
+    item.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(reason || 'Ingen begrunnelse')}</p>`;
+    stack.appendChild(item);
+    setTimeout(() => item.remove(), 12000);
   }
 
   function playNotificationSound() {

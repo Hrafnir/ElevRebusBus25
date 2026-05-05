@@ -30,7 +30,8 @@
     organizationPickerOpen: false,
     groupMessages: [],
     seenMessageIds: new Set(),
-    adminMessageDrafts: new Map()
+    adminMessageDrafts: new Map(),
+    expandedGroupId: null
   };
 
   const $ = id => document.getElementById(id);
@@ -458,7 +459,7 @@
     if (state.mode === 'supabase') {
       const { data, error } = await state.supabase
         .from('rebuses')
-        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, password_hash, team_name, created_at, student_task_overrides(task_id, is_skipped))')
+        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, password_hash, team_name, created_at, student_task_overrides(task_id, is_skipped), progress(task_id, answer, correct, points_awarded, created_at), locations(latitude, longitude, accuracy, created_at), group_score_adjustments(id, points, reason, created_at))')
         .eq('id', id)
         .single();
       if (error) throw error;
@@ -495,7 +496,10 @@
         displayName: student.display_name,
         teamName: student.team_name,
         password: visiblePassword(student.password_hash),
-        taskOverrides: student.student_task_overrides || []
+        taskOverrides: student.student_task_overrides || [],
+        progress: student.progress || [],
+        locations: student.locations || [],
+        scoreAdjustments: student.group_score_adjustments || []
       }))
     };
   }
@@ -551,38 +555,28 @@
         const suggestedPassword = password || generateAccessCode();
         const messages = messagesByStudent.get(student.id) || [];
         const unreadCount = messages.filter(message => message.sender_type === 'student' && !message.read_by_admin_at).length;
+        const stats = groupStats(student);
+        const expanded = state.expandedGroupId === student.id;
         return `
-          <article class="task-card group-card ${password ? '' : 'missing-code'}">
-            <div>
-              <label><span>Gruppenavn</span><input data-group-name="${escapeHtml(student.id)}" value="${escapeHtml(groupName)}"></label>
-              <label><span>Brukernavn</span><input data-group-username="${escapeHtml(student.id)}" value="${escapeHtml(username)}"></label>
+          <article class="task-card group-card compact-group-card ${password ? '' : 'missing-code'}">
+            <div class="group-summary">
+              <div>
+                <h3>${escapeHtml(groupName)}</h3>
+                <p class="muted">Brukernavn: <code>${escapeHtml(username || '-')}</code> · Kode: <code>${escapeHtml(password || suggestedPassword)}</code></p>
+              </div>
               <dl class="group-login-details">
-                <div><dt>Brukernavn</dt><dd><code>${escapeHtml(username || '-')}</code></dd></div>
-                <div><dt>Kode</dt><dd><code>${escapeHtml(password || suggestedPassword)}</code></dd></div>
+                <div><dt>Score</dt><dd><strong>${stats.totalScore}</strong></dd></div>
+                <div><dt>Fullført</dt><dd>${stats.completedCount}/${state.selectedRebus.tasks.length}</dd></div>
+                <div><dt>Siste svar</dt><dd>${formatClock(stats.latestProgressAt)}</dd></div>
+                <div><dt>Meldinger</dt><dd>${unreadCount ? `<span class="badge-alert">${unreadCount} ny</span>` : messages.length}</dd></div>
               </dl>
               ${password ? '' : '<p class="notice compact-notice">Denne gruppen manglet kode. Ny kode er foreslått i feltet til høyre. Trykk “Lagre kode”.</p>'}
             </div>
-            <div class="group-password-tools">
-              <input data-group-password="${escapeHtml(student.id)}" value="${password ? '' : escapeHtml(suggestedPassword)}" placeholder="Ny kode">
-              <button class="ghost compact" type="button" data-generate-password="${escapeHtml(student.id)}">Generer</button>
-              <button class="compact" type="button" data-save-password="${escapeHtml(student.id)}">Lagre kode</button>
-              <button class="ghost compact" type="button" data-copy-login="${escapeHtml(student.id)}">Kopier</button>
-              <button class="ghost compact" type="button" data-save-group="${escapeHtml(student.id)}">Lagre gruppe</button>
-              <button class="danger compact" type="button" data-delete-group="${escapeHtml(student.id)}">Slett</button>
+            <div class="group-card-actions">
+              <button class="compact" type="button" data-toggle-group-details="${escapeHtml(student.id)}">${expanded ? 'Skjul detaljer' : 'Detaljer'}</button>
+              <button class="ghost compact" type="button" data-copy-login="${escapeHtml(student.id)}">Kopier login</button>
             </div>
-            ${renderGroupRouteTools(student)}
-            <section class="group-message-box">
-              <div class="builder-heading">
-                <h3>Meldinger ${unreadCount ? `<span class="badge-alert">${unreadCount} ny</span>` : ''}</h3>
-              </div>
-              <div class="message-thread">
-                ${messages.length ? messages.slice(-6).map(renderAdminMessage).join('') : '<p class="muted">Ingen meldinger ennå.</p>'}
-              </div>
-              <div class="message-composer">
-                <input data-admin-message="${escapeHtml(student.id)}" value="${escapeHtml(state.adminMessageDrafts.get(student.id) || '')}" placeholder="Skriv melding til ${escapeHtml(groupName)}">
-                <button class="compact" type="button" data-send-admin-message="${escapeHtml(student.id)}">Send</button>
-              </div>
-            </section>
+            ${expanded ? renderGroupDetails(student, messages, suggestedPassword) : ''}
           </article>
         `;
       }).join('')
@@ -599,6 +593,12 @@
     });
     document.querySelectorAll('[data-copy-login]').forEach(button => {
       button.addEventListener('click', () => copyGroupLogin(button.dataset.copyLogin).catch(error => alert(error.message)));
+    });
+    document.querySelectorAll('[data-toggle-group-details]').forEach(button => {
+      button.addEventListener('click', () => {
+        state.expandedGroupId = state.expandedGroupId === button.dataset.toggleGroupDetails ? null : button.dataset.toggleGroupDetails;
+        renderGroupList();
+      });
     });
     document.querySelectorAll('[data-save-group]').forEach(button => {
       button.addEventListener('click', () => updateGroup(button.dataset.saveGroup).catch(error => alert(error.message)));
@@ -620,6 +620,148 @@
     document.querySelectorAll('[data-send-to-goal]').forEach(button => {
       button.addEventListener('click', () => sendGroupToGoal(button.dataset.sendToGoal).catch(error => alert(error.message)));
     });
+    document.querySelectorAll('[data-adjust-score]').forEach(button => {
+      button.addEventListener('click', () => adjustGroupScore(button.dataset.adjustScore).catch(error => alert(error.message)));
+    });
+  }
+
+  function renderGroupDetails(student, messages, suggestedPassword) {
+    const groupName = groupDisplayName(student);
+    const password = groupPassword(student);
+    return `
+      <section class="group-detail-panel">
+        <div class="group-detail-grid">
+          ${renderGroupProgressDetails(student)}
+          ${renderGroupScoreAdjustments(student)}
+        </div>
+        ${renderGroupRouteTools(student)}
+        <section class="group-edit-box">
+          <h3>Rediger gruppe</h3>
+          <div class="form-grid">
+            <label><span>Gruppenavn</span><input data-group-name="${escapeHtml(student.id)}" value="${escapeHtml(groupName)}"></label>
+            <label><span>Brukernavn</span><input data-group-username="${escapeHtml(student.id)}" value="${escapeHtml(student.username || '')}"></label>
+            <label><span>Ny kode</span><input data-group-password="${escapeHtml(student.id)}" value="${password ? '' : escapeHtml(suggestedPassword)}" placeholder="Ny kode"></label>
+          </div>
+          <div class="actions">
+            <button class="ghost compact" type="button" data-generate-password="${escapeHtml(student.id)}">Generer kode</button>
+            <button class="compact" type="button" data-save-password="${escapeHtml(student.id)}">Lagre kode</button>
+            <button class="ghost compact" type="button" data-save-group="${escapeHtml(student.id)}">Lagre gruppe</button>
+            <button class="danger compact" type="button" data-delete-group="${escapeHtml(student.id)}">Slett gruppe</button>
+          </div>
+        </section>
+        <section class="score-adjust-box">
+          <h3>Straff eller belønning</h3>
+          <div class="form-grid">
+            <label><span>Poeng (-5 til +5)</span><input data-adjust-points="${escapeHtml(student.id)}" type="number" min="-5" max="5" value="1"></label>
+            <label><span>Begrunnelse</span><input data-adjust-reason="${escapeHtml(student.id)}" placeholder="F.eks. god lagånd eller regelbrudd"></label>
+          </div>
+          <button class="compact" type="button" data-adjust-score="${escapeHtml(student.id)}">Gi straff/belønning</button>
+        </section>
+        <section class="group-message-box">
+          <div class="builder-heading">
+            <h3>Meldinger</h3>
+          </div>
+          <div class="message-thread">
+            ${messages.length ? messages.slice(-8).map(renderAdminMessage).join('') : '<p class="muted">Ingen meldinger ennå.</p>'}
+          </div>
+          <div class="message-composer">
+            <input data-admin-message="${escapeHtml(student.id)}" value="${escapeHtml(state.adminMessageDrafts.get(student.id) || '')}" placeholder="Skriv melding til ${escapeHtml(groupName)}">
+            <button class="compact" type="button" data-send-admin-message="${escapeHtml(student.id)}">Send</button>
+          </div>
+        </section>
+      </section>
+    `;
+  }
+
+  function groupStats(student) {
+    const progress = sortedProgress(student);
+    const adjustments = student.scoreAdjustments || student.group_score_adjustments || [];
+    const completed = progress.filter(item => item.correct !== false);
+    const taskScore = progress.reduce((sum, item) => sum + Number(item.points_awarded ?? item.pointsAwarded ?? 0), 0);
+    const adjustmentScore = adjustments.reduce((sum, item) => sum + Number(item.points || 0), 0);
+    return {
+      progress,
+      completed,
+      completedCount: completed.length,
+      taskScore,
+      adjustmentScore,
+      totalScore: taskScore + adjustmentScore,
+      latestProgressAt: completed[completed.length - 1]?.created_at || completed[completed.length - 1]?.createdAt || null
+    };
+  }
+
+  function sortedProgress(student) {
+    return [...(student.progress || [])].sort((a, b) => new Date(a.created_at || a.createdAt) - new Date(b.created_at || b.createdAt));
+  }
+
+  function renderGroupProgressDetails(student) {
+    const stats = groupStats(student);
+    const tasksById = new Map((state.selectedRebus?.tasks || []).map(task => [task.id, task]));
+    const completed = stats.completed;
+    const rows = completed.length ? completed.map((item, index) => {
+      const task = tasksById.get(item.task_id || item.taskId);
+      const previous = completed[index - 1];
+      const travelMinutes = previous
+        ? minutesBetween(previous.created_at || previous.createdAt, item.created_at || item.createdAt)
+        : null;
+      return `
+        <tr>
+          <td>${escapeHtml(task?.title || 'Ukjent oppgave')}</td>
+          <td>${formatClock(item.created_at || item.createdAt)}</td>
+          <td>${travelMinutes === null ? '-' : formatMinutes(travelMinutes)}</td>
+          <td>${Number(item.points_awarded ?? item.pointsAwarded ?? 0)}</td>
+          <td>${escapeHtml(item.answer || '')}</td>
+        </tr>
+      `;
+    }).join('') : '<tr><td colspan="5" class="muted">Ingen poster fullført ennå.</td></tr>';
+    const latestLocation = latestStudentLocation(student);
+    return `
+      <section class="group-info-box">
+        <h3>Detaljert progresjon</h3>
+        <div class="mini-stats">
+          <div><span>Oppgavepoeng</span><strong>${stats.taskScore}</strong></div>
+          <div><span>Justeringer</span><strong>${signedNumber(stats.adjustmentScore)}</strong></div>
+          <div><span>Total</span><strong>${stats.totalScore}</strong></div>
+          <div><span>Siste GPS</span><strong>${latestLocation ? formatClock(latestLocation.created_at) : '-'}</strong></div>
+        </div>
+        <table class="mini-table">
+          <thead><tr><th>Post</th><th>Tid</th><th>Fra forrige</th><th>Poeng</th><th>Svar</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>
+    `;
+  }
+
+  function renderGroupScoreAdjustments(student) {
+    const adjustments = [...(student.scoreAdjustments || student.group_score_adjustments || [])]
+      .sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+    return `
+      <section class="group-info-box">
+        <h3>Poengjusteringer</h3>
+        ${adjustments.length ? adjustments.slice(0, 6).map(item => `
+          <div class="adjustment-line ${Number(item.points) > 0 ? 'reward-line' : 'penalty-line'}">
+            <strong>${signedNumber(item.points)} poeng</strong>
+            <span>${escapeHtml(item.reason || 'Ingen begrunnelse')}</span>
+            <small>${formatClock(item.created_at || item.createdAt)}</small>
+          </div>
+        `).join('') : '<p class="muted">Ingen straff eller belønninger gitt.</p>'}
+      </section>
+    `;
+  }
+
+  function latestStudentLocation(student) {
+    const locations = [...(student.locations || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return locations[locations.length - 1] || null;
+  }
+
+  function minutesBetween(start, end) {
+    if (!start || !end) return null;
+    return Math.max(0, Math.round((new Date(end) - new Date(start)) / 60000));
+  }
+
+  function signedNumber(value) {
+    const number = Number(value || 0);
+    return number > 0 ? `+${number}` : String(number);
   }
 
   function renderGroupRouteTools(student) {
@@ -1470,12 +1612,12 @@
           : message
       );
     }
-    if (rerender && state.activeAdminTab === 'groups' && !isWritingAdminMessage()) renderGroupList();
+    if (rerender && state.activeAdminTab === 'groups' && !isEditingGroupDetail()) renderGroupList();
   }
 
-  function isWritingAdminMessage() {
+  function isEditingGroupDetail() {
     const active = document.activeElement;
-    return Boolean(active?.dataset?.adminMessage);
+    return Boolean(active && $('group-list')?.contains(active) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
   }
 
   async function sendAdminMessage(studentId) {
@@ -1512,6 +1654,37 @@
     if (!confirm('Sende denne gruppa direkte til mål? Alle oppgaver før siste post hoppes over for denne gruppa.')) return;
     await saveRouteOverrides(studentId, tasks.slice(0, -1).map(task => task.id));
     showNotification('Gruppa er sendt til mål', 'Neste synlige post for gruppa er siste oppgave.');
+  }
+
+  async function adjustGroupScore(studentId) {
+    if (state.mode !== 'supabase') return alert('Straff/belønning krever Supabase-modus.');
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const points = Number(document.querySelector(`[data-adjust-points="${cssEscape(studentId)}"]`)?.value || 0);
+    const reason = document.querySelector(`[data-adjust-reason="${cssEscape(studentId)}"]`)?.value.trim() || '';
+    if (!Number.isInteger(points) || points < -5 || points > 5 || points === 0) {
+      return alert('Poeng må være et helt tall fra -5 til -1 eller fra 1 til 5.');
+    }
+    if (!reason) return alert('Skriv en kort begrunnelse.');
+    const { error } = await state.supabase.from('group_score_adjustments').insert({
+      rebus_id: state.selectedRebus.id,
+      student_id: studentId,
+      points,
+      reason,
+      created_by: state.user?.id || null
+    });
+    if (error) throw error;
+    const student = state.selectedRebus.students.find(item => item.id === studentId);
+    showScoreNotification(points, reason, student ? groupDisplayName(student) : 'Gruppa');
+    await selectRebus(state.selectedRebus.id);
+    await loadLive();
+  }
+
+  function showScoreNotification(points, reason, groupName) {
+    const positive = Number(points) > 0;
+    showNotification(
+      `${positive ? 'Belønning' : 'Straff'} til ${groupName}`,
+      `${signedNumber(points)} poeng: ${reason}`
+    );
   }
 
   async function saveRouteOverrides(studentId, skippedTaskIds) {
@@ -1569,7 +1742,7 @@
     if (!rebusIds.length) return renderLive([], []);
     const { data: students, error } = await state.supabase
       .from('students')
-      .select('id, display_name, username, team_name, rebus_id, progress(points_awarded, correct, task_id, created_at), locations(latitude, longitude, accuracy, created_at), submissions(original_name, content_type, storage_path, storage_bucket, created_at)')
+      .select('id, display_name, username, team_name, rebus_id, progress(points_awarded, correct, task_id, created_at), locations(latitude, longitude, accuracy, created_at), submissions(original_name, content_type, storage_path, storage_bucket, created_at), group_score_adjustments(points, reason, created_at)')
       .in('rebus_id', rebusIds);
     if (error) throw error;
     const participants = (students || []).map(student => {
@@ -1577,14 +1750,16 @@
       const completedProgress = progress.filter(item => item.correct !== false);
       const locations = [...(student.locations || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       const submissions = [...(student.submissions || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const adjustments = student.group_score_adjustments || [];
       const latestSubmission = submissions[submissions.length - 1] || null;
       const latestProgress = completedProgress[completedProgress.length - 1] || null;
       const previousProgress = completedProgress[completedProgress.length - 2] || null;
+      const adjustmentScore = adjustments.reduce((sum, item) => sum + Number(item.points || 0), 0);
       return {
         id: student.id,
         displayName: student.display_name,
         username: student.username,
-        score: progress.reduce((sum, item) => sum + (item.points_awarded || 0), 0),
+        score: progress.reduce((sum, item) => sum + (item.points_awarded || 0), 0) + adjustmentScore,
         completedCount: completedProgress.length,
         latestProgressAt: latestProgress?.created_at || null,
         lastTransportMinutes: latestProgress && previousProgress
