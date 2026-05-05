@@ -22,7 +22,9 @@
     assetRows: [],
     hintRows: [],
     numberBands: [],
-    lastSuggestedGroupUsername: ''
+    lastSuggestedGroupName: '',
+    lastSuggestedGroupUsername: '',
+    activeAdminTab: 'tasks'
   };
 
   const $ = id => document.getElementById(id);
@@ -467,6 +469,7 @@
       ? renderTasksGroupedByStop(rebus)
       : '<p class="muted">Ingen oppgaver ennå. Trykk “Ny oppgave” for å lage den første. Første oppgave blir start, siste blir mål.</p>';
     renderGroupList();
+    setDefaultGroupFields();
     bindTaskListActions();
   }
 
@@ -1042,6 +1045,7 @@
     $('group-name').value = '';
     $('group-username').value = '';
     $('group-password').value = generateAccessCode();
+    state.lastSuggestedGroupName = '';
     state.lastSuggestedGroupUsername = '';
     await selectRebus(state.selectedRebus.id);
     await loadRebuses();
@@ -1197,6 +1201,40 @@
     }
   }
 
+  function setDefaultGroupFields() {
+    if (!state.selectedRebus || !$('group-name')) return;
+    const suggestedName = nextGroupName();
+    const currentName = $('group-name').value.trim();
+    if (!currentName || currentName === state.lastSuggestedGroupName) {
+      $('group-name').value = suggestedName;
+      state.lastSuggestedGroupName = suggestedName;
+    }
+    syncGroupUsername();
+    seedGroupPassword();
+  }
+
+  function nextGroupName() {
+    const existingNumbers = (state.selectedRebus?.students || [])
+      .map(student => student.team_name || student.display_name || '')
+      .map(name => String(name).match(/^gruppe\s+(\d+)$/i))
+      .filter(Boolean)
+      .map(match => Number(match[1]))
+      .filter(Number.isFinite);
+    const nextNumber = existingNumbers.length ? Math.max(...existingNumbers) + 1 : (state.selectedRebus?.students?.length || 0) + 1;
+    return `Gruppe ${nextNumber}`;
+  }
+
+  function switchAdminTab(tab) {
+    state.activeAdminTab = tab;
+    document.querySelectorAll('[data-admin-tab]').forEach(button => {
+      button.classList.toggle('active', button.dataset.adminTab === tab);
+    });
+    document.querySelectorAll('.admin-tab').forEach(panel => {
+      panel.hidden = panel.id !== `tab-${tab}`;
+    });
+    if (tab === 'groups') setDefaultGroupFields();
+  }
+
   function seedGroupPassword() {
     if (!$('group-password').value) $('group-password').value = generateAccessCode();
   }
@@ -1275,6 +1313,9 @@
   $('add-asset-button').addEventListener('click', addAssetRow);
   $('add-hint-button').addEventListener('click', addHintRow);
   $('add-number-band-button').addEventListener('click', addNumberBand);
+  document.querySelectorAll('[data-admin-tab]').forEach(button => {
+    button.addEventListener('click', () => switchAdminTab(button.dataset.adminTab));
+  });
   $('group-name').addEventListener('input', syncGroupUsername);
   $('group-password').addEventListener('focus', seedGroupPassword);
   $('generate-group-password-button').addEventListener('click', () => {

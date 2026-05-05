@@ -60,13 +60,20 @@
           Setter opp kartvelger...
         </div>
 
-        <div class="builder-heading">
-          <h2>Oppgaver</h2>
-          <button id="new-task-button" type="button">Ny oppgave</button>
-        </div>
-        <div id="task-list" class="list"></div>
+        <nav class="tab-bar" aria-label="Administrasjon">
+          <button class="tab-button active" type="button" data-admin-tab="tasks">Oppgaver</button>
+          <button class="tab-button" type="button" data-admin-tab="groups">Grupper</button>
+          <button class="tab-button" type="button" data-admin-tab="live">Live status</button>
+        </nav>
 
-        <section id="task-editor" class="stack" hidden>
+        <section id="tab-tasks" class="admin-tab stack">
+          <div class="builder-heading">
+            <h2>Oppgaver</h2>
+            <button id="new-task-button" type="button">Ny oppgave</button>
+          </div>
+          <div id="task-list" class="list"></div>
+
+          <section id="task-editor" class="stack" hidden>
         <div class="builder-heading">
           <h2 id="task-editor-title">Ny oppgave</h2>
           <button id="cancel-task-edit-button" class="ghost" type="button">Lukk</button>
@@ -134,27 +141,32 @@
           <div id="hint-rows" class="builder-list"></div>
         </section>
         <button id="create-task-button">Lagre oppgave</button>
+          </section>
         </section>
 
-        <h2>Ny gruppe</h2>
-        <div class="form-grid">
-          <label><span>Gruppenavn</span><input id="group-name" placeholder="Gruppe 1"></label>
-          <label><span>Brukernavn</span><input id="group-username" placeholder="gruppe-1"></label>
-          <label><span>Kode</span><input id="group-password" placeholder="Genereres automatisk"></label>
-        </div>
-        <div class="actions">
-          <button id="generate-group-password-button" class="ghost" type="button">Generer ny kode</button>
-          <button id="create-student-button">Opprett gruppe</button>
-        </div>
+        <section id="tab-groups" class="admin-tab stack" hidden>
+          <h2>Ny gruppe</h2>
+          <div class="form-grid">
+            <label><span>Gruppenavn</span><input id="group-name" placeholder="Gruppe 1"></label>
+            <label><span>Brukernavn</span><input id="group-username" placeholder="gruppe-1"></label>
+            <label><span>Kode</span><input id="group-password" placeholder="Genereres automatisk"></label>
+          </div>
+          <div class="actions">
+            <button id="generate-group-password-button" class="ghost" type="button">Generer ny kode</button>
+            <button id="create-student-button">Lagre gruppe</button>
+          </div>
 
-        <h2>Grupper</h2>
-        <div id="group-list" class="list"></div>
+          <h2>Grupper</h2>
+          <div id="group-list" class="list"></div>
+        </section>
 
-        <h2>Live status</h2>
-        <table class="live-table">
-          <thead><tr><th>Gruppe</th><th>Score</th><th>Fullført</th><th>Siste posisjon</th><th>Siste innlevering</th></tr></thead>
-          <tbody id="live-body"></tbody>
-        </table>
+        <section id="tab-live" class="admin-tab stack" hidden>
+          <h2>Live status</h2>
+          <table class="live-table">
+            <thead><tr><th>Gruppe</th><th>Score</th><th>Fullført</th><th>Siste posisjon</th><th>Siste innlevering</th></tr></thead>
+            <tbody id="live-body"></tbody>
+          </table>
+        </section>
       </section>
     </div>
   </main>
