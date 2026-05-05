@@ -29,7 +29,8 @@
     activeAdminTab: 'tasks',
     organizationPickerOpen: false,
     groupMessages: [],
-    seenMessageIds: new Set()
+    seenMessageIds: new Set(),
+    adminMessageDrafts: new Map()
   };
 
   const $ = id => document.getElementById(id);
@@ -578,7 +579,7 @@
                 ${messages.length ? messages.slice(-6).map(renderAdminMessage).join('') : '<p class="muted">Ingen meldinger ennå.</p>'}
               </div>
               <div class="message-composer">
-                <input data-admin-message="${escapeHtml(student.id)}" placeholder="Skriv melding til ${escapeHtml(groupName)}">
+                <input data-admin-message="${escapeHtml(student.id)}" value="${escapeHtml(state.adminMessageDrafts.get(student.id) || '')}" placeholder="Skriv melding til ${escapeHtml(groupName)}">
                 <button class="compact" type="button" data-send-admin-message="${escapeHtml(student.id)}">Send</button>
               </div>
             </section>
@@ -607,6 +608,11 @@
     });
     document.querySelectorAll('[data-send-admin-message]').forEach(button => {
       button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage).catch(error => alert(error.message)));
+    });
+    document.querySelectorAll('[data-admin-message]').forEach(input => {
+      input.addEventListener('input', () => {
+        state.adminMessageDrafts.set(input.dataset.adminMessage, input.value);
+      });
     });
     document.querySelectorAll('[data-save-route]').forEach(button => {
       button.addEventListener('click', () => saveGroupRoute(button.dataset.saveRoute).catch(error => alert(error.message)));
@@ -1464,7 +1470,12 @@
           : message
       );
     }
-    if (rerender && state.activeAdminTab === 'groups') renderGroupList();
+    if (rerender && state.activeAdminTab === 'groups' && !isWritingAdminMessage()) renderGroupList();
+  }
+
+  function isWritingAdminMessage() {
+    const active = document.activeElement;
+    return Boolean(active?.dataset?.adminMessage);
   }
 
   async function sendAdminMessage(studentId) {
@@ -1481,6 +1492,7 @@
     });
     if (error) throw error;
     input.value = '';
+    state.adminMessageDrafts.delete(studentId);
     await loadGroupMessages({ notify: false });
     showNotification('Melding sendt', 'Gruppa får meldingen som pop-up i elevappen.');
   }
