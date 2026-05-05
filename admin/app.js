@@ -5,6 +5,7 @@
     supabase: null,
     session: null,
     user: null,
+    profile: null,
     teacherEmail: localStorage.getItem('teacherEmail') || 'teacher@example.com',
     teacher: null,
     organizations: [],
@@ -123,6 +124,8 @@
     $('logout-button').hidden = false;
     $('supabase-login-button').hidden = true;
     updateAuthStatus();
+    await acceptInvitations();
+    await loadProfile();
     await loadOrganizations();
     await loadLive();
   }
@@ -130,6 +133,7 @@
   function clearSupabaseSession() {
     state.session = null;
     state.user = null;
+    state.profile = null;
     state.organizations = [];
     state.selectedOrganization = null;
     state.projectSettings = null;
@@ -138,6 +142,7 @@
     $('logout-button').hidden = true;
     $('supabase-login-button').hidden = false;
     updateAuthStatus();
+    renderProfile();
     state.organizationPickerOpen = false;
     renderOrganizations();
     renderRebusList();
@@ -213,6 +218,55 @@
     }
   }
 
+  async function acceptInvitations() {
+    if (state.mode !== 'supabase' || !state.supabase) return;
+    const { data, error } = await state.supabase.rpc('accept_my_invitations');
+    if (error) throw error;
+    const accepted = Number(data?.organizationInvites || 0) + Number(data?.rebusInvites || 0);
+    if (accepted) showNotification('Invitasjon aktivert', `Du fikk tilgang til ${accepted} nytt område.`);
+  }
+
+  async function loadProfile() {
+    if (state.mode !== 'supabase' || !state.user) return;
+    const { data, error } = await state.supabase
+      .from('profiles')
+      .select('id, email, full_name, nickname')
+      .eq('id', state.user.id)
+      .maybeSingle();
+    if (error) throw error;
+    state.profile = data;
+    renderProfile();
+  }
+
+  function renderProfile() {
+    const card = $('profile-card');
+    if (!card) return;
+    card.hidden = state.mode !== 'supabase' || !state.user;
+    if ($('teacher-nickname')) {
+      $('teacher-nickname').value = state.profile?.nickname || suggestedTeacherNick();
+    }
+  }
+
+  async function saveNickname() {
+    if (state.mode !== 'supabase' || !state.user) return;
+    const nickname = $('teacher-nickname').value.trim() || suggestedTeacherNick();
+    const { data, error } = await state.supabase
+      .from('profiles')
+      .update({ nickname })
+      .eq('id', state.user.id)
+      .select('id, email, full_name, nickname')
+      .single();
+    if (error) throw error;
+    state.profile = data;
+    renderProfile();
+    showNotification('Nick lagret', `Elevene ser deg som Lærer - ${nickname}.`);
+  }
+
+  function suggestedTeacherNick() {
+    const name = state.profile?.full_name || state.user?.user_metadata?.full_name || state.user?.user_metadata?.name || state.user?.email || 'Lærer';
+    return String(name).split(/\s+/)[0] || 'Lærer';
+  }
+
   function cleanAuthUrl() {
     if (window.location.hash || window.location.search.includes('code=')) {
       history.replaceState(null, document.title, window.location.pathname);
@@ -261,6 +315,7 @@
     $('selected-organization-card').innerHTML = state.selectedOrganization
       ? `<strong>${escapeHtml(state.selectedOrganization.name)}</strong><p class="muted">Aktiv organisasjon</p>`
       : '<p class="muted">Ingen organisasjon valgt.</p>';
+    $('organization-invite-card').hidden = state.mode !== 'supabase' || !state.selectedOrganization;
     $('toggle-organization-picker-button').textContent = state.selectedOrganization ? 'Bytt org' : 'Velg eller lag org';
     $('organization-picker').hidden = !state.organizationPickerOpen;
     $('organization-list').innerHTML = state.organizations.length
@@ -306,6 +361,42 @@
     if (error) throw error;
     state.projectSettings = data;
     configureMapsUi(true);
+  }
+
+  async function inviteOrganizationAdmin() {
+    if (state.mode !== 'supabase' || !state.selectedOrganization) return alert('Velg organisasjon først.');
+    const email = $('org-invite-email').value.trim().toLowerCase();
+    const role = $('org-invite-role').value;
+    if (!email) return alert('Skriv inn e-post først.');
+    const { error } = await state.supabase
+      .from('organization_invitations')
+      .upsert({
+        organization_id: state.selectedOrganization.id,
+        email,
+        role,
+        invited_by: state.user.id,
+        accepted_at: null
+      }, { onConflict: 'organization_id,email' });
+    if (error) throw error;
+    $('org-invite-email').value = '';
+    showNotification('Invitasjon lagret', `${email} får tilgang til organisasjonen når hen logger inn.`);
+  }
+
+  async function inviteRebusAdmin() {
+    if (state.mode !== 'supabase' || !state.selectedRebus) return alert('Velg en rebus først.');
+    const email = $('rebus-invite-email').value.trim().toLowerCase();
+    if (!email) return alert('Skriv inn e-post først.');
+    const { error } = await state.supabase
+      .from('rebus_invitations')
+      .upsert({
+        rebus_id: state.selectedRebus.id,
+        email,
+        invited_by: state.user.id,
+        accepted_at: null
+      }, { onConflict: 'rebus_id,email' });
+    if (error) throw error;
+    $('rebus-invite-email').value = '';
+    showNotification('Rebus-invitasjon lagret', `${email} får admin-tilgang bare til denne rebusen.`);
   }
 
   function currentMapsKey() {
@@ -790,9 +881,10 @@
 
   function renderAdminMessage(message) {
     const mine = message.sender_type === 'admin';
+    const sender = mine ? (message.sender_label || 'Lærer') : 'Gruppe';
     return `
       <div class="message-bubble ${mine ? 'message-admin' : 'message-student'}">
-        <strong>${mine ? 'Admin' : 'Gruppe'}</strong>
+        <strong>${escapeHtml(sender)}</strong>
         <p>${escapeHtml(message.body)}</p>
         <small>${formatClock(message.created_at)}</small>
       </div>
@@ -1630,6 +1722,8 @@
       rebus_id: state.selectedRebus.id,
       student_id: studentId,
       sender_type: 'admin',
+      sender_admin_id: state.user?.id || null,
+      sender_label: `Lærer - ${state.profile?.nickname || suggestedTeacherNick()}`,
       body
     });
     if (error) throw error;
@@ -2050,6 +2144,9 @@
   $('login-button').addEventListener('click', () => devLogin().catch(error => alert(error.message)));
   $('toggle-organization-picker-button').addEventListener('click', toggleOrganizationPicker);
   $('create-organization-button').addEventListener('click', () => createOrganization().catch(error => alert(error.message)));
+  $('save-nickname-button').addEventListener('click', () => saveNickname().catch(error => alert(error.message)));
+  $('invite-org-admin-button').addEventListener('click', () => inviteOrganizationAdmin().catch(error => alert(error.message)));
+  $('invite-rebus-admin-button').addEventListener('click', () => inviteRebusAdmin().catch(error => alert(error.message)));
   $('save-settings-button').addEventListener('click', () => saveProjectSettings().catch(error => alert(error.message)));
   $('task-stop-select').addEventListener('change', event => {
     state.selectedStopId = event.target.value;

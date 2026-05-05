@@ -38,10 +38,22 @@
           <p class="muted">Ingen organisasjon valgt.</p>
         </div>
         <button id="toggle-organization-picker-button" class="ghost" type="button">Bytt org</button>
+        <section id="profile-card" class="compact-settings" hidden>
+          <h3>Min lærerprofil</h3>
+          <label><span>Nick i elevchat</span><input id="teacher-nickname" placeholder="Eirik"></label>
+          <button id="save-nickname-button" class="ghost compact" type="button">Lagre nick</button>
+        </section>
         <section id="organization-picker" class="stack" hidden>
           <label><span>Ny organisasjon</span><input id="organization-name" placeholder="Gjøvik skole"></label>
           <button id="create-organization-button" type="button">Opprett organisasjon</button>
           <div id="organization-list" class="list"></div>
+        </section>
+
+        <section id="organization-invite-card" class="compact-settings" hidden>
+          <h3>Inviter til organisasjonen</h3>
+          <label><span>E-post</span><input id="org-invite-email" type="email" placeholder="kollega@skole.no"></label>
+          <label><span>Rolle</span><select id="org-invite-role"><option value="teacher">Lærer</option><option value="admin">Admin</option><option value="viewer">Lesetilgang</option></select></label>
+          <button id="invite-org-admin-button" class="ghost compact" type="button">Inviter</button>
         </section>
 
         <h2>Prosjektinnstillinger</h2>
@@ -73,6 +85,15 @@
             <label><span>Beskrivelse</span><input id="edit-rebus-description" placeholder="Kort beskrivelse"></label>
           </div>
           <button id="save-rebus-button" type="button">Lagre navn og beskrivelse</button>
+          <div class="compact-settings">
+            <h3>Inviter admin til denne rebusen</h3>
+            <div class="form-grid">
+              <label><span>E-post</span><input id="rebus-invite-email" type="email" placeholder="kollega@skole.no"></label>
+              <label><span>Tilgang</span><input value="Admin bare i denne rebusen" disabled></label>
+            </div>
+            <button id="invite-rebus-admin-button" class="ghost compact" type="button">Inviter til rebus</button>
+            <p class="muted">Personen får tilgang når hen logger inn med Google med samme e-post.</p>
+          </div>
         </section>
 
         <div class="notice" id="maps-status">

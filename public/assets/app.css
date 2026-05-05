@@ -717,6 +717,17 @@ button.compact {
   font-size: 0.92rem;
 }
 
+.compact-settings {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfdff;
+}
+
+.compact-settings h3 {
+  margin-bottom: 10px;
+}
+
 .muted {
   color: var(--muted);
 }

@@ -124,9 +124,10 @@
 
   function renderStudentMessage(message) {
     const mine = message.senderType === 'student' || message.sender_type === 'student';
+    const sender = mine ? 'Dere' : (message.senderLabel || message.sender_label || 'Lærer');
     return `
       <div class="message-bubble ${mine ? 'message-student' : 'message-admin'}">
-        <strong>${mine ? 'Dere' : 'Lærer'}</strong>
+        <strong>${escapeHtml(sender)}</strong>
         <p>${escapeHtml(message.body)}</p>
         <small>${formatTime(message.createdAt || message.created_at)}</small>
       </div>
