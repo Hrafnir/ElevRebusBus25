@@ -10,6 +10,8 @@
   let currentCoords = null;
   let lastGateKey = '';
   let locationWatchId = null;
+  let messagePollId = null;
+  const seenAdminMessageIds = new Set();
 
   const $ = id => document.getElementById(id);
 
@@ -49,6 +51,7 @@
     localStorage.setItem('studentSessionToken', session.token);
     renderSession();
     startLocationSending();
+    startMessagePolling();
   }
 
   async function restoreSession() {
@@ -65,6 +68,7 @@
     }
     renderSession();
     startLocationSending();
+    startMessagePolling();
   }
 
   function renderSession() {
@@ -72,6 +76,7 @@
     $('app-panel').hidden = false;
     $('rebus-title').textContent = session.rebus.title;
     $('student-name').textContent = `${session.student.displayName}${session.student.teamName ? ` · ${session.student.teamName}` : ''}`;
+    renderStudentMessages();
 
     const sortedTasks = [...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
     $('task-list').innerHTML = renderCurrentTask(sortedTasks);
@@ -86,6 +91,36 @@
     document.querySelectorAll('[data-logout]').forEach(button => {
       button.addEventListener('click', logout);
     });
+  }
+
+  function renderStudentMessages() {
+    const panel = $('student-messages');
+    if (!panel) return;
+    const messages = session.messages || [];
+    panel.innerHTML = `
+      <div class="builder-heading">
+        <h3>Meldinger</h3>
+      </div>
+      <div class="message-thread">
+        ${messages.length ? messages.slice(-5).map(renderStudentMessage).join('') : '<p class="muted">Ingen meldinger ennå.</p>'}
+      </div>
+      <div class="message-composer">
+        <input id="student-message-input" placeholder="Skriv melding til læreren">
+        <button id="send-student-message-button" type="button">Send</button>
+      </div>
+    `;
+    $('send-student-message-button')?.addEventListener('click', () => sendStudentMessage().catch(error => alert(error.message)));
+  }
+
+  function renderStudentMessage(message) {
+    const mine = message.senderType === 'student' || message.sender_type === 'student';
+    return `
+      <div class="message-bubble ${mine ? 'message-student' : 'message-admin'}">
+        <strong>${mine ? 'Dere' : 'Lærer'}</strong>
+        <p>${escapeHtml(message.body)}</p>
+        <small>${formatTime(message.createdAt || message.created_at)}</small>
+      </div>
+    `;
   }
 
   function renderCurrentTask(tasks) {
@@ -352,11 +387,76 @@
     return data;
   }
 
+  async function sendStudentMessage() {
+    const input = $('student-message-input');
+    const body = input?.value.trim();
+    if (!body) return alert('Skriv en melding først.');
+    if (mode !== 'supabase') return alert('Meldinger krever Supabase.');
+    const { error } = await supabase.rpc('student_send_message', {
+      raw_token: session.token,
+      message_body: body
+    });
+    if (error) throw error;
+    input.value = '';
+    await refreshSession({ notify: false });
+    showNotification('Melding sendt', 'Læreren får varsel i admin.');
+  }
+
+  function startMessagePolling() {
+    if (messagePollId) clearInterval(messagePollId);
+    if (mode !== 'supabase') return;
+    messagePollId = setInterval(() => refreshSession({ notify: true }).catch(() => {}), 6000);
+  }
+
+  async function refreshSession({ notify = false } = {}) {
+    if (!session?.token) return;
+    const previousSignature = sessionSignature();
+    if (mode === 'supabase') {
+      const { data, error } = await supabase.rpc('student_get_session', { raw_token: session.token });
+      if (error || !data) return;
+      session = data;
+    } else {
+      const response = await fetch(`/api/student/session/${session.token}`);
+      if (!response.ok) return;
+      session = await response.json();
+    }
+    const unreadAdminMessages = (session.messages || []).filter(message =>
+      (message.senderType === 'admin' || message.sender_type === 'admin') &&
+      !(message.readByStudentAt || message.read_by_student_at) &&
+      !seenAdminMessageIds.has(message.id)
+    );
+    unreadAdminMessages.forEach(message => {
+      seenAdminMessageIds.add(message.id);
+      if (notify) {
+        showNotification('Ny melding fra lærer', message.body);
+        playNotificationSound();
+      }
+    });
+    if (unreadAdminMessages.length && mode === 'supabase') {
+      await supabase.rpc('student_mark_messages_read', { raw_token: session.token });
+    }
+    if (sessionSignature() !== previousSignature || unreadAdminMessages.length) renderSession();
+  }
+
+  function sessionSignature() {
+    if (!session) return '';
+    return JSON.stringify({
+      tasks: (session.tasks || []).map(task => task.id),
+      progress: (session.progress || []).map(item => `${item.taskId}:${item.correct}:${item.pointsAwarded}`),
+      messages: (session.messages || []).map(message => `${message.id}:${message.readByStudentAt || message.read_by_student_at || ''}`)
+    });
+  }
+
   function logout() {
     localStorage.removeItem('studentSessionToken');
     session = null;
     lastGateKey = '';
     currentCoords = null;
+    seenAdminMessageIds.clear();
+    if (messagePollId) {
+      clearInterval(messagePollId);
+      messagePollId = null;
+    }
     if (locationWatchId !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(locationWatchId);
       locationWatchId = null;
@@ -586,6 +686,43 @@
   function formatCoordinate(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number.toFixed(5) : '';
+  }
+
+  function formatTime(value) {
+    if (!value) return '';
+    return new Date(value).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function showNotification(title, body) {
+    const stack = $('notification-stack');
+    if (!stack) return alert(`${title}\n${body}`);
+    const item = document.createElement('div');
+    item.className = 'app-notification';
+    item.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(body)}</p>`;
+    stack.appendChild(item);
+    setTimeout(() => item.remove(), 9000);
+  }
+
+  function playNotificationSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const audio = new AudioContext();
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(740, audio.currentTime);
+      oscillator.frequency.setValueAtTime(990, audio.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, audio.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, audio.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.35);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start();
+      oscillator.stop(audio.currentTime + 0.36);
+    } catch (_error) {
+      // Browsers may block sound until the page has had a user gesture.
+    }
   }
 
   function cssEscape(value) {

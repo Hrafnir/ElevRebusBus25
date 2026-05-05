@@ -27,7 +27,9 @@
     lastSuggestedGroupName: '',
     lastSuggestedGroupUsername: '',
     activeAdminTab: 'tasks',
-    organizationPickerOpen: false
+    organizationPickerOpen: false,
+    groupMessages: [],
+    seenMessageIds: new Set()
   };
 
   const $ = id => document.getElementById(id);
@@ -455,14 +457,16 @@
     if (state.mode === 'supabase') {
       const { data, error } = await state.supabase
         .from('rebuses')
-        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, password_hash, team_name, created_at)')
+        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, password_hash, team_name, created_at, student_task_overrides(task_id, is_skipped))')
         .eq('id', id)
         .single();
       if (error) throw error;
       state.selectedRebus = normalizeSupabaseRebus(data);
+      await loadGroupMessages({ notify: false, rerender: false });
     } else {
       const data = await localApi(`/api/admin/rebuses/${id}`);
       state.selectedRebus = data.rebus;
+      state.groupMessages = [];
     }
     renderSelectedRebus();
     renderStopSelect();
@@ -489,7 +493,8 @@
         ...student,
         displayName: student.display_name,
         teamName: student.team_name,
-        password: visiblePassword(student.password_hash)
+        password: visiblePassword(student.password_hash),
+        taskOverrides: student.student_task_overrides || []
       }))
     };
   }
@@ -530,18 +535,21 @@
     $('rebus-settings').hidden = true;
     $('task-list').innerHTML = '';
     $('group-list').innerHTML = '';
-    $('live-body').innerHTML = '<tr><td colspan="5" class="muted">Velg en rebus først.</td></tr>';
+    $('live-body').innerHTML = '<tr><td colspan="7" class="muted">Velg en rebus først.</td></tr>';
     renderStopSelect();
   }
 
   function renderGroupList() {
     const students = state.selectedRebus?.students || [];
+    const messagesByStudent = groupMessagesByStudent();
     $('group-list').innerHTML = students.length
       ? students.map(student => {
         const groupName = groupDisplayName(student);
         const username = student.username || '';
         const password = groupPassword(student);
         const suggestedPassword = password || generateAccessCode();
+        const messages = messagesByStudent.get(student.id) || [];
+        const unreadCount = messages.filter(message => message.sender_type === 'student' && !message.read_by_admin_at).length;
         return `
           <article class="task-card group-card ${password ? '' : 'missing-code'}">
             <div>
@@ -561,6 +569,19 @@
               <button class="ghost compact" type="button" data-save-group="${escapeHtml(student.id)}">Lagre gruppe</button>
               <button class="danger compact" type="button" data-delete-group="${escapeHtml(student.id)}">Slett</button>
             </div>
+            ${renderGroupRouteTools(student)}
+            <section class="group-message-box">
+              <div class="builder-heading">
+                <h3>Meldinger ${unreadCount ? `<span class="badge-alert">${unreadCount} ny</span>` : ''}</h3>
+              </div>
+              <div class="message-thread">
+                ${messages.length ? messages.slice(-6).map(renderAdminMessage).join('') : '<p class="muted">Ingen meldinger ennå.</p>'}
+              </div>
+              <div class="message-composer">
+                <input data-admin-message="${escapeHtml(student.id)}" placeholder="Skriv melding til ${escapeHtml(groupName)}">
+                <button class="compact" type="button" data-send-admin-message="${escapeHtml(student.id)}">Send</button>
+              </div>
+            </section>
           </article>
         `;
       }).join('')
@@ -584,6 +605,59 @@
     document.querySelectorAll('[data-delete-group]').forEach(button => {
       button.addEventListener('click', () => deleteGroup(button.dataset.deleteGroup).catch(error => alert(error.message)));
     });
+    document.querySelectorAll('[data-send-admin-message]').forEach(button => {
+      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage).catch(error => alert(error.message)));
+    });
+    document.querySelectorAll('[data-save-route]').forEach(button => {
+      button.addEventListener('click', () => saveGroupRoute(button.dataset.saveRoute).catch(error => alert(error.message)));
+    });
+    document.querySelectorAll('[data-send-to-goal]').forEach(button => {
+      button.addEventListener('click', () => sendGroupToGoal(button.dataset.sendToGoal).catch(error => alert(error.message)));
+    });
+  }
+
+  function renderGroupRouteTools(student) {
+    const tasks = state.selectedRebus?.tasks || [];
+    if (!tasks.length) return '';
+    const skipped = new Set((student.taskOverrides || student.student_task_overrides || []).filter(item => item.is_skipped).map(item => item.task_id || item.taskId));
+    return `
+      <section class="group-route-box">
+        <div class="builder-heading">
+          <h3>Styr løype</h3>
+          <button class="ghost compact" type="button" data-send-to-goal="${escapeHtml(student.id)}">Send til mål</button>
+        </div>
+        <div class="route-task-grid">
+          ${tasks.map((task, index) => `
+            <label class="check-label route-check">
+              <input type="checkbox" data-route-skip="${escapeHtml(student.id)}" value="${escapeHtml(task.id)}" ${skipped.has(task.id) ? 'checked' : ''}>
+              Hopp over ${index === 0 ? 'Start' : index === tasks.length - 1 ? 'Mål' : `Oppgave ${index + 1}`}: ${escapeHtml(task.title)}
+            </label>
+          `).join('')}
+        </div>
+        <p class="muted">Avhukede oppgaver skjules bare for denne gruppa. Neste synlige post blir målet deres.</p>
+        <button class="ghost compact" type="button" data-save-route="${escapeHtml(student.id)}">Lagre løype for gruppa</button>
+      </section>
+    `;
+  }
+
+  function renderAdminMessage(message) {
+    const mine = message.sender_type === 'admin';
+    return `
+      <div class="message-bubble ${mine ? 'message-admin' : 'message-student'}">
+        <strong>${mine ? 'Admin' : 'Gruppe'}</strong>
+        <p>${escapeHtml(message.body)}</p>
+        <small>${formatClock(message.created_at)}</small>
+      </div>
+    `;
+  }
+
+  function groupMessagesByStudent() {
+    const grouped = new Map();
+    state.groupMessages.forEach(message => {
+      if (!grouped.has(message.student_id)) grouped.set(message.student_id, []);
+      grouped.get(message.student_id).push(message);
+    });
+    return grouped;
   }
 
   async function copyGroupLogin(studentId) {
@@ -1356,6 +1430,99 @@
     await loadLive();
   }
 
+  async function loadGroupMessages({ notify = true, rerender = true } = {}) {
+    if (state.mode !== 'supabase' || !state.selectedRebus) return;
+    const { data, error } = await state.supabase
+      .from('group_messages')
+      .select('*')
+      .eq('rebus_id', state.selectedRebus.id)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    const messages = data || [];
+    const newStudentMessages = messages.filter(message =>
+      message.sender_type === 'student' &&
+      !message.read_by_admin_at &&
+      !state.seenMessageIds.has(message.id)
+    );
+    state.groupMessages = messages;
+    if (notify) {
+      newStudentMessages.forEach(message => {
+        state.seenMessageIds.add(message.id);
+        const student = state.selectedRebus.students?.find(item => item.id === message.student_id);
+        showNotification(`Ny melding fra ${student ? groupDisplayName(student) : 'gruppe'}`, message.body);
+        playNotificationSound();
+      });
+    }
+    if (notify && newStudentMessages.length) {
+      await state.supabase
+        .from('group_messages')
+        .update({ read_by_admin_at: new Date().toISOString() })
+        .in('id', newStudentMessages.map(message => message.id));
+      state.groupMessages = state.groupMessages.map(message =>
+        newStudentMessages.some(item => item.id === message.id)
+          ? { ...message, read_by_admin_at: message.read_by_admin_at || new Date().toISOString() }
+          : message
+      );
+    }
+    if (rerender && state.activeAdminTab === 'groups') renderGroupList();
+  }
+
+  async function sendAdminMessage(studentId) {
+    if (state.mode !== 'supabase') return alert('Meldinger krever Supabase-modus.');
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const input = document.querySelector(`[data-admin-message="${cssEscape(studentId)}"]`);
+    const body = input?.value.trim();
+    if (!body) return alert('Skriv en melding først.');
+    const { error } = await state.supabase.from('group_messages').insert({
+      rebus_id: state.selectedRebus.id,
+      student_id: studentId,
+      sender_type: 'admin',
+      body
+    });
+    if (error) throw error;
+    input.value = '';
+    await loadGroupMessages({ notify: false });
+    showNotification('Melding sendt', 'Gruppa får meldingen som pop-up i elevappen.');
+  }
+
+  async function saveGroupRoute(studentId) {
+    if (state.mode !== 'supabase') return alert('Løypestyring krever Supabase-modus.');
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const skippedTaskIds = Array.from(document.querySelectorAll(`[data-route-skip="${cssEscape(studentId)}"]:checked`)).map(input => input.value);
+    await saveRouteOverrides(studentId, skippedTaskIds);
+    showNotification('Løype lagret', 'Gruppa får oppdatert neste post ved neste oppdatering.');
+  }
+
+  async function sendGroupToGoal(studentId) {
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const tasks = state.selectedRebus.tasks || [];
+    if (tasks.length < 2) return alert('Rebusen må ha minst start og mål.');
+    if (!confirm('Sende denne gruppa direkte til mål? Alle oppgaver før siste post hoppes over for denne gruppa.')) return;
+    await saveRouteOverrides(studentId, tasks.slice(0, -1).map(task => task.id));
+    showNotification('Gruppa er sendt til mål', 'Neste synlige post for gruppa er siste oppgave.');
+  }
+
+  async function saveRouteOverrides(studentId, skippedTaskIds) {
+    const { error: deleteError } = await state.supabase
+      .from('student_task_overrides')
+      .delete()
+      .eq('student_id', studentId)
+      .eq('rebus_id', state.selectedRebus.id);
+    if (deleteError) throw deleteError;
+
+    if (skippedTaskIds.length) {
+      const rows = skippedTaskIds.map(taskId => ({
+        student_id: studentId,
+        task_id: taskId,
+        rebus_id: state.selectedRebus.id,
+        is_skipped: true
+      }));
+      const { error: insertError } = await state.supabase.from('student_task_overrides').insert(rows);
+      if (insertError) throw insertError;
+    }
+    await selectRebus(state.selectedRebus.id);
+  }
+
   async function createStopFromCurrentLocation() {
     if (state.mode !== 'supabase') return alert('Stopp krever Supabase-modus.');
     if (!state.selectedRebus) return alert('Velg en rebus først.');
@@ -1650,6 +1817,38 @@
     return String(value).replace(/["\\]/g, '\\$&');
   }
 
+  function showNotification(title, body) {
+    const stack = $('notification-stack');
+    if (!stack) return alert(`${title}\n${body}`);
+    const item = document.createElement('div');
+    item.className = 'app-notification';
+    item.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(body)}</p>`;
+    stack.appendChild(item);
+    setTimeout(() => item.remove(), 9000);
+  }
+
+  function playNotificationSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const audio = new AudioContext();
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audio.currentTime);
+      oscillator.frequency.setValueAtTime(660, audio.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, audio.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, audio.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.35);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start();
+      oscillator.stop(audio.currentTime + 0.36);
+    } catch (_error) {
+      // Browsers may block sound until the page has had a user gesture.
+    }
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replaceAll('&', '&amp;')
@@ -1693,5 +1892,6 @@
   $('print-groups-button').addEventListener('click', printGroups);
   $('use-current-location-button').addEventListener('click', useCurrentLocation);
   setInterval(() => loadLive().catch(() => {}), 5000);
+  setInterval(() => loadGroupMessages().catch(() => {}), 6000);
   boot().catch(error => alert(error.message));
 })();
