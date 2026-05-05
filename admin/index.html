@@ -33,9 +33,15 @@
     <div class="grid">
       <aside class="panel stack">
         <h2>Organisasjon</h2>
-        <label><span>Ny organisasjon</span><input id="organization-name" placeholder="Gjøvik skole"></label>
-        <button id="create-organization-button">Opprett organisasjon</button>
-        <div id="organization-list" class="list"></div>
+        <div id="selected-organization-card" class="selected-org-card">
+          <p class="muted">Ingen organisasjon valgt.</p>
+        </div>
+        <button id="toggle-organization-picker-button" class="ghost" type="button">Bytt org</button>
+        <section id="organization-picker" class="stack" hidden>
+          <label><span>Ny organisasjon</span><input id="organization-name" placeholder="Gjøvik skole"></label>
+          <button id="create-organization-button" type="button">Opprett organisasjon</button>
+          <div id="organization-list" class="list"></div>
+        </section>
 
         <h2>Prosjektinnstillinger</h2>
         <label><span>Google Maps API key</span><input id="org-maps-key" placeholder="AIza..."></label>

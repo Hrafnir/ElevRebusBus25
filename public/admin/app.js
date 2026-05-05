@@ -24,7 +24,8 @@
     numberBands: [],
     lastSuggestedGroupName: '',
     lastSuggestedGroupUsername: '',
-    activeAdminTab: 'tasks'
+    activeAdminTab: 'tasks',
+    organizationPickerOpen: false
   };
 
   const $ = id => document.getElementById(id);
@@ -131,6 +132,7 @@
     $('logout-button').hidden = true;
     $('supabase-login-button').hidden = false;
     updateAuthStatus();
+    state.organizationPickerOpen = false;
     renderOrganizations();
     renderRebusList();
     renderEmptyRebus();
@@ -236,11 +238,13 @@
     if (error) throw error;
     $('organization-name').value = '';
     state.selectedOrganization = null;
+    state.organizationPickerOpen = false;
     await loadOrganizations();
   }
 
   async function selectOrganization(id) {
     state.selectedOrganization = state.organizations.find(org => org.id === id) || null;
+    state.organizationPickerOpen = false;
     await loadProjectSettings();
     await loadRebuses();
     renderOrganizations();
@@ -248,6 +252,11 @@
   }
 
   function renderOrganizations() {
+    $('selected-organization-card').innerHTML = state.selectedOrganization
+      ? `<strong>${escapeHtml(state.selectedOrganization.name)}</strong><p class="muted">Aktiv organisasjon</p>`
+      : '<p class="muted">Ingen organisasjon valgt.</p>';
+    $('toggle-organization-picker-button').textContent = state.selectedOrganization ? 'Bytt org' : 'Velg eller lag org';
+    $('organization-picker').hidden = !state.organizationPickerOpen;
     $('organization-list').innerHTML = state.organizations.length
       ? state.organizations.map(org => `
         <button class="ghost" data-org-id="${escapeHtml(org.id)}">
@@ -259,6 +268,11 @@
     document.querySelectorAll('[data-org-id]').forEach(button => {
       button.addEventListener('click', () => selectOrganization(button.dataset.orgId).catch(error => alert(error.message)));
     });
+  }
+
+  function toggleOrganizationPicker() {
+    state.organizationPickerOpen = !state.organizationPickerOpen;
+    renderOrganizations();
   }
 
   async function loadProjectSettings() {
@@ -1474,6 +1488,7 @@
   $('supabase-login-button').addEventListener('click', () => signInWithSupabaseGoogle().catch(error => alert(error.message)));
   $('logout-button').addEventListener('click', () => logout().catch(error => alert(error.message)));
   $('login-button').addEventListener('click', () => devLogin().catch(error => alert(error.message)));
+  $('toggle-organization-picker-button').addEventListener('click', toggleOrganizationPicker);
   $('create-organization-button').addEventListener('click', () => createOrganization().catch(error => alert(error.message)));
   $('save-settings-button').addEventListener('click', () => saveProjectSettings().catch(error => alert(error.message)));
   $('task-stop-select').addEventListener('change', event => {

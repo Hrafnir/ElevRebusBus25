@@ -102,6 +102,21 @@ a {
   color: var(--green);
 }
 
+.selected-org-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.selected-org-card strong {
+  display: block;
+}
+
+.selected-org-card p {
+  margin: 4px 0 0;
+}
+
 .button, button {
   min-height: 42px;
   display: inline-flex;
