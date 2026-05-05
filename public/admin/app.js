@@ -795,6 +795,9 @@
     const location = Number.isFinite(lat) && Number.isFinite(lng)
       ? { lat, lng, label: $('task-location-label').value.trim() || $('task-title').value.trim() }
       : null;
+    const nextOrder = state.editingTaskId
+      ? (state.selectedRebus.tasks.find(task => task.id === state.editingTaskId)?.sort_order || state.selectedRebus.tasks.find(task => task.id === state.editingTaskId)?.order || 1)
+      : (state.selectedRebus.tasks?.length || 0) + 1;
 
     if (state.mode === 'supabase') {
       const payload = {
@@ -828,7 +831,6 @@
         if (error) throw error;
         await replaceRichTaskChildren(updatedTask.id);
       } else {
-        payload.sort_order = (state.selectedRebus.tasks?.length || 0) + 1;
         const { data: insertedTask, error } = await state.supabase.from('tasks').insert(payload).select().single();
       if (error) throw error;
       await createRichTaskChildren(insertedTask.id);
