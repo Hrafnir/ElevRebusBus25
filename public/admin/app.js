@@ -329,12 +329,14 @@
 
   function initMapPicker() {
     const fallbackCenter = { lat: 60.79823355219047, lng: 10.674827839521527 };
+    const existingLocation = currentLocationFields();
+    const initialCenter = existingLocation || fallbackCenter;
     const mapElement = $('task-map');
     mapElement.classList.add('is-live');
     mapElement.textContent = '';
 
     state.map = new google.maps.Map(mapElement, {
-      center: fallbackCenter,
+      center: initialCenter,
       zoom: 15,
       mapTypeControl: true,
       streetViewControl: false,
@@ -343,10 +345,15 @@
 
     state.marker = new google.maps.Marker({
       map: state.map,
-      position: fallbackCenter,
+      position: initialCenter,
       draggable: true
     });
-    setLocationFields(fallbackCenter.lat, fallbackCenter.lng, 'Fastland');
+    if (existingLocation) {
+      setPickedLocation(existingLocation.lat, existingLocation.lng, $('task-location-label').value);
+      focusMapOnLocation(existingLocation.lat, existingLocation.lng);
+    } else {
+      setLocationFields(fallbackCenter.lat, fallbackCenter.lng, 'Fastland');
+    }
 
     state.map.addListener('click', event => {
       setPickedLocation(event.latLng.lat(), event.latLng.lng(), $('task-location-label').value);
@@ -377,10 +384,29 @@
     if (state.marker) state.marker.setPosition({ lat, lng });
   }
 
+  function focusMapOnLocation(lat, lng) {
+    if (!state.map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    state.map.panTo({ lat, lng });
+    state.map.setZoom(17);
+    if (state.marker) state.marker.setPosition({ lat, lng });
+  }
+
   function setLocationFields(lat, lng, label) {
     $('task-lat').value = Number(lat).toFixed(7);
     $('task-lng').value = Number(lng).toFixed(7);
     if (label) $('task-location-label').value = label;
+  }
+
+  function currentLocationFields() {
+    const lat = parseCoordinate($('task-lat').value);
+    const lng = parseCoordinate($('task-lng').value);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }
+
+  function parseCoordinate(value) {
+    const trimmed = String(value ?? '').trim();
+    if (!trimmed) return NaN;
+    return Number(trimmed);
   }
 
   function useCurrentLocation() {
@@ -790,8 +816,8 @@
 
   async function createTask() {
     if (!state.selectedRebus) return alert('Velg en rebus først.');
-    const lat = Number($('task-lat').value);
-    const lng = Number($('task-lng').value);
+    const lat = parseCoordinate($('task-lat').value);
+    const lng = parseCoordinate($('task-lng').value);
     const location = Number.isFinite(lat) && Number.isFinite(lng)
       ? { lat, lng, label: $('task-location-label').value.trim() || $('task-title').value.trim() }
       : null;
@@ -885,13 +911,16 @@
   }
 
   function fillTaskForm(task) {
+    const lat = task.latitude ?? task.location?.lat ?? task.stop?.location?.lat ?? '';
+    const lng = task.longitude ?? task.location?.lng ?? task.stop?.location?.lng ?? '';
+    const label = task.location_label || task.location?.label || task.stop?.location?.label || '';
     $('task-title').value = task.title || '';
     $('task-type').value = task.type || 'text';
     $('task-points').value = task.points || 0;
     $('task-max-attempts').value = task.max_attempts || '';
-    $('task-lat').value = task.latitude ?? '';
-    $('task-lng').value = task.longitude ?? '';
-    $('task-location-label').value = task.location_label || '';
+    $('task-lat').value = lat;
+    $('task-lng').value = lng;
+    $('task-location-label').value = label;
     $('task-radius').value = task.geofence_radius_meters || 30;
     $('task-prompt').value = task.prompt || '';
     $('task-answer').value = task.answer || '';
@@ -927,6 +956,11 @@
     renderHintRows();
     renderNumberBands();
     updateTaskTypeUi();
+    const parsedLat = parseCoordinate(lat);
+    const parsedLng = parseCoordinate(lng);
+    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
+      focusMapOnLocation(parsedLat, parsedLng);
+    }
   }
 
   async function replaceRichTaskChildren(taskId) {
@@ -1325,8 +1359,8 @@
   async function createStopFromCurrentLocation() {
     if (state.mode !== 'supabase') return alert('Stopp krever Supabase-modus.');
     if (!state.selectedRebus) return alert('Velg en rebus først.');
-    const lat = Number($('task-lat').value);
-    const lng = Number($('task-lng').value);
+    const lat = parseCoordinate($('task-lat').value);
+    const lng = parseCoordinate($('task-lng').value);
     const nextOrder = (state.selectedRebus.stops?.length || 0) + 1;
     const { data, error } = await state.supabase.from('rebus_stops').insert({
       rebus_id: state.selectedRebus.id,
