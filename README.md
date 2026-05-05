@@ -2,6 +2,16 @@
 
 En tidlig, kjørbar prototype for å lage lærerstyrte rebuser med adminside, elevside, kart, gruppeinnlogging, oppgaver, progresjon og live-status.
 
+## Prøv I Nettleseren
+
+Demoen kan åpnes her:
+
+https://hrafnir.github.io/Rebusgenerator/
+
+GitHub Pages-versjonen er laget for at kolleger raskt kan prøve adminflyten: logge inn med Google, lage organisasjon, lage rebus, legge inn kartlokasjoner, oppgaver og grupper.
+
+Merk: GitHub Pages kan bare servere statiske filer. Den kjører ikke Node-backenden. Derfor må Pages-demoen bruke Supabase direkte fra nettleseren, og elevinnlogging/filopplasting er fortsatt mer begrenset der enn lokalt/serverbasert kjøring.
+
 ## Rask Demo
 
 Dette er den enkleste måten for kolleger å teste uten Supabase, Google-login eller API-nøkler.

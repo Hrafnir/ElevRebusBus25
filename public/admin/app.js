@@ -33,7 +33,7 @@
   });
 
   async function boot() {
-    state.config = await fetch('/api/config', { cache: 'no-store' }).then(response => response.json());
+    state.config = await loadConfig();
     state.mode = state.config.supabaseUrl && state.config.supabaseAnonKey ? 'supabase' : 'local';
     $('teacher-email').value = state.teacherEmail;
     configureAuthUi();
@@ -101,7 +101,7 @@
   async function signInWithSupabaseGoogle() {
     const { error } = await state.supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/admin` }
+      options: { redirectTo: appUrl('admin/') }
     });
     if (error) throw error;
   }
@@ -1158,6 +1158,34 @@
       script.onerror = reject;
       document.head.appendChild(script);
     });
+  }
+
+  async function loadConfig() {
+    if (window.REBUS_CONFIG) return normalizeConfig(window.REBUS_CONFIG);
+    try {
+      const response = await fetch('/api/config', { cache: 'no-store' });
+      if (response.ok) return normalizeConfig(await response.json());
+    } catch (_error) {
+      // GitHub Pages has no local API. Fall back to local demo mode.
+    }
+    return normalizeConfig({});
+  }
+
+  function normalizeConfig(config) {
+    return {
+      supabaseUrl: config.supabaseUrl || '',
+      supabaseAnonKey: config.supabaseAnonKey || '',
+      googleClientId: config.googleClientId || '',
+      googleMapsApiKey: config.googleMapsApiKey || '',
+      allowDevAuth: config.allowDevAuth !== false,
+      basePath: config.basePath || ''
+    };
+  }
+
+  function appUrl(path = '') {
+    const basePath = String(state.config?.basePath || '').replace(/\/$/, '');
+    const cleanPath = String(path || '').replace(/^\//, '');
+    return `${window.location.origin}${basePath}/${cleanPath}`;
   }
 
   function syncGroupUsername() {
