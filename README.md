@@ -8,9 +8,9 @@ Demoen kan åpnes her:
 
 https://hrafnir.github.io/Rebusgenerator/
 
-GitHub Pages-versjonen er laget for at kolleger raskt kan prøve adminflyten: logge inn med Google, lage organisasjon, lage rebus, legge inn kartlokasjoner, oppgaver og grupper.
+GitHub Pages-versjonen er laget for at kolleger raskt kan prøve flyten: logge inn med Google, lage organisasjon, lage rebus, legge inn kartlokasjoner, oppgaver og grupper, og teste elevinnlogging.
 
-Merk: GitHub Pages kan bare servere statiske filer. Den kjører ikke Node-backenden. Derfor må Pages-demoen bruke Supabase direkte fra nettleseren, og elevinnlogging/filopplasting er fortsatt mer begrenset der enn lokalt/serverbasert kjøring.
+Merk: GitHub Pages kan bare servere statiske filer. Den kjører ikke Node-backenden. Derfor bruker Pages-demoen Supabase direkte fra nettleseren. Elevsvar, progresjon og posisjon lagres i Supabase. Selve filopplastingen for bilde/video/lyd er fortsatt en prototypebegrensning.
 
 ## Rask Demo
 
@@ -86,8 +86,8 @@ supabase/migrations/
 - Lage oppgaver med tekst, tall, multiple choice, media-lenker og hint.
 - Lage grupper med automatisk brukernavn og kode.
 - Endre kode for en gruppe etterpå.
-- Logge inn på elevsiden.
-- Levere svar og se progresjon.
+- Logge inn på elevsiden med gruppebruker og kode.
+- Levere svar og se progresjon via Supabase.
 - Sende posisjon fra elevens nettleser når geolokasjon tillates.
 
 ## Kjente Begrensninger

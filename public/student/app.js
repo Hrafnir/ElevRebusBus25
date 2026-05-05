@@ -1,5 +1,8 @@
 (function () {
   let session = null;
+  let config = null;
+  let mode = 'local';
+  let supabase = null;
 
   const $ = id => document.getElementById(id);
 
@@ -19,13 +22,23 @@
   }
 
   async function login() {
-    session = await api('/api/student/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        username: $('username').value.trim(),
-        password: $('password').value
-      })
-    });
+    if (mode === 'supabase') {
+      const { data, error } = await supabase.rpc('student_login', {
+        student_username: $('username').value.trim(),
+        student_password: $('password').value
+      });
+      if (error) throw error;
+      if (!data) throw new Error('Feil brukernavn eller kode.');
+      session = data;
+    } else {
+      session = await api('/api/student/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: $('username').value.trim(),
+          password: $('password').value
+        })
+      });
+    }
     localStorage.setItem('studentSessionToken', session.token);
     renderSession();
     startLocationSending();
@@ -34,9 +47,15 @@
   async function restoreSession() {
     const token = localStorage.getItem('studentSessionToken');
     if (!token) return;
-    const response = await fetch(`/api/student/session/${token}`);
-    if (!response.ok) return;
-    session = await response.json();
+    if (mode === 'supabase') {
+      const { data, error } = await supabase.rpc('student_get_session', { raw_token: token });
+      if (error || !data) return;
+      session = data;
+    } else {
+      const response = await fetch(`/api/student/session/${token}`);
+      if (!response.ok) return;
+      session = await response.json();
+    }
     renderSession();
     startLocationSending();
   }
@@ -262,11 +281,13 @@
     }
 
     if (status) status.textContent = 'Leverer...';
-    const data = await api('/api/student/progress', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
+    const progress = mode === 'supabase'
+      ? await recordSupabaseProgress(payload)
+      : (await api('/api/student/progress', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })).progress;
+    session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), progress];
     renderSession();
   }
 
@@ -280,20 +301,38 @@
       return;
     }
 
-    const formData = new FormData();
-    formData.append('taskId', taskId);
-    formData.append('note', noteInput ? noteInput.value : '');
-    formData.append('file', file);
+    if (status) status.textContent = mode === 'supabase' ? 'Registrerer innlevering...' : 'Laster opp...';
+    if (mode === 'supabase') {
+      const note = [noteInput?.value || '', file.name].filter(Boolean).join(' · ');
+      const progress = await recordSupabaseProgress({ taskId, answer: note });
+      session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), progress];
+    } else {
+      const formData = new FormData();
+      formData.append('taskId', taskId);
+      formData.append('note', noteInput ? noteInput.value : '');
+      formData.append('file', file);
 
-    if (status) status.textContent = 'Laster opp...';
-    const data = await api('/api/student/submissions', {
-      method: 'POST',
-      body: formData
-    });
-    session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
-    session.submissions = session.submissions || [];
-    session.submissions.push(data.submission);
+      const data = await api('/api/student/submissions', {
+        method: 'POST',
+        body: formData
+      });
+      session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
+      session.submissions = session.submissions || [];
+      session.submissions.push(data.submission);
+    }
     renderSession();
+  }
+
+  async function recordSupabaseProgress(payload) {
+    const { data, error } = await supabase.rpc('student_record_progress', {
+      raw_token: session.token,
+      target_task_id: payload.taskId,
+      answer_text: payload.answer || '',
+      selected_option_ids: payload.optionIds || []
+    });
+    if (error) throw error;
+    if (!data) throw new Error('Kunne ikke levere svar.');
+    return data;
   }
 
   function logout() {
@@ -306,14 +345,23 @@
   function startLocationSending() {
     if (!navigator.geolocation) return;
     navigator.geolocation.watchPosition(position => {
-      api('/api/student/location', {
-        method: 'POST',
-        body: JSON.stringify({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy
-        })
-      }).catch(() => {});
+      if (mode === 'supabase') {
+        supabase.rpc('student_record_location', {
+          raw_token: session.token,
+          latitude_value: position.coords.latitude,
+          longitude_value: position.coords.longitude,
+          accuracy_value: position.coords.accuracy
+        }).catch(() => {});
+      } else {
+        api('/api/student/location', {
+          method: 'POST',
+          body: JSON.stringify({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          })
+        }).catch(() => {});
+      }
     }, () => {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
   }
 
@@ -382,6 +430,51 @@
     return escapeHtml(url);
   }
 
-  $('login-button').addEventListener('click', () => login().catch(error => alert(error.message)));
-  restoreSession().catch(() => {});
+  async function boot() {
+    config = await loadConfig();
+    mode = config.supabaseUrl && config.supabaseAnonKey ? 'supabase' : 'local';
+    if (mode === 'supabase') {
+      await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+      supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      $('username').value = '';
+      $('password').value = '';
+      $('username').placeholder = 'gruppe-1';
+      $('password').placeholder = 'Kode fra læreren';
+    }
+    $('login-button').addEventListener('click', () => login().catch(error => alert(error.message)));
+    restoreSession().catch(() => {});
+  }
+
+  async function loadConfig() {
+    if (window.REBUS_CONFIG) return normalizeConfig(window.REBUS_CONFIG);
+    try {
+      const response = await fetch('/api/config', { cache: 'no-store' });
+      if (response.ok) return normalizeConfig(await response.json());
+    } catch (_error) {
+      // GitHub Pages has no local API.
+    }
+    return normalizeConfig({});
+  }
+
+  function normalizeConfig(value) {
+    return {
+      supabaseUrl: value.supabaseUrl || '',
+      supabaseAnonKey: value.supabaseAnonKey || ''
+    };
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) return resolve();
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.defer = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  boot().catch(error => alert(error.message));
 })();
