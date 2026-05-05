@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Rebus Platform</title>
+  <link rel="stylesheet" href="../assets/app.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Lærer</p>
+        <h1>Admin</h1>
+          <p>Lag organisasjoner, rebuser, oppgaver og grupper. Supabase Auth brukes når prosjektet er konfigurert.</p>
+      </div>
+      <div class="toolbar">
+        <span id="auth-status" class="auth-status">Ikke innlogget</span>
+        <div id="google-login-slot"></div>
+        <button id="supabase-login-button">Logg inn med Google</button>
+        <button id="logout-button" class="ghost" hidden>Logg ut</button>
+        <input id="teacher-email" value="teacher@example.com" aria-label="Lærer e-post">
+        <button id="login-button">Dev-login</button>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat"><span>Rebuser</span><strong id="rebus-count">0</strong></div>
+      <div class="stat"><span>Aktive grupper</span><strong id="participant-count">0</strong></div>
+      <div class="stat"><span>Hendelser</span><strong id="event-count">0</strong></div>
+    </section>
+
+    <div class="grid">
+      <aside class="panel stack">
+        <h2>Organisasjon</h2>
+        <label><span>Ny organisasjon</span><input id="organization-name" placeholder="Gjøvik skole"></label>
+        <button id="create-organization-button">Opprett organisasjon</button>
+        <div id="organization-list" class="list"></div>
+
+        <h2>Prosjektinnstillinger</h2>
+        <label><span>Google Maps API key</span><input id="org-maps-key" placeholder="AIza..."></label>
+        <button id="save-settings-button">Lagre innstillinger</button>
+
+        <h2>Opprett rebus</h2>
+        <label><span>Tittel</span><input id="rebus-title" placeholder="Byvandring i naturfag"></label>
+        <label><span>Beskrivelse</span><textarea id="rebus-description" placeholder="Hva skal elevene gjøre?"></textarea></label>
+        <button id="create-rebus-button">Opprett</button>
+
+        <h2>Mine rebuser</h2>
+        <div id="rebus-list" class="list"></div>
+      </aside>
+
+      <section class="panel stack">
+        <div>
+          <h2 id="selected-title">Velg en rebus</h2>
+          <p id="selected-description" class="muted">Når en rebus er valgt kan du legge til oppgaver, grupper og se live status.</p>
+        </div>
+
+        <div class="notice" id="maps-status">
+          Setter opp kartvelger...
+        </div>
+
+        <div class="builder-heading">
+          <h2>Oppgaver</h2>
+          <button id="new-task-button" type="button">Ny oppgave</button>
+        </div>
+        <div id="task-list" class="list"></div>
+
+        <section id="task-editor" class="stack" hidden>
+        <div class="builder-heading">
+          <h2 id="task-editor-title">Ny oppgave</h2>
+          <button id="cancel-task-edit-button" class="ghost" type="button">Lukk</button>
+        </div>
+        <section class="builder-section">
+          <div class="builder-heading">
+            <h3>Stopp/lokasjon</h3>
+            <button id="create-stop-button" class="ghost" type="button">Opprett stopp fra kartet</button>
+          </div>
+          <div class="form-grid">
+            <label><span>Velg stopp</span><select id="task-stop-select"><option value="">Ingen stopp valgt</option></select></label>
+            <label><span>Nytt stopp-navn</span><input id="stop-title" placeholder="F.eks. Hovedinngangen"></label>
+          </div>
+          <p class="muted">Flere oppgaver kan ligge på samme stopp. Elevene løser da alle oppgavene på stedet før de sendes videre.</p>
+        </section>
+        <div class="map-tools">
+          <input id="place-search" placeholder="Søk etter sted eller adresse">
+          <button id="use-current-location-button" class="ghost">Bruk min posisjon</button>
+        </div>
+        <div id="task-map" class="map-picker">
+          Kartvelger lastes hvis Google Maps API-nøkkel er konfigurert.
+        </div>
+        <div class="form-grid">
+          <label><span>Tittel</span><input id="task-title" placeholder="Post 1"></label>
+          <label><span>Type</span><select id="task-type"><option value="text">Tekstsvar</option><option value="number">Tallsvar</option><option value="multiple_choice">Multiple choice</option><option value="multi_select">Flere riktige valg</option><option value="photo">Bildeinnlevering</option><option value="video">Videoinnlevering</option><option value="audio">Lydoppgave</option><option value="teacher_approved">Lærergodkjent</option><option value="qr_code">Kode/QR</option></select></label>
+          <label><span>Poeng</span><input id="task-points" type="number" value="5"></label>
+          <label><span>Maks forsøk</span><input id="task-max-attempts" type="number" placeholder="Ubegrenset"></label>
+          <label><span>Latitude</span><input id="task-lat" type="number" step="any" placeholder="60.79823"></label>
+          <label><span>Longitude</span><input id="task-lng" type="number" step="any" placeholder="10.67482"></label>
+          <label><span>Stedsnavn</span><input id="task-location-label" placeholder="Fastland"></label>
+          <label><span>Radius meter</span><input id="task-radius" type="number" value="30"></label>
+        </div>
+        <label><span>Oppgavetekst</span><textarea id="task-prompt"></textarea></label>
+        <label><span>Riktig svar</span><input id="task-answer" placeholder="For tekstoppgaver"></label>
+        <section id="number-builder" class="builder-section" hidden>
+          <div class="builder-heading">
+            <h3>Tallvurdering</h3>
+            <button id="add-number-band-button" class="ghost" type="button">Legg til poengnivå</button>
+          </div>
+          <div class="form-grid">
+            <label><span>Riktig tall</span><input id="number-correct-value" type="number" step="any" placeholder="F.eks. 24"></label>
+            <label class="check-label"><input id="number-use-tolerance" type="checkbox" checked> Bruk slingringsmonn</label>
+          </div>
+          <div id="number-band-rows" class="builder-list"></div>
+        </section>
+        <section id="options-builder" class="builder-section">
+          <div class="builder-heading">
+            <h3>Svaralternativer</h3>
+            <button id="add-option-button" class="ghost" type="button">Legg til alternativ</button>
+          </div>
+          <div id="option-rows" class="builder-list"></div>
+        </section>
+        <section class="builder-section">
+          <div class="builder-heading">
+            <h3>Media i oppgaven</h3>
+            <button id="add-asset-button" class="ghost" type="button">Legg til media</button>
+          </div>
+          <div id="asset-rows" class="builder-list"></div>
+        </section>
+        <section class="builder-section">
+          <div class="builder-heading">
+            <h3>Hint</h3>
+            <button id="add-hint-button" class="ghost" type="button">Legg til hint</button>
+          </div>
+          <div id="hint-rows" class="builder-list"></div>
+        </section>
+        <button id="create-task-button">Lagre oppgave</button>
+        </section>
+
+        <h2>Ny gruppe</h2>
+        <div class="form-grid">
+          <label><span>Gruppenavn</span><input id="group-name" placeholder="Gruppe 1"></label>
+          <label><span>Brukernavn</span><input id="group-username" placeholder="gruppe-1"></label>
+          <label><span>Kode</span><input id="group-password" placeholder="Genereres automatisk"></label>
+        </div>
+        <div class="actions">
+          <button id="generate-group-password-button" class="ghost" type="button">Generer ny kode</button>
+          <button id="create-student-button">Opprett gruppe</button>
+        </div>
+
+        <h2>Grupper</h2>
+        <div id="group-list" class="list"></div>
+
+        <h2>Live status</h2>
+        <table class="live-table">
+          <thead><tr><th>Gruppe</th><th>Score</th><th>Fullført</th><th>Siste posisjon</th><th>Siste innlevering</th></tr></thead>
+          <tbody id="live-body"></tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+  <script src="../config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

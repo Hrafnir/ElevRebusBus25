@@ -1,0 +1,70 @@
+<!-- Version: #27 -->
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skolerebus!</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="rebus">Rebus</button>
+            <button class="tab-button" data-tab="map">Kart</button>
+        </div>
+
+        <!-- Innhold for Rebus-fanen -->
+        <div id="rebus-content" class="tab-content visible">
+            <!-- Geofence Feedback -->
+            <div id="geofence-feedback" style="display: none; margin-top: 15px; margin-bottom:10px; padding: 10px; border-radius: 4px; text-align: center; font-weight: 500;">
+                Laster posisjonsdata...
+            </div>
+
+            <!-- Poengvisning -->
+            <div id="score-display" style="text-align: center; margin-bottom: 15px; font-size: 1.1em; display: none;">
+                Poeng: <span id="current-score">0</span>
+            </div>
+
+            <!-- Container hvor post-HTML lastes dynamisk -->
+            <div id="post-content-container">
+                <!-- Innhold fra posts/postX.html eller posts/intro.html lastes her -->
+            </div>
+        </div>
+
+        <!-- Innhold for Kart-fanen -->
+        <div id="map-content" class="tab-content">
+            <h2>Kart over Området</h2>
+            <p>Bruk kartet for å finne neste post eller målet. Lykke til!</p>
+            <div id="dynamic-map-container"></div>
+            <p style="font-size: 0.9em; margin-top: 15px;">(Trykk på 'Rebus'-fanen for å se oppgavene)</p>
+        </div>
+
+        <!-- Mobil Logg Container -->
+        <div id="mobile-log-container" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0;">Debug Logg (Mobil)</h4>
+                <div>
+                    <button id="toggle-log-visibility" style="margin-top:0; margin-right: 5px; padding: 5px 10px; font-size:0.8em;">Vis/Skjul</button>
+                    <button id="clear-mobile-log" style="margin-top:0; padding: 5px 10px; font-size:0.8em; background-color: #e74c3c;">Tøm Logg</button>
+                </div>
+            </div>
+            <div id="mobile-log-output" style="max-height: 200px; overflow-y: auto; background-color: #fff; padding: 8px; font-size: 0.8em; text-align: left; display: none;">
+                <!-- Loggmeldinger legges til her -->
+            </div>
+        </div>
+
+    </div>
+
+    <script src="client-api.js"></script>
+    <script src="core.js"></script> <!-- Endret til core.js -->
+    <!-- Post-spesifikke JS-filer kan lastes dynamisk av core.js eller legges til her hvis de alltid trengs -->
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
+    </script>
+
+</body>
+</html>
+<!-- Version: #27 -->

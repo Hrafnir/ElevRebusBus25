@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elev - Rebus Platform</title>
+  <link rel="stylesheet" href="../assets/app.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Elev</p>
+        <h1>Min rebus</h1>
+        <p>Logg inn med brukernavn og passord fra læreren.</p>
+      </div>
+      <a class="button ghost" href="../">Forside</a>
+    </header>
+
+    <section id="login-panel" class="panel stack">
+      <h2>Logg inn</h2>
+      <label><span>Brukernavn</span><input id="username" value="demo"></label>
+      <label><span>Passord</span><input id="password" type="password" value="demo"></label>
+      <button id="login-button">Start</button>
+    </section>
+
+    <section id="app-panel" class="panel stack" hidden>
+      <div>
+        <h2 id="rebus-title"></h2>
+        <p id="student-name" class="muted"></p>
+      </div>
+      <div class="map-picker" id="map-placeholder">
+        Interaktivt Google Maps kommer her. Foreløpig sender appen GPS-posisjon når nettleseren tillater det.
+      </div>
+      <div id="task-list" class="list"></div>
+    </section>
+  </main>
+  <script src="../config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
