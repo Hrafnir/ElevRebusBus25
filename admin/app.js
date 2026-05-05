@@ -1559,7 +1559,7 @@
       randomChar(numbers),
       randomChar(specials)
     ];
-    while (chars.length < 10) chars.push(randomChar(all));
+    while (chars.length < 6) chars.push(randomChar(all));
     return shuffle(chars).join('');
   }
 

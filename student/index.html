@@ -20,7 +20,7 @@
     <section id="login-panel" class="panel stack">
       <h2>Logg inn</h2>
       <label><span>Brukernavn</span><input id="username" value="demo"></label>
-      <label><span>Passord</span><input id="password" type="password" value="demo"></label>
+      <label><span>Kode</span><input id="password" value="demo" autocomplete="off"></label>
       <button id="login-button">Start</button>
     </section>
 
@@ -29,9 +29,10 @@
         <h2 id="rebus-title"></h2>
         <p id="student-name" class="muted"></p>
       </div>
-      <div class="map-picker" id="map-placeholder">
-        Interaktivt Google Maps kommer her. Foreløpig sender appen GPS-posisjon når nettleseren tillater det.
+      <div class="map-picker" id="student-map">
+        Elevkart lastes når posisjon er tillatt.
       </div>
+      <p id="location-status" class="muted">Posisjon er ikke sendt ennå.</p>
       <div id="task-list" class="list"></div>
     </section>
   </main>

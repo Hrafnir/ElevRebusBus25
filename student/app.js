@@ -3,6 +3,9 @@
   let config = null;
   let mode = 'local';
   let supabase = null;
+  let studentMap = null;
+  let studentMarker = null;
+  let taskMarkers = [];
 
   const $ = id => document.getElementById(id);
 
@@ -71,10 +74,10 @@
     $('task-list').innerHTML = renderTaskGroups(sortedTasks, progressByTaskId);
 
     document.querySelectorAll('[data-submit-task]').forEach(button => {
-      button.addEventListener('click', () => submitTask(button.dataset.submitTask));
+      button.addEventListener('click', () => submitTask(button.dataset.submitTask).catch(error => showTaskError(button.dataset.submitTask, error)));
     });
     document.querySelectorAll('[data-upload-task]').forEach(button => {
-      button.addEventListener('click', () => submitFileTask(button.dataset.uploadTask));
+      button.addEventListener('click', () => submitFileTask(button.dataset.uploadTask).catch(error => showUploadError(button.dataset.uploadTask, error)));
     });
     document.querySelectorAll('[data-logout]').forEach(button => {
       button.addEventListener('click', logout);
@@ -291,6 +294,18 @@
     renderSession();
   }
 
+  function showTaskError(taskId, error) {
+    const status = document.getElementById(`task-status-${taskId}`);
+    if (status) status.textContent = error.message || 'Kunne ikke levere svar.';
+    else alert(error.message || 'Kunne ikke levere svar.');
+  }
+
+  function showUploadError(taskId, error) {
+    const status = document.getElementById(`upload-status-${taskId}`);
+    if (status) status.textContent = error.message || 'Kunne ikke levere.';
+    else alert(error.message || 'Kunne ikke levere.');
+  }
+
   async function submitFileTask(taskId) {
     const fileInput = document.getElementById(`file-${taskId}`);
     const noteInput = document.getElementById(`note-${taskId}`);
@@ -343,15 +358,23 @@
   }
 
   function startLocationSending() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationStatus('Denne nettleseren støtter ikke posisjon.');
+      return;
+    }
+    initStudentMap().catch(() => {});
     navigator.geolocation.watchPosition(position => {
+      updateStudentPosition(position.coords.latitude, position.coords.longitude);
       if (mode === 'supabase') {
         supabase.rpc('student_record_location', {
           raw_token: session.token,
           latitude_value: position.coords.latitude,
           longitude_value: position.coords.longitude,
           accuracy_value: position.coords.accuracy
-        }).catch(() => {});
+        }).then(({ error }) => {
+          if (error) setLocationStatus(`Posisjon ikke sendt: ${error.message}`);
+          else setLocationStatus(`Posisjon sendt ${new Date().toLocaleTimeString('no-NO')}.`);
+        }).catch(error => setLocationStatus(`Posisjon ikke sendt: ${error.message}`));
       } else {
         api('/api/student/location', {
           method: 'POST',
@@ -360,9 +383,70 @@
             lng: position.coords.longitude,
             accuracy: position.coords.accuracy
           })
-        }).catch(() => {});
+        }).then(() => setLocationStatus(`Posisjon sendt ${new Date().toLocaleTimeString('no-NO')}.`))
+          .catch(error => setLocationStatus(`Posisjon ikke sendt: ${error.message}`));
       }
-    }, () => {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+    }, error => {
+      setLocationStatus(error.code === 1 ? 'Posisjon ble ikke tillatt på denne enheten.' : 'Kunne ikke hente posisjon.');
+    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+  }
+
+  async function initStudentMap() {
+    if (!config.googleMapsApiKey || studentMap || !window.google?.maps) {
+      if (config.googleMapsApiKey && !window.google?.maps) {
+        await loadScript(`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(config.googleMapsApiKey)}`);
+      } else if (!config.googleMapsApiKey) {
+        return;
+      }
+    }
+    const element = $('student-map');
+    element.classList.add('is-live');
+    element.textContent = '';
+    studentMap = new google.maps.Map(element, {
+      center: { lat: 60.795, lng: 10.67 },
+      zoom: 15,
+      mapTypeControl: false,
+      streetViewControl: false
+    });
+    taskMarkers.forEach(marker => marker.setMap(null));
+    taskMarkers = (session.tasks || [])
+      .filter(task => task.location || task.stop?.location)
+      .map((task, index) => {
+        const position = task.location || task.stop.location;
+        return new google.maps.Marker({
+          map: studentMap,
+          position,
+          label: String(index + 1),
+          title: task.title
+        });
+      });
+  }
+
+  function updateStudentPosition(lat, lng) {
+    if (!studentMap || !window.google?.maps) return;
+    const position = { lat, lng };
+    if (!studentMarker) {
+      studentMarker = new google.maps.Marker({
+        map: studentMap,
+        position,
+        title: 'Min posisjon',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#1f6feb',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2
+        }
+      });
+    }
+    studentMarker.setPosition(position);
+    studentMap.panTo(position);
+  }
+
+  function setLocationStatus(message) {
+    const element = $('location-status');
+    if (element) element.textContent = message;
   }
 
   function groupLabel(index, total) {
@@ -459,7 +543,8 @@
   function normalizeConfig(value) {
     return {
       supabaseUrl: value.supabaseUrl || '',
-      supabaseAnonKey: value.supabaseAnonKey || ''
+      supabaseAnonKey: value.supabaseAnonKey || '',
+      googleMapsApiKey: value.googleMapsApiKey || ''
     };
   }
 
