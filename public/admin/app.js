@@ -1394,16 +1394,23 @@
       .in('rebus_id', rebusIds);
     if (error) throw error;
     const participants = (students || []).map(student => {
-      const progress = student.progress || [];
+      const progress = [...(student.progress || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const completedProgress = progress.filter(item => item.correct !== false);
       const locations = [...(student.locations || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       const submissions = [...(student.submissions || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       const latestSubmission = submissions[submissions.length - 1] || null;
+      const latestProgress = completedProgress[completedProgress.length - 1] || null;
+      const previousProgress = completedProgress[completedProgress.length - 2] || null;
       return {
         id: student.id,
         displayName: student.display_name,
         username: student.username,
         score: progress.reduce((sum, item) => sum + (item.points_awarded || 0), 0),
-        completedCount: progress.filter(item => item.correct !== false).length,
+        completedCount: completedProgress.length,
+        latestProgressAt: latestProgress?.created_at || null,
+        lastTransportMinutes: latestProgress && previousProgress
+          ? Math.max(0, Math.round((new Date(latestProgress.created_at) - new Date(previousProgress.created_at)) / 60000))
+          : null,
         latestLocation: locations.length ? {
           lat: locations[locations.length - 1].latitude,
           lng: locations[locations.length - 1].longitude
@@ -1427,10 +1434,21 @@
         const locText = loc ? `<a href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank" rel="noreferrer">${Number(loc.lat).toFixed(5)}, ${Number(loc.lng).toFixed(5)}</a>` : '-';
         const submission = participant.latestSubmission;
         const submissionText = submission ? `<a href="${escapeHtml(submission.url)}" target="_blank" rel="noreferrer">${escapeHtml(submission.originalName)}</a><br><small>${escapeHtml(submission.contentType)}</small>` : '-';
-        return `<tr><td>${escapeHtml(participant.displayName)}</td><td>${participant.score}</td><td>${participant.completedCount}</td><td>${locText}</td><td>${submissionText}</td></tr>`;
+        return `<tr><td>${escapeHtml(participant.displayName)}</td><td>${participant.score}</td><td>${participant.completedCount}</td><td>${formatClock(participant.latestProgressAt)}</td><td>${formatMinutes(participant.lastTransportMinutes)}</td><td>${locText}</td><td>${submissionText}</td></tr>`;
       }).join('')
-      : '<tr><td colspan="5" class="muted">Ingen aktive elever ennå.</td></tr>';
+      : '<tr><td colspan="7" class="muted">Ingen aktive elever ennå.</td></tr>';
     renderLiveMap(participants);
+  }
+
+  function formatClock(value) {
+    if (!value) return '-';
+    return new Date(value).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatMinutes(value) {
+    if (value === null || value === undefined) return '-';
+    if (value < 1) return 'Under 1 min';
+    return `${value} min`;
   }
 
   function renderLiveMap(participants) {

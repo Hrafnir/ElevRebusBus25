@@ -5,7 +5,11 @@
   let supabase = null;
   let studentMap = null;
   let studentMarker = null;
+  let targetMarker = null;
   let taskMarkers = [];
+  let currentCoords = null;
+  let lastGateKey = '';
+  let locationWatchId = null;
 
   const $ = id => document.getElementById(id);
 
@@ -69,9 +73,9 @@
     $('rebus-title').textContent = session.rebus.title;
     $('student-name').textContent = `${session.student.displayName}${session.student.teamName ? ` · ${session.student.teamName}` : ''}`;
 
-    const progressByTaskId = new Map((session.progress || []).map(item => [item.taskId, item]));
     const sortedTasks = [...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-    $('task-list').innerHTML = renderTaskGroups(sortedTasks, progressByTaskId);
+    $('task-list').innerHTML = renderCurrentTask(sortedTasks);
+    renderStudentMapState(sortedTasks);
 
     document.querySelectorAll('[data-submit-task]').forEach(button => {
       button.addEventListener('click', () => submitTask(button.dataset.submitTask).catch(error => showTaskError(button.dataset.submitTask, error)));
@@ -84,51 +88,44 @@
     });
   }
 
-  function renderTaskGroups(tasks, progressByTaskId) {
+  function renderCurrentTask(tasks) {
     if (!tasks.length) {
       return '<p class="muted">Læreren har ikke lagt inn oppgaver ennå.</p>';
     }
 
-    const grouped = [];
-    tasks.forEach((task, index) => {
-      const key = task.stopId || task.id;
-      let group = grouped.find(item => item.key === key);
-      if (!group) {
-        group = {
-          key,
-          stop: task.stop,
-          title: task.stop?.title || task.location?.label || task.title || `Stopp ${grouped.length + 1}`,
-          tasks: []
-        };
-        grouped.push(group);
-      }
-      group.tasks.push({ ...task, globalIndex: index });
-    });
+    const progressByTaskId = new Map((session.progress || []).map(item => [item.taskId, item]));
+    const currentIndex = tasks.findIndex(task => !isTaskComplete(progressByTaskId.get(task.id)));
+    if (currentIndex === -1) {
+      return `
+        <div class="student-topline">
+          <p class="muted">${tasks.length} av ${tasks.length} oppgaver fullført.</p>
+          <button class="ghost compact" type="button" data-logout>Logg ut</button>
+        </div>
+        <section class="task-group">
+          <p class="eyebrow">Mål</p>
+          <h3>Rebus fullført</h3>
+          <p>Alle poster er levert. Bra jobbet.</p>
+        </section>
+      `;
+    }
 
-    let previousGroupsComplete = true;
-    grouped.forEach(group => {
-      group.unlocked = previousGroupsComplete;
-      group.complete = group.tasks.every(task => isTaskComplete(progressByTaskId.get(task.id)));
-      previousGroupsComplete = previousGroupsComplete && group.complete;
-    });
-
+    const task = { ...tasks[currentIndex], globalIndex: currentIndex };
+    const progress = progressByTaskId.get(task.id);
+    const locationState = taskLocationState(task);
+    const title = taskTitlePrefix(currentIndex, tasks.length);
     return `
       <div class="student-topline">
         <p class="muted">${progressByTaskId.size} av ${tasks.length} oppgaver levert.</p>
         <button class="ghost compact" type="button" data-logout>Logg ut</button>
       </div>
-      ${grouped.map((group, groupIndex) => `
-        <section class="task-group">
-          <div>
-            <p class="eyebrow">${groupLabel(groupIndex, grouped.length)}</p>
-            <h3>${escapeHtml(group.title)}</h3>
-            ${group.stop?.location ? `<p class="muted">Lokasjon: ${escapeHtml(group.stop.location.label || '')} ${formatCoordinate(group.stop.location.lat)}, ${formatCoordinate(group.stop.location.lng)}</p>` : ''}
-          </div>
-          ${group.unlocked
-            ? group.tasks.map(task => renderTask(task, tasks.length, progressByTaskId.get(task.id))).join('')
-            : '<p class="notice">Dette stoppet åpnes når forrige stopp er fullført.</p>'}
-        </section>
-      `).join('')}
+      <section class="task-group">
+        <p class="eyebrow">${title}</p>
+        <h3>${escapeHtml(locationTitle(task))}</h3>
+        ${locationState.location ? `<p class="muted">Gå til markøren på kartet. Radius: ${locationState.radius} meter.</p>` : ''}
+        ${locationState.location && !locationState.inside ? `
+          <p class="notice">Oppgaven åpnes når dere er innenfor geofence. ${locationState.distanceText}</p>
+        ` : renderTask(task, tasks.length, progress)}
+      </section>
     `;
   }
 
@@ -266,6 +263,11 @@
   async function submitTask(taskId) {
     const task = (session.tasks || []).find(item => item.id === taskId);
     const status = document.getElementById(`task-status-${taskId}`);
+    const locationState = taskLocationState(task);
+    if (locationState.location && !locationState.inside) {
+      if (status) status.textContent = 'Dere er ikke innenfor geofence ennå.';
+      return;
+    }
     const payload = { taskId };
 
     if (task?.type === 'multiple_choice' || task?.type === 'multi_select') {
@@ -353,6 +355,14 @@
   function logout() {
     localStorage.removeItem('studentSessionToken');
     session = null;
+    lastGateKey = '';
+    currentCoords = null;
+    if (locationWatchId !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(locationWatchId);
+      locationWatchId = null;
+    }
+    if (targetMarker) targetMarker.setMap(null);
+    targetMarker = null;
     $('login-panel').hidden = false;
     $('app-panel').hidden = true;
   }
@@ -363,8 +373,23 @@
       return;
     }
     initStudentMap().catch(() => {});
-    navigator.geolocation.watchPosition(position => {
+    if (locationWatchId !== null) {
+      navigator.geolocation.clearWatch(locationWatchId);
+    }
+    locationWatchId = navigator.geolocation.watchPosition(position => {
+      currentCoords = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      };
       updateStudentPosition(position.coords.latitude, position.coords.longitude);
+      const gateKey = currentGateKey();
+      if (gateKey !== lastGateKey) {
+        lastGateKey = gateKey;
+        renderSession();
+      } else {
+        renderStudentMapState([...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)));
+      }
       if (mode === 'supabase') {
         supabase.rpc('student_record_location', {
           raw_token: session.token,
@@ -408,18 +433,7 @@
       mapTypeControl: false,
       streetViewControl: false
     });
-    taskMarkers.forEach(marker => marker.setMap(null));
-    taskMarkers = (session.tasks || [])
-      .filter(task => task.location || task.stop?.location)
-      .map((task, index) => {
-        const position = task.location || task.stop.location;
-        return new google.maps.Marker({
-          map: studentMap,
-          position,
-          label: String(index + 1),
-          title: task.title
-        });
-      });
+    renderStudentMapState([...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)));
   }
 
   function updateStudentPosition(lat, lng) {
@@ -442,6 +456,87 @@
     }
     studentMarker.setPosition(position);
     studentMap.panTo(position);
+  }
+
+  function renderStudentMapState(tasks) {
+    if (!studentMap || !window.google?.maps) return;
+    taskMarkers.forEach(marker => marker.setMap(null));
+    taskMarkers = [];
+    const progressByTaskId = new Map((session.progress || []).map(item => [item.taskId, item]));
+    const currentIndex = tasks.findIndex(task => !isTaskComplete(progressByTaskId.get(task.id)));
+    if (currentIndex === -1) {
+      if (targetMarker) targetMarker.setMap(null);
+      targetMarker = null;
+      return;
+    }
+    const task = tasks[currentIndex];
+    const location = taskTargetLocation(task);
+    if (!location) return;
+    if (!targetMarker) {
+      targetMarker = new google.maps.Marker({
+        map: studentMap,
+        position: location,
+        label: String(currentIndex + 1),
+        title: task.title
+      });
+    }
+    targetMarker.setMap(studentMap);
+    targetMarker.setPosition(location);
+    targetMarker.setLabel(String(currentIndex + 1));
+    targetMarker.setTitle(task.title);
+    if (!currentCoords) {
+      studentMap.panTo(location);
+      studentMap.setZoom(16);
+    }
+  }
+
+  function taskLocationState(task) {
+    const location = taskTargetLocation(task);
+    const radius = Number(task?.geofenceRadiusMeters || task?.geofence_radius_meters || 30);
+    if (!location) return { location: null, radius, inside: true, distance: 0, distanceText: '' };
+    if (!currentCoords) return { location, radius, inside: false, distance: null, distanceText: 'Venter på GPS-posisjon.' };
+    const distance = distanceMeters(currentCoords, location);
+    return {
+      location,
+      radius,
+      inside: distance <= radius,
+      distance,
+      distanceText: `Avstand: ca. ${Math.round(distance)} meter.`
+    };
+  }
+
+  function currentGateKey() {
+    if (!session) return '';
+    const tasks = [...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    const progressByTaskId = new Map((session.progress || []).map(item => [item.taskId, item]));
+    const currentIndex = tasks.findIndex(task => !isTaskComplete(progressByTaskId.get(task.id)));
+    if (currentIndex === -1) return 'done';
+    const state = taskLocationState(tasks[currentIndex]);
+    return `${tasks[currentIndex].id}:${state.inside ? 'inside' : 'outside'}`;
+  }
+
+  function taskTargetLocation(task) {
+    return task?.location || task?.stop?.location || null;
+  }
+
+  function locationTitle(task) {
+    const location = taskTargetLocation(task);
+    return location?.label || task?.stop?.title || task?.title || 'Neste post';
+  }
+
+  function distanceMeters(from, to) {
+    const earthRadius = 6371000;
+    const lat1 = degreesToRadians(from.lat);
+    const lat2 = degreesToRadians(to.lat);
+    const deltaLat = degreesToRadians(to.lat - from.lat);
+    const deltaLng = degreesToRadians(to.lng - from.lng);
+    const a = Math.sin(deltaLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+    return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function degreesToRadians(value) {
+    return Number(value) * Math.PI / 180;
   }
 
   function setLocationStatus(message) {
