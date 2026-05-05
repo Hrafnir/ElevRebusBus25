@@ -413,7 +413,7 @@
     if (state.mode === 'supabase') {
       const { data, error } = await state.supabase
         .from('rebuses')
-        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, team_name, created_at)')
+        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, password_hash, team_name, created_at)')
         .eq('id', id)
         .single();
       if (error) throw error;
@@ -443,7 +443,12 @@
           ? { lat: task.latitude, lng: task.longitude, label: task.location_label }
           : null
       })),
-      students: rebus.students || []
+      students: (rebus.students || []).map(student => ({
+        ...student,
+        displayName: student.display_name,
+        teamName: student.team_name,
+        password: visiblePassword(student.password_hash)
+      }))
     };
   }
 
@@ -491,12 +496,15 @@
     const students = state.selectedRebus?.students || [];
     $('group-list').innerHTML = students.length
       ? students.map(student => {
-        const groupName = student.team_name || student.display_name || student.username;
+        const groupName = groupDisplayName(student);
+        const username = student.username || '';
+        const password = groupPassword(student);
         return `
           <article class="task-card group-card">
             <div>
               <strong>${escapeHtml(groupName)}</strong>
-              <p class="muted">Brukernavn: <code>${escapeHtml(student.username)}</code></p>
+              <p class="muted">Brukernavn: <code>${escapeHtml(username || '-')}</code></p>
+              <p class="muted">Kode: <code>${escapeHtml(password || 'Mangler kode')}</code></p>
             </div>
             <div class="group-password-tools">
               <input data-group-password="${escapeHtml(student.id)}" placeholder="Ny kode">
@@ -517,6 +525,87 @@
     document.querySelectorAll('[data-save-password]').forEach(button => {
       button.addEventListener('click', () => updateGroupPassword(button.dataset.savePassword).catch(error => alert(error.message)));
     });
+  }
+
+  function exportGroups() {
+    const groups = sortedGroups();
+    if (!groups.length) return alert('Ingen grupper å eksportere.');
+    const rows = [
+      ['Gruppe', 'Brukernavn', 'Kode'],
+      ...groups.map(group => [groupDisplayName(group), group.username || '', groupPassword(group)])
+    ];
+    const csv = rows.map(row => row.map(csvCell).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${slugify(state.selectedRebus?.title || 'rebus')}-grupper.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+  }
+
+  function printGroups() {
+    const groups = sortedGroups();
+    if (!groups.length) return alert('Ingen grupper å printe.');
+    const title = state.selectedRebus?.title || 'Rebus';
+    const rows = groups.map(group => `
+      <tr>
+        <td>${escapeHtml(groupDisplayName(group))}</td>
+        <td>${escapeHtml(group.username || '')}</td>
+        <td>${escapeHtml(groupPassword(group))}</td>
+      </tr>
+    `).join('');
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) return alert('Nettleseren blokkerte utskriftsvinduet.');
+    printWindow.document.write(`
+      <!doctype html>
+      <html lang="no">
+      <head>
+        <meta charset="utf-8">
+        <title>${escapeHtml(title)} - grupper</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 32px; color: #172033; }
+          h1 { margin: 0 0 20px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #cfd8e3; padding: 10px; text-align: left; font-size: 16px; }
+          th { background: #eef3f8; }
+          td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)} - grupper</h1>
+        <table>
+          <thead><tr><th>Gruppe</th><th>Brukernavn</th><th>Kode</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  function sortedGroups() {
+    return [...(state.selectedRebus?.students || [])].sort((a, b) => groupDisplayName(a).localeCompare(groupDisplayName(b), 'no', { numeric: true }));
+  }
+
+  function groupDisplayName(student) {
+    return student.teamName || student.team_name || student.displayName || student.display_name || student.username || 'Gruppe uten navn';
+  }
+
+  function groupPassword(student) {
+    return student.password || visiblePassword(student.password_hash) || '';
+  }
+
+  function visiblePassword(passwordHash) {
+    const value = String(passwordHash || '');
+    return value.startsWith('plain:') ? value.slice(6) : '';
+  }
+
+  function csvCell(value) {
+    return `"${String(value ?? '').replaceAll('"', '""')}"`;
   }
 
   function renderTasksGroupedByStop(rebus) {
@@ -1133,6 +1222,12 @@
     }
 
     input.value = '';
+    const student = state.selectedRebus.students.find(item => item.id === studentId);
+    if (student) {
+      student.password = password;
+      student.password_hash = `plain:${password}`;
+    }
+    renderGroupList();
     alert('Koden er oppdatert.');
   }
 
@@ -1387,6 +1482,8 @@
   $('delete-rebus-button').addEventListener('click', () => deleteRebus().catch(error => alert(error.message)));
   $('create-task-button').addEventListener('click', () => createTask().catch(error => alert(error.message)));
   $('create-student-button').addEventListener('click', () => createStudent().catch(error => alert(error.message)));
+  $('export-groups-button').addEventListener('click', exportGroups);
+  $('print-groups-button').addEventListener('click', printGroups);
   $('use-current-location-button').addEventListener('click', useCurrentLocation);
   setInterval(() => loadLive().catch(() => {}), 5000);
   boot().catch(error => alert(error.message));

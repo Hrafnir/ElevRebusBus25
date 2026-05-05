@@ -52,7 +52,10 @@ function getRebusDetails(rebusId, teacherId) {
   return {
     ...rebus,
     tasks: db.tasks.filter(task => task.rebusId === rebusId).sort((a, b) => a.order - b.order),
-    students: db.students.filter(student => student.rebusId === rebusId).map(publicStudent)
+    students: db.students.filter(student => student.rebusId === rebusId).map(student => ({
+      ...publicStudent(student),
+      password: student.password || ''
+    }))
   };
 }
 
