@@ -254,18 +254,46 @@ label span {
   grid-template-columns: var(--org-width, 300px) minmax(0, 1fr) var(--chat-width, 340px);
   gap: 14px;
   align-items: start;
+  position: relative;
+}
+
+.org-sidebar {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.main-admin-panel {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.chat-sidebar {
+  grid-column: 3;
+  grid-row: 1;
 }
 
 .resize-handle {
+  grid-row: 1;
   align-self: stretch;
   min-height: 420px;
   cursor: col-resize;
   background: #e7eef7;
   transition: background 0.15s ease;
   width: 8px;
-  margin: 0 -11px;
   z-index: 3;
   border-radius: 999px;
+}
+
+.left-resize-handle {
+  grid-column: 1;
+  justify-self: end;
+  transform: translateX(11px);
+}
+
+[data-resize-pane="chat"] {
+  grid-column: 3;
+  justify-self: start;
+  transform: translateX(-11px);
 }
 
 .resize-handle:hover,
