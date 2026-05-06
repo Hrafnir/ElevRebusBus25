@@ -75,38 +75,41 @@
           <p id="selected-description" class="muted">Når en rebus er valgt kan du legge til oppgaver, grupper og se live status.</p>
         </div>
 
-        <section id="rebus-settings" class="builder-section stack" hidden>
-          <div class="builder-heading">
-            <h3>Rebusinnstillinger</h3>
-            <button id="delete-rebus-button" class="danger" type="button">Slett rebus</button>
-          </div>
-          <div class="form-grid">
-            <label><span>Navn</span><input id="edit-rebus-title" placeholder="Navn på rebusen"></label>
-            <label><span>Beskrivelse</span><input id="edit-rebus-description" placeholder="Kort beskrivelse"></label>
-          </div>
-          <button id="save-rebus-button" type="button">Lagre navn og beskrivelse</button>
-          <div class="compact-settings">
-            <h3>Inviter admin til denne rebusen</h3>
-            <div class="form-grid">
-              <label><span>E-post</span><input id="rebus-invite-email" type="email" placeholder="kollega@skole.no"></label>
-              <label><span>Tilgang</span><input value="Admin bare i denne rebusen" disabled></label>
-            </div>
-            <button id="invite-rebus-admin-button" class="ghost compact" type="button">Inviter til rebus</button>
-            <p class="muted">Personen får tilgang når hen logger inn med Google med samme e-post.</p>
-          </div>
-        </section>
-
-        <div class="notice" id="maps-status">
-          Setter opp kartvelger...
-        </div>
-
         <nav class="tab-bar" aria-label="Administrasjon">
-          <button class="tab-button active" type="button" data-admin-tab="tasks">Oppgaver</button>
+          <button class="tab-button active" type="button" data-admin-tab="settings">Innstillinger</button>
+          <button class="tab-button" type="button" data-admin-tab="tasks">Oppgaver</button>
           <button class="tab-button" type="button" data-admin-tab="groups">Grupper</button>
+          <button class="tab-button" type="button" data-admin-tab="chat">Chat</button>
           <button class="tab-button" type="button" data-admin-tab="live">Live status</button>
         </nav>
 
-        <section id="tab-tasks" class="admin-tab stack">
+        <section id="tab-settings" class="admin-tab stack">
+          <section id="rebus-settings" class="builder-section stack" hidden>
+            <div class="builder-heading">
+              <h3>Rebusinnstillinger</h3>
+              <button id="delete-rebus-button" class="danger" type="button">Slett rebus</button>
+            </div>
+            <div class="form-grid">
+              <label><span>Navn</span><input id="edit-rebus-title" placeholder="Navn på rebusen"></label>
+              <label><span>Beskrivelse</span><input id="edit-rebus-description" placeholder="Kort beskrivelse"></label>
+            </div>
+            <button id="save-rebus-button" type="button">Lagre navn og beskrivelse</button>
+            <div class="compact-settings">
+              <h3>Inviter admin til denne rebusen</h3>
+              <div class="form-grid">
+                <label><span>E-post</span><input id="rebus-invite-email" type="email" placeholder="kollega@skole.no"></label>
+                <label><span>Tilgang</span><input value="Admin bare i denne rebusen" disabled></label>
+              </div>
+              <button id="invite-rebus-admin-button" class="ghost compact" type="button">Inviter til rebus</button>
+              <p class="muted">Personen får tilgang når hen logger inn med Google med samme e-post.</p>
+            </div>
+          </section>
+          <div class="notice" id="maps-status">
+            Setter opp kartvelger...
+          </div>
+        </section>
+
+        <section id="tab-tasks" class="admin-tab stack" hidden>
           <div class="builder-heading">
             <h2>Oppgaver</h2>
             <button id="new-task-button" type="button">Ny oppgave</button>
@@ -204,6 +207,14 @@
             </div>
           </div>
           <div id="group-list" class="list"></div>
+        </section>
+
+        <section id="tab-chat" class="admin-tab stack" hidden>
+          <div class="builder-heading">
+            <h2>Chat</h2>
+            <p class="muted">Direktemeldinger mellom admin og grupper. Gruppene ser ikke hverandre.</p>
+          </div>
+          <div id="chat-panel" class="chat-admin-layout"></div>
         </section>
 
         <section id="tab-live" class="admin-tab stack" hidden>

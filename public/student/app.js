@@ -91,6 +91,9 @@
     document.querySelectorAll('[data-upload-task]').forEach(button => {
       button.addEventListener('click', () => submitFileTask(button.dataset.uploadTask).catch(error => showUploadError(button.dataset.uploadTask, error)));
     });
+    document.querySelectorAll('[data-skip-task]').forEach(button => {
+      button.addEventListener('click', () => skipTask(button.dataset.skipTask).catch(error => showTaskError(button.dataset.skipTask, error)));
+    });
     document.querySelectorAll('[data-logout]').forEach(button => {
       button.addEventListener('click', logout);
     });
@@ -190,8 +193,20 @@
         ${task.location ? `<p class="muted">Presis lokasjon: ${escapeHtml(task.location.label || '')} ${formatCoordinate(task.location.lat)}, ${formatCoordinate(task.location.lng)}</p>` : ''}
         ${renderAssets(task.assets || [])}
         ${renderHints(task.hints || [])}
-        ${progress && progress.correct !== false ? renderProgressDetails(progress) : `${progress ? renderRetryDetails(progress) : ''}${taskForm(task)}`}
+        ${progress && progress.correct !== false ? renderProgressDetails(progress) : `${progress ? renderRetryDetails(progress) : ''}${taskForm(task)}${skipTaskBox(task)}`}
       </article>
+    `;
+  }
+
+  function skipTaskBox(task) {
+    return `
+      <details class="skip-task-box">
+        <summary>Vi gir opp denne oppgaven</summary>
+        <p class="notice">Hvis dere gir opp, sendes dere videre til neste post. Dere får 0 poeng for denne posten, og kan ikke samle poeng fra den etterpå.</p>
+        <label><span>Skriv HOPP for å bekrefte</span><input id="skip-confirm-${task.id}" autocomplete="off" placeholder="HOPP"></label>
+        <button class="danger" type="button" data-skip-task="${task.id}">Gi opp og gå videre</button>
+        <p id="skip-status-${task.id}" class="muted"></p>
+      </details>
     `;
   }
 
@@ -396,6 +411,32 @@
     if (error) throw error;
     if (!data) throw new Error('Kunne ikke levere svar.');
     return data;
+  }
+
+  async function skipTask(taskId) {
+    const task = (session.tasks || []).find(item => item.id === taskId);
+    const status = document.getElementById(`skip-status-${taskId}`);
+    const locationState = taskLocationState(task);
+    if (locationState.location && !locationState.inside) {
+      if (status) status.textContent = 'Dere må være innenfor geofence før dere kan gi opp denne posten.';
+      return;
+    }
+    const confirmation = document.getElementById(`skip-confirm-${taskId}`)?.value || '';
+    if (confirmation.trim().toLowerCase() !== 'hopp') {
+      if (status) status.textContent = 'Skriv HOPP for å bekrefte.';
+      return;
+    }
+    if (status) status.textContent = 'Hopper over...';
+    if (mode !== 'supabase') throw new Error('Hopp over krever Supabase-modus.');
+    const { data, error } = await supabase.rpc('student_skip_task', {
+      raw_token: session.token,
+      target_task_id: taskId,
+      confirmation_text: confirmation
+    });
+    if (error) throw error;
+    if (!data) throw new Error('Kunne ikke hoppe over oppgaven.');
+    session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data];
+    renderSession();
   }
 
   async function sendStudentMessage() {
