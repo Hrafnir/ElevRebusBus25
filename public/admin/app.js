@@ -173,7 +173,6 @@
     if (!sidebar) return;
     sidebar.classList.toggle('is-collapsed', state.orgSidebarCollapsed);
     if (button) button.textContent = state.orgSidebarCollapsed ? 'Vis' : 'Skjul';
-    if (handle) handle.hidden = state.orgSidebarCollapsed;
     const width = Number(localStorage.getItem('orgPaneWidth') || 300);
     document.documentElement.style.setProperty('--org-width', state.orgSidebarCollapsed ? '56px' : `${width}px`);
   }
@@ -2035,13 +2034,11 @@
   }
 
   async function loadSupabaseLive() {
-    if (!state.selectedOrganization) return;
-    const rebusIds = state.rebuses.map(rebus => rebus.id);
-    if (!rebusIds.length) return renderLive([], []);
+    if (!state.selectedRebus) return renderLive([], []);
     const { data: students, error } = await state.supabase
       .from('students')
       .select('id, display_name, username, team_name, rebus_id, progress(points_awarded, correct, task_id, created_at), locations(latitude, longitude, accuracy, created_at), submissions(original_name, content_type, storage_path, storage_bucket, created_at), group_score_adjustments(points, reason, created_at)')
-      .in('rebus_id', rebusIds);
+      .eq('rebus_id', state.selectedRebus.id);
     if (error) throw error;
     const participants = (students || []).map(student => {
       const progress = [...(student.progress || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
