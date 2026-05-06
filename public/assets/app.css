@@ -251,7 +251,7 @@ label span {
 
 .grid {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 300px minmax(0, 1fr) minmax(280px, 0.34fr);
   gap: 18px;
   align-items: start;
 }
@@ -707,6 +707,55 @@ button.compact {
   padding-right: 4px;
 }
 
+.chat-sidebar {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.chat-sidebar-log {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+
+.sidebar-message {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  padding: 10px;
+  text-align: left;
+}
+
+.sidebar-message.latest {
+  border-color: #b7d3ff;
+  border-left-color: var(--blue);
+  background: #eef5ff;
+}
+
+.sidebar-message span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.sidebar-message p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.chat-sidebar-reply {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
 .skip-task-box {
   margin-top: 16px;
   border: 1px solid #f1b5ad;
@@ -846,6 +895,11 @@ button.compact {
 
   .grid, .stats {
     grid-template-columns: 1fr;
+  }
+
+  .chat-sidebar {
+    position: static;
+    max-height: none;
   }
 
   .group-card,

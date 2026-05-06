@@ -623,6 +623,7 @@
       : '<p class="muted">Ingen oppgaver ennå. Trykk “Ny oppgave” for å lage den første. Første oppgave blir start, siste blir mål.</p>';
     renderGroupList();
     renderChatTab();
+    renderChatSidebar();
     setDefaultGroupFields();
     bindTaskListActions();
   }
@@ -634,6 +635,7 @@
     $('task-list').innerHTML = '';
     $('group-list').innerHTML = '';
     $('chat-panel').innerHTML = '';
+    renderChatSidebar();
     $('live-body').innerHTML = '<tr><td colspan="7" class="muted">Velg en rebus først.</td></tr>';
     renderStopSelect();
   }
@@ -959,6 +961,65 @@
         switchAdminTab('groups');
         renderGroupList();
       });
+    });
+  }
+
+  function renderChatSidebar() {
+    const sidebar = $('chat-sidebar');
+    const log = $('chat-sidebar-log');
+    const reply = $('chat-sidebar-reply');
+    if (!sidebar || !log || !reply) return;
+    const students = sortedGroups();
+    sidebar.hidden = !state.selectedRebus || !students.length;
+    if (sidebar.hidden) {
+      log.innerHTML = '';
+      reply.innerHTML = '';
+      return;
+    }
+    if (!state.activeChatStudentId || !students.some(student => student.id === state.activeChatStudentId)) {
+      state.activeChatStudentId = students[0].id;
+    }
+    const studentById = new Map(students.map(student => [student.id, student]));
+    const recent = [...state.groupMessages]
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .slice(-10);
+    const latestId = recent[recent.length - 1]?.id || '';
+    log.innerHTML = recent.length
+      ? recent.map(message => {
+        const student = studentById.get(message.student_id);
+        const sender = message.sender_type === 'admin'
+          ? (message.sender_label || 'Lærer')
+          : groupDisplayName(student || {});
+        return `
+          <button class="sidebar-message ${message.id === latestId ? 'latest' : ''}" type="button" data-sidebar-message="${escapeHtml(message.student_id)}">
+            <span>${escapeHtml(groupDisplayName(student || {}))} · ${formatClock(message.created_at)}</span>
+            <strong>${escapeHtml(sender)}</strong>
+            <p>${escapeHtml(message.body)}</p>
+          </button>
+        `;
+      }).join('')
+      : '<p class="muted">Ingen meldinger ennå.</p>';
+
+    const activeStudent = studentById.get(state.activeChatStudentId) || students[0];
+    reply.innerHTML = `
+      <label><span>Svar til ${escapeHtml(groupDisplayName(activeStudent))}</span><input data-sidebar-message-input="${escapeHtml(activeStudent.id)}" value="${escapeHtml(state.adminMessageDrafts.get(activeStudent.id) || '')}" placeholder="Skriv svar"></label>
+      <button class="compact" type="button" data-send-admin-message="${escapeHtml(activeStudent.id)}">Send svar</button>
+    `;
+
+    document.querySelectorAll('#chat-sidebar [data-sidebar-message]').forEach(button => {
+      button.addEventListener('click', () => {
+        state.activeChatStudentId = button.dataset.sidebarMessage;
+        renderChatSidebar();
+        setTimeout(() => document.querySelector('#chat-sidebar [data-sidebar-message-input]')?.focus(), 0);
+      });
+    });
+    document.querySelectorAll('#chat-sidebar [data-sidebar-message-input]').forEach(input => {
+      input.addEventListener('input', () => {
+        state.adminMessageDrafts.set(input.dataset.sidebarMessageInput, input.value);
+      });
+    });
+    document.querySelectorAll('#chat-sidebar [data-send-admin-message]').forEach(button => {
+      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage).catch(error => alert(error.message)));
     });
   }
 
@@ -1768,17 +1829,20 @@
     }
     if (rerender && state.activeAdminTab === 'groups' && !isEditingAdminInput()) renderGroupList();
     if (rerender && state.activeAdminTab === 'chat' && !isEditingAdminInput()) renderChatTab();
+    if (rerender && !isEditingAdminInput()) renderChatSidebar();
   }
 
   function isEditingAdminInput() {
     const active = document.activeElement;
-    return Boolean(active && ($('group-list')?.contains(active) || $('chat-panel')?.contains(active)) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
+    return Boolean(active && ($('group-list')?.contains(active) || $('chat-panel')?.contains(active) || $('chat-sidebar')?.contains(active)) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
   }
 
   async function sendAdminMessage(studentId) {
     if (state.mode !== 'supabase') return alert('Meldinger krever Supabase-modus.');
     if (!state.selectedRebus) return alert('Velg en rebus først.');
-    const input = document.querySelector(`[data-admin-message="${cssEscape(studentId)}"]`) || document.querySelector(`[data-chat-message="${cssEscape(studentId)}"]`);
+    const input = document.querySelector(`[data-admin-message="${cssEscape(studentId)}"]`) ||
+      document.querySelector(`[data-chat-message="${cssEscape(studentId)}"]`) ||
+      document.querySelector(`[data-sidebar-message-input="${cssEscape(studentId)}"]`);
     const body = input?.value.trim();
     if (!body) return alert('Skriv en melding først.');
     const { error } = await state.supabase.from('group_messages').insert({
@@ -1794,6 +1858,7 @@
     state.adminMessageDrafts.delete(studentId);
     await loadGroupMessages({ notify: false, rerender: false });
     renderChatTab();
+    renderChatSidebar();
     renderGroupList();
     showNotification('Melding sendt', 'Gruppa får meldingen som pop-up i elevappen.');
   }
