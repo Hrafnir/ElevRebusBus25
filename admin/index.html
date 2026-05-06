@@ -31,9 +31,12 @@
       <div class="stat"><span>Hendelser</span><strong id="event-count">0</strong></div>
     </section>
 
-    <div class="grid">
-      <aside class="panel stack">
-        <h2>Organisasjon</h2>
+    <div class="grid admin-grid" id="admin-grid">
+      <aside class="panel stack org-sidebar" id="org-sidebar">
+        <div class="sidebar-compact-header">
+          <h2>Organisasjon</h2>
+          <button id="toggle-org-sidebar-button" class="ghost compact" type="button">Skjul</button>
+        </div>
         <div id="selected-organization-card" class="selected-org-card">
           <p class="muted">Ingen organisasjon valgt.</p>
         </div>
@@ -68,8 +71,9 @@
         <h2>Mine rebuser</h2>
         <div id="rebus-list" class="list"></div>
       </aside>
+      <div class="resize-handle left-resize-handle" data-resize-pane="left" title="Dra for å endre bredde"></div>
 
-      <section class="panel stack">
+      <section class="panel stack main-admin-panel">
         <div>
           <h2 id="selected-title">Velg en rebus</h2>
           <p id="selected-description" class="muted">Når en rebus er valgt kan du legge til oppgaver, grupper og se live status.</p>
@@ -228,6 +232,7 @@
           </table>
         </section>
       </section>
+      <div class="resize-handle" data-resize-pane="chat" title="Dra for å endre bredde"></div>
       <aside id="chat-sidebar" class="panel chat-sidebar" hidden>
         <h2>Chatlogg</h2>
         <p class="muted">Siste meldinger for aktiv rebus.</p>

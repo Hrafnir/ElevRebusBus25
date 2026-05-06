@@ -27,7 +27,7 @@ body {
 
 .shell {
   min-height: 100vh;
-  width: min(1160px, calc(100% - 32px));
+  width: min(1680px, calc(100% - 32px));
   margin: 0 auto;
   padding: 32px 0;
 }
@@ -251,9 +251,56 @@ label span {
 
 .grid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) minmax(280px, 0.34fr);
-  gap: 18px;
+  grid-template-columns: var(--org-width, 300px) 8px minmax(0, 1fr) 8px var(--chat-width, 340px);
+  gap: 12px;
   align-items: start;
+}
+
+.resize-handle {
+  align-self: stretch;
+  min-height: 420px;
+  border-radius: 999px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.resize-handle:hover,
+.resize-handle.is-dragging {
+  background: #cfe0f4;
+}
+
+.sidebar-compact-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.org-sidebar.is-collapsed {
+  padding: 10px 8px;
+  justify-items: center;
+}
+
+.org-sidebar.is-collapsed > :not(.sidebar-compact-header) {
+  display: none;
+}
+
+.org-sidebar.is-collapsed .sidebar-compact-header {
+  display: grid;
+  justify-items: center;
+}
+
+.org-sidebar.is-collapsed h2 {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.org-sidebar.is-collapsed #toggle-org-sidebar-button {
+  writing-mode: vertical-rl;
+  padding: 8px 6px;
 }
 
 .panel {
@@ -895,6 +942,25 @@ button.compact {
 
   .grid, .stats {
     grid-template-columns: 1fr;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+
+  .org-sidebar.is-collapsed {
+    padding: 18px;
+    justify-items: stretch;
+  }
+
+  .org-sidebar.is-collapsed > :not(.sidebar-compact-header) {
+    display: grid;
+  }
+
+  .org-sidebar.is-collapsed h2,
+  .org-sidebar.is-collapsed #toggle-org-sidebar-button {
+    writing-mode: horizontal-tb;
+    transform: none;
   }
 
   .chat-sidebar {

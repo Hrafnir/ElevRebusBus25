@@ -33,7 +33,8 @@
     groupMessages: [],
     seenMessageIds: new Set(),
     adminMessageDrafts: new Map(),
-    expandedGroupId: null
+    expandedGroupId: null,
+    orgSidebarCollapsed: localStorage.getItem('orgSidebarCollapsed') === 'true'
   };
 
   const $ = id => document.getElementById(id);
@@ -47,6 +48,7 @@
     state.config = await loadConfig();
     state.mode = state.config.supabaseUrl && state.config.supabaseAnonKey ? 'supabase' : 'local';
     $('teacher-email').value = state.teacherEmail;
+    initAdminLayoutControls();
     configureAuthUi();
 
     if (state.mode === 'supabase') {
@@ -107,6 +109,73 @@
           $('teacher-email').hidden = false;
         });
     }
+  }
+
+  function initAdminLayoutControls() {
+    const grid = $('admin-grid');
+    const storedOrgWidth = Number(localStorage.getItem('orgPaneWidth') || 300);
+    const storedChatWidth = Number(localStorage.getItem('chatPaneWidth') || 340);
+    setPaneWidth('left', storedOrgWidth);
+    setPaneWidth('chat', storedChatWidth);
+    applyOrgSidebarState();
+
+    $('toggle-org-sidebar-button')?.addEventListener('click', () => {
+      state.orgSidebarCollapsed = !state.orgSidebarCollapsed;
+      localStorage.setItem('orgSidebarCollapsed', String(state.orgSidebarCollapsed));
+      localStorage.setItem('orgSidebarManual', 'true');
+      applyOrgSidebarState();
+    });
+
+    document.querySelectorAll('[data-resize-pane]').forEach(handle => {
+      handle.addEventListener('pointerdown', event => {
+        if (!grid || window.matchMedia('(max-width: 820px)').matches) return;
+        const pane = handle.dataset.resizePane;
+        const startX = event.clientX;
+        const startWidth = pane === 'left'
+          ? Number(localStorage.getItem('orgPaneWidth') || 300)
+          : Number(localStorage.getItem('chatPaneWidth') || 340);
+        handle.setPointerCapture(event.pointerId);
+        handle.classList.add('is-dragging');
+
+        const onMove = moveEvent => {
+          const delta = moveEvent.clientX - startX;
+          const nextWidth = pane === 'left' ? startWidth + delta : startWidth - delta;
+          setPaneWidth(pane, nextWidth, true);
+        };
+        const onUp = () => {
+          handle.classList.remove('is-dragging');
+          handle.removeEventListener('pointermove', onMove);
+          handle.removeEventListener('pointerup', onUp);
+          handle.removeEventListener('pointercancel', onUp);
+        };
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onUp);
+      });
+    });
+  }
+
+  function setPaneWidth(pane, width, persist = false) {
+    const clamped = Math.round(Math.min(Math.max(Number(width) || 0, pane === 'left' ? 220 : 280), pane === 'left' ? 520 : 560));
+    if (pane === 'left') {
+      document.documentElement.style.setProperty('--org-width', state.orgSidebarCollapsed ? '56px' : `${clamped}px`);
+      if (persist) localStorage.setItem('orgPaneWidth', String(clamped));
+    } else {
+      document.documentElement.style.setProperty('--chat-width', `${clamped}px`);
+      if (persist) localStorage.setItem('chatPaneWidth', String(clamped));
+    }
+  }
+
+  function applyOrgSidebarState() {
+    const sidebar = $('org-sidebar');
+    const handle = document.querySelector('.left-resize-handle');
+    const button = $('toggle-org-sidebar-button');
+    if (!sidebar) return;
+    sidebar.classList.toggle('is-collapsed', state.orgSidebarCollapsed);
+    if (button) button.textContent = state.orgSidebarCollapsed ? 'Vis' : 'Skjul';
+    if (handle) handle.hidden = state.orgSidebarCollapsed;
+    const width = Number(localStorage.getItem('orgPaneWidth') || 300);
+    document.documentElement.style.setProperty('--org-width', state.orgSidebarCollapsed ? '56px' : `${width}px`);
   }
 
   async function signInWithSupabaseGoogle() {
@@ -561,6 +630,11 @@
       const data = await localApi(`/api/admin/rebuses/${id}`);
       state.selectedRebus = data.rebus;
       state.groupMessages = [];
+    }
+    if (localStorage.getItem('orgSidebarManual') !== 'true') {
+      state.orgSidebarCollapsed = true;
+      localStorage.setItem('orgSidebarCollapsed', 'true');
+      applyOrgSidebarState();
     }
     renderSelectedRebus();
     renderStopSelect();
