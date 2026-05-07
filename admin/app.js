@@ -692,6 +692,7 @@
     $('rebus-settings').hidden = false;
     $('edit-rebus-title').value = rebus.title || '';
     $('edit-rebus-description').value = rebus.description || '';
+    $('edit-rebus-show-score').checked = rebus.show_live_score !== false && rebus.showLiveScore !== false;
     $('task-list').innerHTML = rebus.tasks.length
       ? renderTasksGroupedByStop(rebus)
       : '<p class="muted">Ingen oppgaver ennå. Trykk “Ny oppgave” for å lage den første. Første oppgave blir start, siste blir mål.</p>';
@@ -1434,17 +1435,18 @@
     if (!state.selectedRebus) return alert('Velg en rebus først.');
     const title = $('edit-rebus-title').value.trim() || 'Ny rebus';
     const description = $('edit-rebus-description').value.trim();
+    const showLiveScore = $('edit-rebus-show-score').checked;
 
     if (state.mode === 'supabase') {
       const { error } = await state.supabase
         .from('rebuses')
-        .update({ title, description })
+        .update({ title, description, show_live_score: showLiveScore })
         .eq('id', state.selectedRebus.id);
       if (error) throw error;
     } else {
       await localApi(`/api/admin/rebuses/${state.selectedRebus.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ title, description })
+        body: JSON.stringify({ title, description, showLiveScore })
       });
     }
 

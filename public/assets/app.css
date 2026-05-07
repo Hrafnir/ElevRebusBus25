@@ -429,6 +429,41 @@ button.compact {
   margin: 0;
 }
 
+.student-score-panel {
+  display: grid;
+  gap: 6px;
+}
+
+.student-score-grid {
+  margin-bottom: 0;
+}
+
+.student-tab {
+  display: grid;
+  gap: 12px;
+}
+
+.activity-log {
+  display: grid;
+  gap: 8px;
+}
+
+.log-entry {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.log-entry p {
+  margin: 4px 0;
+}
+
+.log-entry small {
+  color: var(--muted);
+}
+
 .choice-list {
   display: grid;
   gap: 8px;

@@ -10,6 +10,7 @@
   let currentCoords = null;
   let lastGateKey = '';
   let lastUploadReceipt = null;
+  let activeStudentTab = 'task';
   let locationWatchId = null;
   let messagePollId = null;
   const seenAdminMessageIds = new Set();
@@ -80,11 +81,14 @@
     $('app-panel').hidden = false;
     $('rebus-title').textContent = session.rebus.title;
     $('student-name').textContent = `${session.student.displayName}${session.student.teamName ? ` · ${session.student.teamName}` : ''}`;
+    renderStudentScore();
     renderStudentMessages();
+    renderStudentLog();
 
     const sortedTasks = [...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
     $('task-list').innerHTML = renderCurrentTask(sortedTasks);
     renderStudentMapState(sortedTasks);
+    switchStudentTab(activeStudentTab);
 
     document.querySelectorAll('[data-submit-task]').forEach(button => {
       button.addEventListener('click', () => submitTask(button.dataset.submitTask).catch(error => showTaskError(button.dataset.submitTask, error)));
@@ -97,6 +101,9 @@
     });
     document.querySelectorAll('[data-logout]').forEach(button => {
       button.addEventListener('click', logout);
+    });
+    document.querySelectorAll('[data-student-tab]').forEach(button => {
+      button.addEventListener('click', () => switchStudentTab(button.dataset.studentTab));
     });
   }
 
@@ -126,6 +133,92 @@
     $('send-student-message-button')?.addEventListener('click', () => sendStudentMessage().catch(error => alert(error.message)));
   }
 
+  function renderStudentScore() {
+    const panel = $('student-score-panel');
+    if (!panel) return;
+    if (session.rebus?.showLiveScore === false || session.rebus?.show_live_score === false) {
+      panel.innerHTML = '<p class="muted">Poengsum vises av lærer etter rebusen.</p>';
+      return;
+    }
+    const score = visibleStudentScore();
+    const completed = (session.progress || []).filter(item => item.correct !== false).length;
+    panel.innerHTML = `
+      <div class="mini-stats student-score-grid">
+        <div><span>Foreløpig poengsum</span><strong>${score}</strong></div>
+        <div><span>Levert</span><strong>${completed}/${(session.tasks || []).length}</strong></div>
+      </div>
+      <p class="muted">Mediaoppgaver og lærervurderte oppgaver kan få poeng senere.</p>
+    `;
+  }
+
+  function visibleStudentScore() {
+    const tasksById = new Map((session.tasks || []).map(task => [task.id, task]));
+    const progressScore = (session.progress || []).reduce((sum, item) => {
+      const task = tasksById.get(item.taskId || item.task_id);
+      if (['photo', 'video', 'audio', 'teacher_approved'].includes(task?.type)) return sum;
+      return sum + Number(item.pointsAwarded ?? item.points_awarded ?? 0);
+    }, 0);
+    const adjustmentScore = (session.scoreAdjustments || []).reduce((sum, item) => sum + Number(item.points || 0), 0);
+    return progressScore + adjustmentScore;
+  }
+
+  function renderStudentLog() {
+    const panel = $('student-log');
+    if (!panel) return;
+    const rows = studentLogEntries();
+    panel.innerHTML = rows.length
+      ? rows.map(entry => `
+        <article class="log-entry ${entry.kind}">
+          <strong>${escapeHtml(entry.title)}</strong>
+          <p>${escapeHtml(entry.body)}</p>
+          <small>${formatTime(entry.createdAt)}</small>
+        </article>
+      `).join('')
+      : '<p class="muted">Loggen fylles opp når dere leverer svar, får meldinger eller får poengjusteringer.</p>';
+  }
+
+  function studentLogEntries() {
+    const tasksById = new Map((session.tasks || []).map(task => [task.id, task]));
+    const progressEntries = (session.progress || []).map(item => {
+      const task = tasksById.get(item.taskId || item.task_id);
+      const answer = String(item.answer || '');
+      const skipped = answer.startsWith('[GITT_OPP]');
+      const found = answer.startsWith('[FUNNET_FREM]');
+      const media = answer.startsWith('[MEDIA_LEVERT]');
+      return {
+        kind: skipped ? 'penalty-line' : 'submitted',
+        createdAt: item.createdAt || item.created_at,
+        title: found ? `Kom frem til ${task?.title || 'post'}` : skipped ? `Ga opp ${task?.title || 'oppgave'}` : `Leverte ${task?.title || 'oppgave'}`,
+        body: media ? 'Media er levert og venter på lærervurdering.' : skipped ? 'Dere gikk videre uten poeng fra denne posten.' : formatPlainAnswer(answer)
+      };
+    });
+    const messageEntries = (session.messages || []).map(message => {
+      const mine = message.senderType === 'student' || message.sender_type === 'student';
+      return {
+        kind: mine ? 'message-student' : 'message-admin',
+        createdAt: message.createdAt || message.created_at,
+        title: mine ? 'Melding sendt til lærer' : `Melding fra ${message.senderLabel || message.sender_label || 'Lærer'}`,
+        body: message.body || ''
+      };
+    });
+    const adjustmentEntries = (session.scoreAdjustments || []).map(item => ({
+      kind: Number(item.points || 0) > 0 ? 'reward-line' : 'penalty-line',
+      createdAt: item.createdAt || item.created_at,
+      title: `${Number(item.points || 0) > 0 ? 'Belønning' : 'Trekk'} ${signedNumber(item.points)} poeng`,
+      body: item.reason || 'Ingen begrunnelse.'
+    }));
+    return [...progressEntries, ...messageEntries, ...adjustmentEntries]
+      .filter(entry => entry.createdAt)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  function formatPlainAnswer(answer) {
+    const value = String(answer || '');
+    if (!value) return 'Oppgaven er levert.';
+    if (value.startsWith('[FUNNET_FREM]')) return 'Dere fant riktig sted.';
+    return `Svar: ${value}`;
+  }
+
   function renderStudentMessage(message) {
     const mine = message.senderType === 'student' || message.sender_type === 'student';
     const sender = mine ? 'Dere' : (message.senderLabel || message.sender_label || 'Lærer');
@@ -136,6 +229,16 @@
         <small>${formatTime(message.createdAt || message.created_at)}</small>
       </div>
     `;
+  }
+
+  function switchStudentTab(tab) {
+    activeStudentTab = tab || 'task';
+    document.querySelectorAll('[data-student-tab]').forEach(button => {
+      button.classList.toggle('active', button.dataset.studentTab === activeStudentTab);
+    });
+    document.querySelectorAll('.student-tab').forEach(panel => {
+      panel.hidden = panel.id !== `student-tab-${activeStudentTab}`;
+    });
   }
 
   function renderCurrentTask(tasks) {
@@ -829,6 +932,11 @@
   function formatTime(value) {
     if (!value) return '';
     return new Date(value).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function signedNumber(value) {
+    const number = Number(value || 0);
+    return number > 0 ? `+${number}` : String(number);
   }
 
   function showNotification(title, body) {
