@@ -526,6 +526,11 @@ button.compact {
   color: var(--blue);
 }
 
+.status-pill.pending {
+  background: #fff8eb;
+  color: var(--amber);
+}
+
 .submitted-box {
   margin-top: 12px;
   border-left: 4px solid var(--blue);
@@ -662,6 +667,65 @@ button.compact {
   padding: 8px;
   text-align: left;
   vertical-align: top;
+}
+
+.manual-score-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.manual-score-inline input {
+  width: 76px;
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.tiny-button {
+  min-height: 36px;
+  padding: 6px 10px;
+}
+
+.submission-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
+}
+
+.submission-card p {
+  margin-bottom: 6px;
+}
+
+.submission-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.submission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  justify-content: flex-end;
+}
+
+.submission-actions label {
+  min-width: 96px;
+  margin: 0;
+}
+
+.submission-actions input {
+  min-height: 42px;
+  padding: 8px 10px;
 }
 
 .adjustment-line {

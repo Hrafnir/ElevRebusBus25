@@ -381,9 +381,33 @@
 
     if (status) status.textContent = mode === 'supabase' ? 'Registrerer innlevering...' : 'Laster opp...';
     if (mode === 'supabase') {
-      const note = [noteInput?.value || '', file.name].filter(Boolean).join(' · ');
-      const progress = await recordSupabaseProgress({ taskId, answer: note });
-      session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), progress];
+      const uploadName = `${Date.now()}-${safeUploadName(file.name)}`;
+      const storagePath = [
+        session.rebus.id,
+        session.student.id,
+        taskId,
+        uploadName
+      ].join('/');
+      const contentType = file.type || 'application/octet-stream';
+      const { error: uploadError } = await supabase.storage
+        .from('submissions')
+        .upload(storagePath, file, { contentType, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data, error } = await supabase.rpc('student_record_submission', {
+        raw_token: session.token,
+        target_task_id: taskId,
+        storage_path_value: storagePath,
+        original_name_value: file.name,
+        content_type_value: contentType,
+        size_bytes_value: file.size,
+        note_value: noteInput ? noteInput.value : ''
+      });
+      if (error) throw error;
+      if (!data) throw new Error('Kunne ikke registrere innleveringen.');
+      session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
+      session.submissions = session.submissions || [];
+      session.submissions.push(data.submission);
     } else {
       const formData = new FormData();
       formData.append('taskId', taskId);
@@ -399,6 +423,15 @@
       session.submissions.push(data.submission);
     }
     renderSession();
+  }
+
+  function safeUploadName(name) {
+    return String(name || 'innlevering')
+      .normalize('NFKD')
+      .replace(/[^\w.\-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 90) || 'innlevering';
   }
 
   async function recordSupabaseProgress(payload) {

@@ -83,6 +83,7 @@
           <button class="tab-button active" type="button" data-admin-tab="settings">Innstillinger</button>
           <button class="tab-button" type="button" data-admin-tab="tasks">Oppgaver</button>
           <button class="tab-button" type="button" data-admin-tab="groups">Grupper</button>
+          <button class="tab-button" type="button" data-admin-tab="submissions">Innleveringer</button>
           <button class="tab-button" type="button" data-admin-tab="chat">Chat</button>
           <button class="tab-button" type="button" data-admin-tab="live">Live status</button>
         </nav>
@@ -211,6 +212,14 @@
             </div>
           </div>
           <div id="group-list" class="list"></div>
+        </section>
+
+        <section id="tab-submissions" class="admin-tab stack" hidden>
+          <div class="builder-heading">
+            <h2>Innleveringer</h2>
+            <p class="muted">Se bilde, lyd og video fra gruppene. Media-oppgaver gir 0 poeng først, og vurderes her.</p>
+          </div>
+          <div id="submission-list" class="list"></div>
         </section>
 
         <section id="tab-chat" class="admin-tab stack" hidden>

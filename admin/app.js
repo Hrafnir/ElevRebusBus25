@@ -619,7 +619,7 @@
     if (state.mode === 'supabase') {
       const { data, error } = await state.supabase
         .from('rebuses')
-        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, password_hash, team_name, created_at, student_task_overrides(task_id, is_skipped), progress(task_id, answer, correct, points_awarded, created_at), locations(latitude, longitude, accuracy, created_at), group_score_adjustments(id, points, reason, created_at))')
+        .select('*, rebus_stops(*), tasks(*, task_options(*), task_assets(*), task_hints(*)), students(id, display_name, username, password_hash, team_name, created_at, student_task_overrides(task_id, is_skipped), progress(id, task_id, answer, status, correct, points_awarded, created_at), submissions(id, task_id, type, storage_bucket, storage_path, original_name, content_type, size_bytes, note, status, created_at), locations(latitude, longitude, accuracy, created_at), group_score_adjustments(id, points, reason, created_at))')
         .eq('id', id)
         .single();
       if (error) throw error;
@@ -663,6 +663,7 @@
         password: visiblePassword(student.password_hash),
         taskOverrides: student.student_task_overrides || [],
         progress: student.progress || [],
+        submissions: student.submissions || [],
         locations: student.locations || [],
         scoreAdjustments: student.group_score_adjustments || []
       }))
@@ -695,6 +696,7 @@
       ? renderTasksGroupedByStop(rebus)
       : '<p class="muted">Ingen oppgaver ennå. Trykk “Ny oppgave” for å lage den første. Første oppgave blir start, siste blir mål.</p>';
     renderGroupList();
+    renderSubmissionList();
     renderChatTab();
     renderChatSidebar();
     setDefaultGroupFields();
@@ -707,6 +709,7 @@
     $('rebus-settings').hidden = true;
     $('task-list').innerHTML = '';
     $('group-list').innerHTML = '';
+    $('submission-list').innerHTML = '';
     $('chat-panel').innerHTML = '';
     renderChatSidebar();
     $('live-body').innerHTML = '<tr><td colspan="7" class="muted">Velg en rebus først.</td></tr>';
@@ -792,6 +795,7 @@
     document.querySelectorAll('[data-adjust-score]').forEach(button => {
       button.addEventListener('click', () => adjustGroupScore(button.dataset.adjustScore).catch(error => alert(error.message)));
     });
+    bindSubmissionActions($('group-list'));
   }
 
   function renderGroupDetails(student, suggestedPassword) {
@@ -803,6 +807,7 @@
           ${renderGroupProgressDetails(student)}
           ${renderGroupScoreAdjustments(student)}
         </div>
+        ${renderGroupSubmissions(student)}
         ${renderGroupRouteTools(student)}
         <section class="group-edit-box">
           <h3>Rediger gruppe</h3>
@@ -866,7 +871,15 @@
           <td>${escapeHtml(task?.title || 'Ukjent oppgave')}</td>
           <td>${formatClock(item.created_at || item.createdAt)}</td>
           <td>${travelMinutes === null ? '-' : formatMinutes(travelMinutes)}</td>
-          <td>${Number(item.points_awarded ?? item.pointsAwarded ?? 0)}</td>
+          <td>
+            <div class="manual-score-inline">
+              <span>${Number(item.points_awarded ?? item.pointsAwarded ?? 0)}</span>
+              ${item.id ? `
+                <input data-manual-points="${escapeHtml(item.id)}" type="number" min="0" max="${Number(task?.points || 20)}" value="${Number(item.points_awarded ?? item.pointsAwarded ?? 0)}" aria-label="Poeng">
+                <button class="ghost tiny-button" type="button" data-save-manual-score="${escapeHtml(item.id)}">Lagre</button>
+              ` : ''}
+            </div>
+          </td>
           <td>${formatProgressAnswer(item.answer || '')}</td>
         </tr>
       `;
@@ -906,9 +919,97 @@
     `;
   }
 
+  function renderGroupSubmissions(student) {
+    const submissions = sortedSubmissions(student);
+    return `
+      <section class="group-info-box">
+        <div class="builder-heading">
+          <h3>Media levert av ${escapeHtml(groupDisplayName(student))}</h3>
+          <button class="ghost compact" type="button" data-admin-tab-jump="submissions">Se alle innleveringer</button>
+        </div>
+        ${submissions.length ? submissions.map(submission => renderSubmissionCard(submission, student)).join('') : '<p class="muted">Ingen media levert ennå.</p>'}
+      </section>
+    `;
+  }
+
+  function renderSubmissionList() {
+    const list = $('submission-list');
+    if (!list) return;
+    const students = state.selectedRebus?.students || [];
+    const rows = students.flatMap(student => sortedSubmissions(student).map(submission => ({ student, submission })))
+      .sort((a, b) => new Date(b.submission.created_at || b.submission.createdAt) - new Date(a.submission.created_at || a.submission.createdAt));
+    list.innerHTML = rows.length
+      ? rows.map(({ student, submission }) => renderSubmissionCard(submission, student)).join('')
+      : '<p class="muted">Ingen media-innleveringer ennå.</p>';
+    bindSubmissionActions(list);
+  }
+
+  function renderSubmissionCard(submission, student) {
+    const task = taskById(submission.task_id || submission.taskId);
+    const progress = latestProgressForTask(student, submission.task_id || submission.taskId);
+    const progressId = progress?.id || '';
+    const currentPoints = Number(progress?.points_awarded ?? progress?.pointsAwarded ?? 0);
+    const maxPoints = Number(task?.points || 20);
+    const statusText = progress?.status === 'approved' || progress?.correct === true
+      ? 'Vurdert'
+      : 'Venter vurdering';
+    return `
+      <article class="submission-card">
+        <div>
+          <div class="submission-meta">
+            <strong>${escapeHtml(groupDisplayName(student))}</strong>
+            <span>${escapeHtml(task?.title || 'Ukjent oppgave')}</span>
+            <span class="status-pill ${statusText === 'Vurdert' ? 'success' : 'pending'}">${statusText}</span>
+          </div>
+          <p><strong>${escapeHtml(submission.original_name || submission.originalName || submission.storage_path || 'Innlevering')}</strong></p>
+          ${submission.note ? `<p class="muted">${escapeHtml(submission.note)}</p>` : ''}
+          <p class="muted">${escapeHtml(submission.content_type || submission.contentType || 'fil')} · ${formatFileSize(submission.size_bytes || submission.sizeBytes)} · ${formatClock(submission.created_at || submission.createdAt)}</p>
+        </div>
+        <div class="submission-actions">
+          <button class="ghost compact" type="button" data-open-submission="${escapeHtml(submission.storage_path || submission.storagePath || '')}">Åpne</button>
+          <label><span>Poeng</span><input data-manual-points="${escapeHtml(progressId)}" type="number" min="0" max="${maxPoints}" value="${currentPoints}"></label>
+          <button class="compact" type="button" data-save-manual-score="${escapeHtml(progressId)}" ${progressId ? '' : 'disabled'}>Lagre poeng</button>
+        </div>
+      </article>
+    `;
+  }
+
+  function bindSubmissionActions(root = document) {
+    root.querySelectorAll('[data-open-submission]').forEach(button => {
+      button.addEventListener('click', () => openSubmission(button.dataset.openSubmission).catch(error => alert(error.message)));
+    });
+    root.querySelectorAll('[data-save-manual-score]').forEach(button => {
+      button.addEventListener('click', () => saveManualScore(button.dataset.saveManualScore, button).catch(error => alert(error.message)));
+    });
+    root.querySelectorAll('[data-admin-tab-jump]').forEach(button => {
+      button.addEventListener('click', () => switchAdminTab(button.dataset.adminTabJump));
+    });
+  }
+
+  function sortedSubmissions(student) {
+    return [...(student.submissions || [])].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+  }
+
+  function latestProgressForTask(student, taskId) {
+    const rows = (student.progress || []).filter(item => (item.task_id || item.taskId) === taskId);
+    return rows.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt))[0] || null;
+  }
+
+  function taskById(taskId) {
+    return (state.selectedRebus?.tasks || []).find(task => task.id === taskId) || null;
+  }
+
+  function formatFileSize(bytes) {
+    const size = Number(bytes || 0);
+    if (!size) return 'ukjent størrelse';
+    if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  }
+
   function formatProgressAnswer(answer) {
     const value = String(answer || '');
     if (value.startsWith('[GITT_OPP]')) return '<span class="status-pill retry">Gitt opp</span>';
+    if (value.startsWith('[MEDIA_LEVERT]')) return `<span class="status-pill pending">Media levert</span> ${escapeHtml(value.replace('[MEDIA_LEVERT]', '').trim())}`;
     return escapeHtml(value);
   }
 
@@ -1972,6 +2073,40 @@
     if (error) throw error;
     const student = state.selectedRebus.students.find(item => item.id === studentId);
     showScoreNotification(points, reason, student ? groupDisplayName(student) : 'Gruppa');
+    await selectRebus(state.selectedRebus.id);
+    await loadLive();
+  }
+
+  async function openSubmission(storagePath) {
+    if (state.mode !== 'supabase') return alert('Mediaåpning krever Supabase-modus.');
+    if (!storagePath) return alert('Fant ikke filstien for innleveringen.');
+    const { data, error } = await state.supabase.storage
+      .from('submissions')
+      .createSignedUrl(storagePath, 60 * 10);
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async function saveManualScore(progressId, sourceButton) {
+    if (state.mode !== 'supabase') return alert('Manuell poengsetting krever Supabase-modus.');
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    if (!progressId) return alert('Fant ikke progresjonsraden som skal vurderes.');
+    const scope = sourceButton?.closest('.submission-card, .manual-score-inline') || document;
+    const input = scope.querySelector(`[data-manual-points="${cssEscape(progressId)}"]`) ||
+      document.querySelector(`[data-manual-points="${cssEscape(progressId)}"]`);
+    const points = Number(input?.value ?? 0);
+    if (!Number.isFinite(points) || points < 0) return alert('Poeng må være 0 eller mer.');
+    const { error } = await state.supabase
+      .from('progress')
+      .update({
+        points_awarded: points,
+        correct: true,
+        status: 'approved'
+      })
+      .eq('id', progressId)
+      .eq('rebus_id', state.selectedRebus.id);
+    if (error) throw error;
+    showNotification('Poeng lagret', `${points} poeng er registrert.`);
     await selectRebus(state.selectedRebus.id);
     await loadLive();
   }
