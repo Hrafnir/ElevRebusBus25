@@ -935,13 +935,17 @@
   function renderSubmissionList() {
     const list = $('submission-list');
     if (!list) return;
-    const students = state.selectedRebus?.students || [];
-    const rows = students.flatMap(student => sortedSubmissions(student).map(submission => ({ student, submission })))
-      .sort((a, b) => new Date(b.submission.created_at || b.submission.createdAt) - new Date(a.submission.created_at || a.submission.createdAt));
+    const rows = allSubmissionRows();
     list.innerHTML = rows.length
       ? rows.map(({ student, submission }) => renderSubmissionCard(submission, student)).join('')
       : '<p class="muted">Ingen media-innleveringer ennå.</p>';
     bindSubmissionActions(list);
+  }
+
+  function allSubmissionRows() {
+    const students = state.selectedRebus?.students || [];
+    return students.flatMap(student => sortedSubmissions(student).map(submission => ({ student, submission })))
+      .sort((a, b) => new Date(b.submission.created_at || b.submission.createdAt) - new Date(a.submission.created_at || a.submission.createdAt));
   }
 
   function renderSubmissionCard(submission, student) {
@@ -1004,6 +1008,43 @@
     if (!size) return 'ukjent størrelse';
     if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
     return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function submissionFileName(submission, student, index = 0) {
+    const task = taskById(submission.task_id || submission.taskId);
+    const deliveredAt = submission.created_at || submission.createdAt || new Date().toISOString();
+    const stamp = new Date(deliveredAt).toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const originalName = submission.original_name || submission.originalName || submission.storage_path || 'innlevering';
+    const extensionMatch = String(originalName).match(/(\.[a-z0-9]{1,8})$/i);
+    const extension = extensionMatch ? extensionMatch[1].toLowerCase() : extensionFromContentType(submission.content_type || submission.contentType);
+    const base = [
+      String(index + 1).padStart(3, '0'),
+      slugify(groupDisplayName(student)) || 'gruppe',
+      slugify(task?.title || 'oppgave') || 'oppgave',
+      stamp
+    ].join('_');
+    return `${base}${extension}`;
+  }
+
+  function extensionFromContentType(contentType) {
+    const map = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'image/heic': '.heic',
+      'image/heif': '.heif',
+      'video/mp4': '.mp4',
+      'video/quicktime': '.mov',
+      'video/webm': '.webm',
+      'audio/mpeg': '.mp3',
+      'audio/mp4': '.m4a',
+      'audio/wav': '.wav',
+      'audio/webm': '.webm',
+      'audio/x-m4a': '.m4a',
+      'audio/aac': '.aac',
+      'audio/ogg': '.ogg'
+    };
+    return map[String(contentType || '').toLowerCase()] || '';
   }
 
   function formatProgressAnswer(answer) {
@@ -2111,6 +2152,71 @@
     await loadLive();
   }
 
+  async function downloadSubmissionsZip() {
+    if (state.mode !== 'supabase') return alert('ZIP-nedlasting krever Supabase-modus.');
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const rows = allSubmissionRows();
+    if (!rows.length) return alert('Ingen innleveringer å laste ned.');
+    const button = $('download-submissions-button');
+    const originalText = button?.textContent || 'Last ned ZIP';
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Pakker ZIP...';
+    }
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+      const zip = new window.JSZip();
+      for (const [index, row] of rows.entries()) {
+        const storagePath = row.submission.storage_path || row.submission.storagePath;
+        if (!storagePath) continue;
+        const { data, error } = await state.supabase.storage.from('submissions').download(storagePath);
+        if (error) throw error;
+        const groupFolder = slugify(groupDisplayName(row.student)) || 'gruppe';
+        zip.file(`${groupFolder}/${submissionFileName(row.submission, row.student, index)}`, data);
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      downloadBlob(blob, `${slugify(state.selectedRebus.title || 'rebus')}-innleveringer.zip`);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    }
+  }
+
+  async function deleteAllSubmissions() {
+    if (state.mode !== 'supabase') return alert('Sletting krever Supabase-modus.');
+    if (!state.selectedRebus) return alert('Velg en rebus først.');
+    const rows = allSubmissionRows();
+    if (!rows.length) return alert('Ingen innleveringer å slette.');
+    const confirmation = prompt(`Dette sletter ${rows.length} innleverte filer for "${state.selectedRebus.title}". Poeng og progresjon beholdes. Skriv SLETT for å bekrefte.`);
+    if (confirmation !== 'SLETT') return;
+    const paths = rows.map(row => row.submission.storage_path || row.submission.storagePath).filter(Boolean);
+    if (paths.length) {
+      const { error: storageError } = await state.supabase.storage.from('submissions').remove(paths);
+      if (storageError) throw storageError;
+    }
+    const { error } = await state.supabase
+      .from('submissions')
+      .delete()
+      .eq('rebus_id', state.selectedRebus.id);
+    if (error) throw error;
+    showNotification('Innleveringer slettet', 'Filene er fjernet fra Supabase Storage. Poeng og progresjon er beholdt.');
+    await selectRebus(state.selectedRebus.id);
+    await loadLive();
+  }
+
+  function downloadBlob(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function showScoreNotification(points, reason, groupName) {
     const positive = Number(points) > 0;
     showNotification(
@@ -2379,6 +2485,7 @@
       panel.hidden = panel.id !== `tab-${tab}`;
     });
     if (tab === 'groups') setDefaultGroupFields();
+    if (tab === 'submissions') renderSubmissionList();
     if (tab === 'chat') renderChatTab();
   }
 
@@ -2511,6 +2618,8 @@
   $('create-student-button').addEventListener('click', () => createStudent().catch(error => alert(error.message)));
   $('export-groups-button').addEventListener('click', exportGroups);
   $('print-groups-button').addEventListener('click', printGroups);
+  $('download-submissions-button').addEventListener('click', () => downloadSubmissionsZip().catch(error => alert(error.message)));
+  $('delete-submissions-button').addEventListener('click', () => deleteAllSubmissions().catch(error => alert(error.message)));
   $('use-current-location-button').addEventListener('click', useCurrentLocation);
   setInterval(() => loadLive().catch(() => {}), 5000);
   setInterval(() => loadGroupMessages().catch(() => {}), 6000);

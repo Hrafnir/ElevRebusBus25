@@ -216,8 +216,14 @@
 
         <section id="tab-submissions" class="admin-tab stack" hidden>
           <div class="builder-heading">
-            <h2>Innleveringer</h2>
-            <p class="muted">Se bilde, lyd og video fra gruppene. Media-oppgaver gir 0 poeng først, og vurderes her.</p>
+            <div>
+              <h2>Innleveringer</h2>
+              <p class="muted">Se bilde, lyd og video fra gruppene. Media-oppgaver gir 0 poeng først, og vurderes her.</p>
+            </div>
+            <div class="actions">
+              <button id="download-submissions-button" class="ghost" type="button">Last ned ZIP</button>
+              <button id="delete-submissions-button" class="danger" type="button">Slett alle innleveringer</button>
+            </div>
           </div>
           <div id="submission-list" class="list"></div>
         </section>
