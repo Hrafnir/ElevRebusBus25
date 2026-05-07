@@ -778,8 +778,8 @@
     document.querySelectorAll('[data-delete-group]').forEach(button => {
       button.addEventListener('click', () => deleteGroup(button.dataset.deleteGroup).catch(error => alert(error.message)));
     });
-    document.querySelectorAll('[data-send-admin-message]').forEach(button => {
-      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage).catch(error => alert(error.message)));
+    $('group-list').querySelectorAll('[data-send-admin-message]').forEach(button => {
+      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage, button).catch(error => alert(error.message)));
     });
     document.querySelectorAll('[data-admin-message]').forEach(input => {
       input.addEventListener('input', () => {
@@ -1168,7 +1168,7 @@
       });
     });
     document.querySelectorAll('#chat-panel [data-send-admin-message]').forEach(button => {
-      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage).catch(error => alert(error.message)));
+      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage, button).catch(error => alert(error.message)));
     });
     document.querySelectorAll('#chat-panel [data-toggle-group-details]').forEach(button => {
       button.addEventListener('click', () => {
@@ -1234,7 +1234,7 @@
       });
     });
     document.querySelectorAll('#chat-sidebar [data-send-admin-message]').forEach(button => {
-      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage).catch(error => alert(error.message)));
+      button.addEventListener('click', () => sendAdminMessage(button.dataset.sendAdminMessage, button).catch(error => alert(error.message)));
     });
   }
 
@@ -2052,12 +2052,14 @@
     return Boolean(active && ($('group-list')?.contains(active) || $('chat-panel')?.contains(active) || $('chat-sidebar')?.contains(active)) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
   }
 
-  async function sendAdminMessage(studentId) {
+  async function sendAdminMessage(studentId, sourceButton = null) {
     if (state.mode !== 'supabase') return alert('Meldinger krever Supabase-modus.');
     if (!state.selectedRebus) return alert('Velg en rebus først.');
-    const input = document.querySelector(`[data-admin-message="${cssEscape(studentId)}"]`) ||
+    const sourceRoot = sourceButton?.closest('.message-composer, .chat-sidebar-reply, .group-message-box') || null;
+    const input = sourceRoot?.querySelector('input, textarea') ||
+      document.querySelector(`[data-sidebar-message-input="${cssEscape(studentId)}"]`) ||
       document.querySelector(`[data-chat-message="${cssEscape(studentId)}"]`) ||
-      document.querySelector(`[data-sidebar-message-input="${cssEscape(studentId)}"]`);
+      document.querySelector(`[data-admin-message="${cssEscape(studentId)}"]`);
     const body = input?.value.trim();
     if (!body) return alert('Skriv en melding først.');
     const { error } = await state.supabase.from('group_messages').insert({
