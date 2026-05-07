@@ -1,8 +1,12 @@
 const TASK_TYPES = {
   TEXT: 'text',
+  FIND_DESTINATION: 'find_destination',
+  NUMBER: 'number',
   MULTIPLE_CHOICE: 'multiple_choice',
+  MULTI_SELECT: 'multi_select',
   PHOTO: 'photo',
   VIDEO: 'video',
+  AUDIO: 'audio',
   TEACHER_APPROVED: 'teacher_approved'
 };
 

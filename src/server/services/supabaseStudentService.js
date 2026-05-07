@@ -211,6 +211,14 @@ function evaluateAnswer(task, answer, optionIds) {
     };
   }
 
+  if (task.type === 'find_destination') {
+    return {
+      answerText: '[FUNNET_FREM] Laget fant riktig sted.',
+      correct: true,
+      pointsAwarded: task.points
+    };
+  }
+
   if (task.answer) {
     const correct = String(answer || '').trim().toLowerCase() === String(task.answer).trim().toLowerCase();
     return {

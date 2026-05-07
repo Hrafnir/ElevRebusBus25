@@ -1376,7 +1376,7 @@
           </span>
         </div>
         <p>${escapeHtml(task.prompt || task.description || 'Ingen oppgavetekst.')}</p>
-        <small>${escapeHtml(task.type)} · ${task.points} poeng · ${task.location ? `${task.location.lat}, ${task.location.lng}` : 'Ingen egen lokasjon'}</small>
+        <small>${escapeHtml(adminTaskTypeLabel(task.type))} · ${task.points} poeng · ${task.location ? `${task.location.lat}, ${task.location.lng}` : 'Ingen egen lokasjon'}</small>
         ${task.options?.length ? `<p><strong>Alternativer:</strong> ${task.options.map(option => `${option.is_correct ? '✓ ' : ''}${escapeHtml(option.label)}`).join(' · ')}</p>` : ''}
         ${task.config?.numberRules ? `<p><strong>Tall:</strong> Riktig ${escapeHtml(task.config.numberRules.correctValue)}${task.config.numberRules.useTolerance ? ` · ${task.config.numberRules.bands.map(band => `±${band.maxDeviation}: ${band.points}p`).join(' · ')}` : ''}</p>` : ''}
         ${task.assets?.length ? `<p><strong>Media:</strong> ${task.assets.map(asset => `<a href="${escapeHtml(asset.url || '#')}" target="_blank" rel="noreferrer">${escapeHtml(asset.title || asset.type)}</a>`).join(' · ')}</p>` : ''}
@@ -1507,6 +1507,7 @@
           answerMode: $('task-type').value,
           createdInBuilder: true,
           hasTeacherMedia: state.assetRows.length > 0,
+          ...(buildFindDestinationConfig() ? { findDestination: buildFindDestinationConfig() } : {}),
           ...(buildNumberRules() ? { numberRules: buildNumberRules() } : {})
         }
       };
@@ -1587,6 +1588,7 @@
     $('task-radius').value = task.geofence_radius_meters || 30;
     $('task-prompt').value = task.prompt || '';
     $('task-answer').value = task.answer || '';
+    $('find-show-distance').checked = task.config?.findDestination?.showDistance !== false;
     state.selectedStopId = task.stop_id || '';
     renderStopSelect();
     state.optionRows = task.options?.length ? task.options.map(option => ({
@@ -1676,6 +1678,7 @@
     ];
     state.assetRows = [];
     state.hintRows = [];
+    $('find-show-distance').checked = true;
     state.numberBands = [
       { id: crypto.randomUUID(), maxDeviation: 0, points: Number($('task-points').value || 5) },
       { id: crypto.randomUUID(), maxDeviation: 1, points: Math.max(0, Number($('task-points').value || 5) - 1) },
@@ -1692,7 +1695,8 @@
     const usesOptions = type === 'multiple_choice' || type === 'multi_select';
     $('options-builder').hidden = !usesOptions;
     $('number-builder').hidden = type !== 'number';
-    $('task-answer').closest('label').hidden = usesOptions || ['number', 'photo', 'video', 'audio', 'teacher_approved'].includes(type);
+    $('find-destination-builder').hidden = type !== 'find_destination';
+    $('task-answer').closest('label').hidden = usesOptions || ['number', 'find_destination', 'photo', 'video', 'audio', 'teacher_approved'].includes(type);
     if (usesOptions && state.optionRows.length < 3) {
       while (state.optionRows.length < 3) addOptionRow(false);
       renderOptionRows();
@@ -1905,6 +1909,29 @@
       useTolerance,
       bands: useTolerance ? bands : [{ maxDeviation: 0, points: Number($('task-points').value || 0) }]
     };
+  }
+
+  function buildFindDestinationConfig() {
+    if ($('task-type').value !== 'find_destination') return null;
+    return {
+      showDistance: $('find-show-distance').checked
+    };
+  }
+
+  function adminTaskTypeLabel(type) {
+    const labels = {
+      text: 'Tekstsvar',
+      find_destination: 'Finn frem!',
+      number: 'Tallsvar',
+      multiple_choice: 'Multiple choice',
+      multi_select: 'Flere riktige valg',
+      photo: 'Bildeinnlevering',
+      video: 'Videoinnlevering',
+      audio: 'Lydoppgave',
+      teacher_approved: 'Lærergodkjent',
+      qr_code: 'Kode/QR'
+    };
+    return labels[type] || type || 'Oppgave';
   }
 
   async function createStudent() {

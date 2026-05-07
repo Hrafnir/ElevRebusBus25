@@ -163,6 +163,7 @@
     const progress = progressByTaskId.get(task.id);
     const locationState = taskLocationState(task);
     const title = taskTitlePrefix(currentIndex, tasks.length);
+    const isFindTask = isFindDestinationTask(task);
     return `
       <div class="student-topline">
         <p class="muted">${progressByTaskId.size} av ${tasks.length} oppgaver levert.</p>
@@ -172,8 +173,9 @@
       <section class="task-group">
         <p class="eyebrow">${title}</p>
         <h3>${escapeHtml(locationTitle(task))}</h3>
-        ${locationState.location ? `<p class="muted">Gå til markøren på kartet. Radius: ${locationState.radius} meter.</p>` : ''}
-        ${locationState.location && !locationState.inside ? `
+        ${locationState.location && !isFindTask ? `<p class="muted">Gå til markøren på kartet. Radius: ${locationState.radius} meter.</p>` : ''}
+        ${locationState.location && isFindTask ? renderFindDestinationNotice(task, locationState) : ''}
+        ${locationState.location && !locationState.inside && !isFindTask ? `
           <p class="notice">Oppgaven åpnes når dere er innenfor geofence. ${locationState.distanceText}</p>
         ` : renderTask(task, tasks.length, progress)}
       </section>
@@ -192,7 +194,7 @@
           ${progress ? renderProgressBadge(progress) : ''}
         </div>
         ${task.prompt || task.description ? `<p>${escapeHtml(task.prompt || task.description)}</p>` : ''}
-        ${task.location ? `<p class="muted">Presis lokasjon: ${escapeHtml(task.location.label || '')} ${formatCoordinate(task.location.lat)}, ${formatCoordinate(task.location.lng)}</p>` : ''}
+        ${task.location && !isFindDestinationTask(task) ? `<p class="muted">Presis lokasjon: ${escapeHtml(task.location.label || '')} ${formatCoordinate(task.location.lat)}, ${formatCoordinate(task.location.lng)}</p>` : ''}
         ${renderAssets(task.assets || [])}
         ${renderHints(task.hints || [])}
         ${progress && progress.correct !== false ? renderProgressDetails(progress) : `${progress ? renderRetryDetails(progress) : ''}${taskForm(task)}${skipTaskBox(task)}`}
@@ -239,6 +241,13 @@
       return `
         <label><span>Tall-svar</span><input id="answer-${task.id}" type="number" inputmode="decimal" step="any" placeholder="Skriv et tall"></label>
         <button data-submit-task="${task.id}">Lever</button>
+        <p id="task-status-${task.id}" class="muted"></p>
+      `;
+    }
+
+    if (isFindDestinationTask(task)) {
+      return `
+        <button data-submit-task="${task.id}">Vi er fremme</button>
         <p id="task-status-${task.id}" class="muted"></p>
       `;
     }
@@ -350,8 +359,8 @@
       }
     } else {
       const input = document.getElementById(`answer-${taskId}`);
-      payload.answer = input ? input.value : '';
-      if (!String(payload.answer).trim() && task?.type !== 'teacher_approved') {
+      payload.answer = isFindDestinationTask(task) ? 'Fremme' : (input ? input.value : '');
+      if (!String(payload.answer).trim() && task?.type !== 'teacher_approved' && !isFindDestinationTask(task)) {
         if (status) status.textContent = 'Skriv inn et svar først.';
         return;
       }
@@ -680,6 +689,11 @@
     const task = tasks[currentIndex];
     const location = taskTargetLocation(task);
     if (!location) return;
+    if (isFindDestinationTask(task)) {
+      if (targetMarker) targetMarker.setMap(null);
+      targetMarker = null;
+      return;
+    }
     if (!targetMarker) {
       targetMarker = new google.maps.Marker({
         map: studentMap,
@@ -713,6 +727,20 @@
     };
   }
 
+  function renderFindDestinationNotice(task, locationState) {
+    if (locationState.inside) {
+      return `<p class="notice success-notice">Dere er innenfor området. Bekreft når dere er klare til å gå videre.</p>`;
+    }
+    if (task.config?.findDestination?.showDistance === false) {
+      return '<p class="notice">Finn riktig sted. Oppgaven kan leveres når dere er innenfor området.</p>';
+    }
+    return `<p class="notice">Finn riktig sted. ${locationState.distanceText || 'Venter på GPS-posisjon.'}</p>`;
+  }
+
+  function isFindDestinationTask(task) {
+    return task?.type === 'find_destination';
+  }
+
   function currentGateKey() {
     if (!session) return '';
     const tasks = [...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
@@ -728,6 +756,7 @@
   }
 
   function locationTitle(task) {
+    if (isFindDestinationTask(task)) return task?.title || 'Finn frem!';
     const location = taskTargetLocation(task);
     return location?.label || task?.stop?.title || task?.title || 'Neste post';
   }
@@ -767,6 +796,7 @@
   function taskTypeLabel(type) {
     const labels = {
       text: 'Tekstsvar',
+      find_destination: 'Finn frem!',
       number: 'Tall-svar',
       multiple_choice: 'Ett riktig svar',
       multi_select: 'Flere riktige svar',
