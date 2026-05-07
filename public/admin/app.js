@@ -942,6 +942,11 @@
     bindSubmissionActions(list);
   }
 
+  async function refreshSelectedRebusForSubmissions() {
+    if (state.mode !== 'supabase' || !state.selectedRebus?.id) return;
+    await selectRebus(state.selectedRebus.id);
+  }
+
   function allSubmissionRows() {
     const students = state.selectedRebus?.students || [];
     return students.flatMap(student => sortedSubmissions(student).map(submission => ({ student, submission })))
@@ -970,7 +975,13 @@
           <p class="muted">${escapeHtml(submission.content_type || submission.contentType || 'fil')} · ${formatFileSize(submission.size_bytes || submission.sizeBytes)} · ${formatClock(submission.created_at || submission.createdAt)}</p>
         </div>
         <div class="submission-actions">
-          <button class="ghost compact" type="button" data-open-submission="${escapeHtml(submission.storage_path || submission.storagePath || '')}">Åpne</button>
+          <button
+            class="ghost compact"
+            type="button"
+            data-open-submission="${escapeHtml(submission.storage_path || submission.storagePath || '')}"
+            data-submission-type="${escapeHtml(submission.content_type || submission.contentType || '')}"
+            data-submission-name="${escapeHtml(submission.original_name || submission.originalName || 'Innlevering')}"
+          >Åpne</button>
           <label><span>Poeng</span><input data-manual-points="${escapeHtml(progressId)}" type="number" min="0" max="${maxPoints}" value="${currentPoints}"></label>
           <button class="compact" type="button" data-save-manual-score="${escapeHtml(progressId)}" ${progressId ? '' : 'disabled'}>Lagre poeng</button>
         </div>
@@ -980,7 +991,7 @@
 
   function bindSubmissionActions(root = document) {
     root.querySelectorAll('[data-open-submission]').forEach(button => {
-      button.addEventListener('click', () => openSubmission(button.dataset.openSubmission).catch(error => alert(error.message)));
+      button.addEventListener('click', () => openSubmission(button).catch(error => alert(error.message)));
     });
     root.querySelectorAll('[data-save-manual-score]').forEach(button => {
       button.addEventListener('click', () => saveManualScore(button.dataset.saveManualScore, button).catch(error => alert(error.message)));
@@ -2120,14 +2131,54 @@
     await loadLive();
   }
 
-  async function openSubmission(storagePath) {
+  async function openSubmission(sourceButton) {
     if (state.mode !== 'supabase') return alert('Mediaåpning krever Supabase-modus.');
+    const storagePath = sourceButton?.dataset.openSubmission || '';
     if (!storagePath) return alert('Fant ikke filstien for innleveringen.');
     const { data, error } = await state.supabase.storage
       .from('submissions')
       .createSignedUrl(storagePath, 60 * 10);
     if (error) throw error;
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    showSubmissionPreview({
+      url: data.signedUrl,
+      contentType: sourceButton?.dataset.submissionType || '',
+      title: sourceButton?.dataset.submissionName || 'Innlevering'
+    });
+  }
+
+  function showSubmissionPreview({ url, contentType, title }) {
+    const modal = $('submission-preview-modal');
+    const body = $('submission-preview-body');
+    const titleElement = $('submission-preview-title');
+    if (!modal || !body || !titleElement) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    titleElement.textContent = title || 'Innlevering';
+    const type = String(contentType || '').toLowerCase();
+    if (type.startsWith('image/')) {
+      body.innerHTML = `<img class="submission-preview-media" src="${escapeAttribute(url)}" alt="${escapeAttribute(title || 'Innlevering')}">`;
+    } else if (type.startsWith('video/')) {
+      body.innerHTML = `<video class="submission-preview-media" src="${escapeAttribute(url)}" controls autoplay></video>`;
+    } else if (type.startsWith('audio/')) {
+      body.innerHTML = `<audio class="submission-preview-audio" src="${escapeAttribute(url)}" controls autoplay></audio>`;
+    } else {
+      body.innerHTML = `
+        <p class="muted">Denne filtypen kan ikke forhåndsvises sikkert i nettleseren.</p>
+        <a class="button-like" href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">Åpne i ny fane</a>
+      `;
+    }
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+  }
+
+  function closeSubmissionPreview() {
+    const modal = $('submission-preview-modal');
+    const body = $('submission-preview-body');
+    if (!modal || !body) return;
+    modal.hidden = true;
+    body.innerHTML = '';
+    document.body.classList.remove('modal-open');
   }
 
   async function saveManualScore(progressId, sourceButton) {
@@ -2157,6 +2208,7 @@
   async function downloadSubmissionsZip() {
     if (state.mode !== 'supabase') return alert('ZIP-nedlasting krever Supabase-modus.');
     if (!state.selectedRebus) return alert('Velg en rebus først.');
+    await refreshSelectedRebusForSubmissions();
     const rows = allSubmissionRows();
     if (!rows.length) return alert('Ingen innleveringer å laste ned.');
     const button = $('download-submissions-button');
@@ -2189,6 +2241,7 @@
   async function deleteAllSubmissions() {
     if (state.mode !== 'supabase') return alert('Sletting krever Supabase-modus.');
     if (!state.selectedRebus) return alert('Velg en rebus først.');
+    await refreshSelectedRebusForSubmissions();
     const rows = allSubmissionRows();
     if (!rows.length) return alert('Ingen innleveringer å slette.');
     const confirmation = prompt(`Dette sletter ${rows.length} innleverte filer for "${state.selectedRebus.title}". Poeng og progresjon beholdes. Skriv SLETT for å bekrefte.`);
@@ -2487,7 +2540,7 @@
       panel.hidden = panel.id !== `tab-${tab}`;
     });
     if (tab === 'groups') setDefaultGroupFields();
-    if (tab === 'submissions') renderSubmissionList();
+    if (tab === 'submissions') refreshSelectedRebusForSubmissions().catch(error => alert(error.message));
     if (tab === 'chat') renderChatTab();
   }
 
@@ -2585,6 +2638,8 @@
       .replaceAll("'", '&#039;');
   }
 
+  const escapeAttribute = escapeHtml;
+
   $('supabase-login-button').addEventListener('click', () => signInWithSupabaseGoogle().catch(error => alert(error.message)));
   $('logout-button').addEventListener('click', () => logout().catch(error => alert(error.message)));
   $('login-button').addEventListener('click', () => devLogin().catch(error => alert(error.message)));
@@ -2622,6 +2677,12 @@
   $('print-groups-button').addEventListener('click', printGroups);
   $('download-submissions-button').addEventListener('click', () => downloadSubmissionsZip().catch(error => alert(error.message)));
   $('delete-submissions-button').addEventListener('click', () => deleteAllSubmissions().catch(error => alert(error.message)));
+  document.querySelectorAll('[data-close-submission-preview]').forEach(button => {
+    button.addEventListener('click', closeSubmissionPreview);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeSubmissionPreview();
+  });
   $('use-current-location-button').addEventListener('click', useCurrentLocation);
   setInterval(() => loadLive().catch(() => {}), 5000);
   setInterval(() => loadGroupMessages().catch(() => {}), 6000);

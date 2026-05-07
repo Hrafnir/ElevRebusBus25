@@ -8,6 +8,16 @@
 </head>
 <body>
   <div id="notification-stack" class="notification-stack" aria-live="polite"></div>
+  <div id="submission-preview-modal" class="preview-modal" hidden>
+    <div class="preview-modal-backdrop" data-close-submission-preview></div>
+    <section class="preview-modal-panel" role="dialog" aria-modal="true" aria-labelledby="submission-preview-title">
+      <div class="builder-heading">
+        <h2 id="submission-preview-title">Innlevering</h2>
+        <button class="ghost compact" type="button" data-close-submission-preview>Lukk</button>
+      </div>
+      <div id="submission-preview-body" class="submission-preview-body"></div>
+    </section>
+  </div>
   <main class="shell">
     <header class="app-header">
       <div>

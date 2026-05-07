@@ -9,6 +9,7 @@
   let taskMarkers = [];
   let currentCoords = null;
   let lastGateKey = '';
+  let lastUploadReceipt = null;
   let locationWatchId = null;
   let messagePollId = null;
   const seenAdminMessageIds = new Set();
@@ -167,6 +168,7 @@
         <p class="muted">${progressByTaskId.size} av ${tasks.length} oppgaver levert.</p>
         <button class="ghost compact" type="button" data-logout>Logg ut</button>
       </div>
+      ${renderUploadReceipt()}
       <section class="task-group">
         <p class="eyebrow">${title}</p>
         <h3>${escapeHtml(locationTitle(task))}</h3>
@@ -246,7 +248,7 @@
       return `
         <label><span>${taskTypeLabel(task.type)}</span><input id="file-${task.id}" type="file" accept="${accept}"></label>
         <label><span>Kommentar</span><input id="note-${task.id}" placeholder="Valgfri kommentar"></label>
-        <button data-upload-task="${task.id}">Last opp</button>
+        <button data-upload-task="${task.id}">Bekreft at alle filer er levert, gå til neste oppgave</button>
         <p id="upload-status-${task.id}" class="muted"></p>
       `;
     }
@@ -309,6 +311,15 @@
         <strong>${points} poeng registrert</strong>
         ${answer}
       </div>
+    `;
+  }
+
+  function renderUploadReceipt() {
+    if (!lastUploadReceipt) return '';
+    return `
+      <p class="notice success-notice">
+        Innleveringen er registrert: ${escapeHtml(lastUploadReceipt.fileName)}. Dere er sendt videre til neste oppgave.
+      </p>
     `;
   }
 
@@ -379,7 +390,7 @@
       return;
     }
 
-    if (status) status.textContent = mode === 'supabase' ? 'Registrerer innlevering...' : 'Laster opp...';
+    if (status) status.textContent = mode === 'supabase' ? 'Laster opp og registrerer innlevering...' : 'Laster opp...';
     if (mode === 'supabase') {
       const uploadName = `${Date.now()}-${safeUploadName(file.name)}`;
       const storagePath = [
@@ -408,6 +419,7 @@
       session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
       session.submissions = session.submissions || [];
       session.submissions.push(data.submission);
+      lastUploadReceipt = { taskId, fileName: file.name };
     } else {
       const formData = new FormData();
       formData.append('taskId', taskId);
@@ -421,6 +433,7 @@
       session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
       session.submissions = session.submissions || [];
       session.submissions.push(data.submission);
+      lastUploadReceipt = { taskId, fileName: file.name };
     }
     renderSession();
   }
