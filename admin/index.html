@@ -130,16 +130,16 @@
             <h2>Oppgaver</h2>
             <button id="new-task-button" type="button">Ny oppgave</button>
           </div>
-          <div id="task-list" class="list"></div>
 
           <section id="task-editor" class="stack" hidden>
         <div class="builder-heading">
           <h2 id="task-editor-title">Ny oppgave</h2>
           <button id="cancel-task-edit-button" class="ghost" type="button">Lukk</button>
         </div>
-        <section class="builder-section">
-          <div class="builder-heading">
-            <h3>Stopp/lokasjon</h3>
+        <details class="builder-section collapsed-builder-section">
+          <summary>Stopp/lokasjon</summary>
+          <div class="builder-heading compact-heading">
+            <h3>Start/stopp</h3>
             <button id="create-stop-button" class="ghost" type="button">Opprett stopp fra kartet</button>
           </div>
           <div class="form-grid">
@@ -147,7 +147,7 @@
             <label><span>Nytt stopp-navn</span><input id="stop-title" placeholder="F.eks. Hovedinngangen"></label>
           </div>
           <p class="muted">Flere oppgaver kan ligge på samme stopp. Elevene løser da alle oppgavene på stedet før de sendes videre.</p>
-        </section>
+        </details>
         <div class="map-tools">
           <input id="place-search" placeholder="Søk etter sted eller adresse">
           <button id="use-current-location-button" class="ghost">Bruk min posisjon</button>
@@ -206,6 +206,7 @@
         </section>
         <button id="create-task-button">Lagre oppgave</button>
           </section>
+          <div id="task-list" class="list"></div>
         </section>
 
         <section id="tab-groups" class="admin-tab stack" hidden>

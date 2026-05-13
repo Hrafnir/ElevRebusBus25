@@ -1564,11 +1564,20 @@
     $('create-task-button').textContent = taskId ? 'Lagre endringer' : 'Lagre oppgave';
     if (!taskId) {
       clearTaskForm();
+      focusTaskEditor();
       return;
     }
     const task = state.selectedRebus.tasks.find(item => item.id === taskId);
     if (!task) return;
     fillTaskForm(task);
+    focusTaskEditor();
+  }
+
+  function focusTaskEditor() {
+    requestAnimationFrame(() => {
+      $('task-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('task-title')?.focus({ preventScroll: true });
+    });
   }
 
   function closeTaskEditor() {
