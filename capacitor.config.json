@@ -1,0 +1,8 @@
+{
+  "appId": "com.hrafnir.rebuselev",
+  "appName": "Rebus Elev",
+  "webDir": "android-web",
+  "server": {
+    "androidScheme": "https"
+  }
+}

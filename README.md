@@ -79,6 +79,18 @@ Supabase-tabeller ligger i:
 supabase/migrations/
 ```
 
+## Android Elevapp
+
+Første mobilspor er en Android-app kun for elever. Appen pakkes med Capacitor og bygger bare `public/student` inn i Android-prosjektet.
+
+```bash
+npm install
+npm run check
+npm run android:sync
+```
+
+Debug-APK bygges med Gradle fra Android-prosjektet. For Play Store må det lages en signert AAB i Android Studio. Se `docs/android-play-store.md`.
+
 ## Hva Kan Testes Nå?
 
 - Logge inn på admin i lokal dev-modus.
