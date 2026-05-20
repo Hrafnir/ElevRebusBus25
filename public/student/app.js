@@ -1047,7 +1047,7 @@
     organizations = data || [];
     select.innerHTML = organizations.length
       ? organizations.map(org => `<option value="${escapeAttributeValue(org.id)}">${escapeHtml(org.name)}</option>`).join('')
-      : '<option value="">Ingen aktive organisasjoner</option>';
+      : '<option value="">Ingen organisasjoner med rebuser</option>';
   }
 
   async function loadConfig() {
