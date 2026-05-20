@@ -21,7 +21,6 @@
     marker: null,
     liveMap: null,
     liveMarkers: new Map(),
-    liveMapInitialViewKey: '',
     autocomplete: null,
     loadedMapsKey: '',
     optionRows: [],
@@ -2512,13 +2511,11 @@
       });
     }
 
-    const bounds = new google.maps.LatLngBounds();
     const activeIds = new Set();
     positioned.forEach((participant, index) => {
       const id = participant.id || participant.displayName || String(index);
       activeIds.add(id);
       const position = participant.latestLocation;
-      bounds.extend(position);
       const label = participant.displayName || `Gruppe ${index + 1}`;
       let marker = state.liveMarkers.get(id);
       if (!marker) {
@@ -2540,16 +2537,6 @@
         state.liveMarkers.delete(id);
       }
     });
-    const liveViewKey = state.selectedRebus?.id || 'local-live';
-    if (state.liveMapInitialViewKey === liveViewKey) return;
-    state.liveMapInitialViewKey = liveViewKey;
-
-    if (positioned.length === 1) {
-      state.liveMap.setCenter(positioned[0].latestLocation);
-      state.liveMap.setZoom(16);
-    } else {
-      state.liveMap.fitBounds(bounds);
-    }
   }
 
   function loadScript(src, id = null) {
