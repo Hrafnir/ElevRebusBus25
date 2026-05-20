@@ -614,6 +614,19 @@ button.compact {
   margin-bottom: 0;
 }
 
+.upload-safe-box {
+  margin: 12px 0;
+  border: 1px solid rgba(93, 211, 158, 0.5);
+  border-left: 5px solid var(--green);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--success-bg);
+}
+
+.upload-safe-box p {
+  margin: 4px 0 0;
+}
+
 .group-card {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.4fr);
@@ -1060,6 +1073,47 @@ body.modal-open {
   display: grid;
   gap: 10px;
   width: min(360px, calc(100vw - 32px));
+}
+
+.geofence-alert {
+  position: fixed;
+  inset: auto 16px max(16px, env(safe-area-inset-bottom)) 16px;
+  z-index: 11000;
+  display: grid;
+  gap: 8px;
+  width: min(620px, calc(100vw - 32px));
+  margin: 0 auto;
+  border: 2px solid var(--green);
+  border-radius: 8px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+  background: #0f2b20;
+  padding: 16px;
+  animation: geofencePulse 1s ease-in-out infinite alternate;
+}
+
+.geofence-alert strong {
+  color: var(--text);
+  font-size: 1.45rem;
+}
+
+.geofence-alert p {
+  margin: 0;
+  color: var(--text);
+}
+
+.geofence-alert button {
+  width: fit-content;
+}
+
+@keyframes geofencePulse {
+  from {
+    transform: translateY(0);
+    border-color: var(--green);
+  }
+  to {
+    transform: translateY(-4px);
+    border-color: var(--amber);
+  }
 }
 
 .app-notification {

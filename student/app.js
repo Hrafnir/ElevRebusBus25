@@ -12,8 +12,13 @@
   let lastUploadReceipt = null;
   let activeStudentTab = 'task';
   let locationWatchId = null;
+  let backgroundLocationWatchId = null;
+  let alertAudioContext = null;
+  let wakeLockSentinel = null;
   let messagePollId = null;
   let organizations = [];
+  const geofenceAlertedTaskIds = new Set();
+  const pendingUploads = new Map();
   const seenAdminMessageIds = new Set();
   const seenScoreAdjustmentIds = new Set();
 
@@ -101,6 +106,9 @@
     });
     document.querySelectorAll('[data-upload-task]').forEach(button => {
       button.addEventListener('click', () => submitFileTask(button.dataset.uploadTask).catch(error => showUploadError(button.dataset.uploadTask, error)));
+    });
+    document.querySelectorAll('[data-confirm-upload-task]').forEach(button => {
+      button.addEventListener('click', () => confirmUploadedTask(button.dataset.confirmUploadTask).catch(error => showUploadError(button.dataset.confirmUploadTask, error)));
     });
     document.querySelectorAll('[data-skip-task]').forEach(button => {
       button.addEventListener('click', () => skipTask(button.dataset.skipTask).catch(error => showTaskError(button.dataset.skipTask, error)));
@@ -363,10 +371,21 @@
 
     if (task.type === 'photo' || task.type === 'video' || task.type === 'audio') {
       const accept = task.type === 'photo' ? 'image/*' : task.type === 'audio' ? 'audio/*' : 'video/*';
+      const pendingUpload = pendingUploads.get(task.id);
+      if (pendingUpload) {
+        return `
+          <div class="upload-safe-box">
+            <strong>Filen er trygt lastet opp</strong>
+            <p>${escapeHtml(pendingUpload.fileName)} er lagret i Supabase Storage. Bekreft levering når dere er klare til å gå videre.</p>
+          </div>
+          <button data-confirm-upload-task="${task.id}">Bekreft levering og gå videre</button>
+          <p id="upload-status-${task.id}" class="muted"></p>
+        `;
+      }
       return `
         <label><span>${taskTypeLabel(task.type)}</span><input id="file-${task.id}" type="file" accept="${accept}"></label>
         <label><span>Kommentar</span><input id="note-${task.id}" placeholder="Valgfri kommentar"></label>
-        <button data-upload-task="${task.id}">Bekreft at alle filer er levert, gå til neste oppgave</button>
+        <button data-upload-task="${task.id}">Last opp fil trygt</button>
         <p id="upload-status-${task.id}" class="muted"></p>
       `;
     }
@@ -508,7 +527,7 @@
       return;
     }
 
-    if (status) status.textContent = mode === 'supabase' ? 'Laster opp og registrerer innlevering...' : 'Laster opp...';
+    if (status) status.textContent = mode === 'supabase' ? 'Laster opp fil til trygg lagring...' : 'Laster opp...';
     if (mode === 'supabase') {
       const uploadName = `${Date.now()}-${safeUploadName(file.name)}`;
       const storagePath = [
@@ -523,21 +542,20 @@
         .upload(storagePath, file, { contentType, upsert: false });
       if (uploadError) throw uploadError;
 
-      const { data, error } = await supabase.rpc('student_record_submission', {
-        raw_token: session.token,
-        target_task_id: taskId,
-        storage_path_value: storagePath,
-        original_name_value: file.name,
-        content_type_value: contentType,
-        size_bytes_value: file.size,
-        note_value: noteInput ? noteInput.value : ''
+      pendingUploads.set(taskId, {
+        taskId,
+        storagePath,
+        fileName: file.name,
+        contentType,
+        size: file.size,
+        note: noteInput ? noteInput.value : ''
       });
-      if (error) throw error;
-      if (!data) throw new Error('Kunne ikke registrere innleveringen.');
-      session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
-      session.submissions = session.submissions || [];
-      session.submissions.push(data.submission);
-      lastUploadReceipt = { taskId, fileName: file.name };
+      if (status) status.textContent = 'Filen er trygt lastet opp. Bekreft levering for å gå videre.';
+      showNotification('Fil trygt lastet opp', `${file.name} er lagret. Bekreft levering for å gå videre.`);
+      playUploadSuccessSound();
+      renderSession();
+      focusCurrentTask();
+      return;
     } else {
       const formData = new FormData();
       formData.append('taskId', taskId);
@@ -553,6 +571,35 @@
       session.submissions.push(data.submission);
       lastUploadReceipt = { taskId, fileName: file.name };
     }
+    renderSession();
+  }
+
+  async function confirmUploadedTask(taskId) {
+    const pendingUpload = pendingUploads.get(taskId);
+    const status = document.getElementById(`upload-status-${taskId}`);
+    if (!pendingUpload) {
+      if (status) status.textContent = 'Last opp filen først.';
+      return;
+    }
+    if (status) status.textContent = 'Registrerer levering...';
+    const { data, error } = await supabase.rpc('student_record_submission', {
+      raw_token: session.token,
+      target_task_id: taskId,
+      storage_path_value: pendingUpload.storagePath,
+      original_name_value: pendingUpload.fileName,
+      content_type_value: pendingUpload.contentType,
+      size_bytes_value: pendingUpload.size,
+      note_value: pendingUpload.note
+    });
+    if (error) throw error;
+    if (!data) throw new Error('Kunne ikke registrere innleveringen.');
+    session.progress = [...(session.progress || []).filter(item => item.taskId !== taskId), data.progress];
+    session.submissions = session.submissions || [];
+    session.submissions.push(data.submission);
+    pendingUploads.delete(taskId);
+    lastUploadReceipt = { taskId, fileName: pendingUpload.fileName };
+    showNotification('Innlevering bekreftet', `${pendingUpload.fileName} er levert og dere er sendt videre.`);
+    playUploadSuccessSound();
     renderSession();
   }
 
@@ -687,6 +734,8 @@
       navigator.geolocation.clearWatch(locationWatchId);
       locationWatchId = null;
     }
+    stopBackgroundLocationWatch();
+    releaseWakeLock();
     if (targetMarker) targetMarker.setMap(null);
     targetMarker = null;
     $('login-panel').hidden = false;
@@ -694,52 +743,126 @@
   }
 
   function startLocationSending() {
+    initStudentMap().catch(() => {});
+    armStudentAlerts().catch(() => {});
+    requestNativeNotificationPermission().catch(() => {});
+    if (startBackgroundLocationWatch()) return;
+    startBrowserLocationWatch();
+  }
+
+  function startBackgroundLocationWatch() {
+    const backgroundGeolocation = nativePlugin('BackgroundGeolocation');
+    if (!backgroundGeolocation || backgroundLocationWatchId) return Boolean(backgroundLocationWatchId);
+    backgroundGeolocation.addWatcher({
+      backgroundTitle: 'Rebus Elev følger posisjonen',
+      backgroundMessage: 'Varsler når dere kommer innenfor posten.',
+      requestPermissions: true,
+      stale: false,
+      distanceFilter: 5
+    }, (location, error) => {
+      if (error) {
+        setLocationStatus(error.code === 'NOT_AUTHORIZED' ? 'Posisjonstillatelse mangler.' : 'Kunne ikke følge posisjon i bakgrunnen.');
+        return;
+      }
+      if (!location) return;
+      handleLocationUpdate({
+        lat: location.latitude,
+        lng: location.longitude,
+        accuracy: location.accuracy
+      });
+    }).then(id => {
+      backgroundLocationWatchId = id;
+      setLocationStatus('Bakgrunnsposisjon aktiv. Appen varsler når dere er ved posten.');
+    }).catch(error => {
+      setLocationStatus(`Bakgrunnsposisjon ikke aktiv: ${error.message || error}`);
+      startBrowserLocationWatch();
+    });
+    return true;
+  }
+
+  function startBrowserLocationWatch() {
     if (!navigator.geolocation) {
       setLocationStatus('Denne nettleseren støtter ikke posisjon.');
       return;
     }
-    initStudentMap().catch(() => {});
     if (locationWatchId !== null) {
       navigator.geolocation.clearWatch(locationWatchId);
     }
     locationWatchId = navigator.geolocation.watchPosition(position => {
-      currentCoords = {
+      handleLocationUpdate({
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         accuracy: position.coords.accuracy
-      };
-      updateStudentPosition(position.coords.latitude, position.coords.longitude);
-      const gateKey = currentGateKey();
-      if (gateKey !== lastGateKey) {
-        lastGateKey = gateKey;
-        renderSession();
-      } else {
-        renderStudentMapState([...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)));
-      }
-      if (mode === 'supabase') {
-        supabase.rpc('student_record_location', {
-          raw_token: session.token,
-          latitude_value: position.coords.latitude,
-          longitude_value: position.coords.longitude,
-          accuracy_value: position.coords.accuracy
-        }).then(({ error }) => {
-          if (error) setLocationStatus(`Posisjon ikke sendt: ${error.message}`);
-          else setLocationStatus(`Posisjon sendt ${new Date().toLocaleTimeString('no-NO')}.`);
-        }).catch(error => setLocationStatus(`Posisjon ikke sendt: ${error.message}`));
-      } else {
-        api('/api/student/location', {
-          method: 'POST',
-          body: JSON.stringify({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          })
-        }).then(() => setLocationStatus(`Posisjon sendt ${new Date().toLocaleTimeString('no-NO')}.`))
-          .catch(error => setLocationStatus(`Posisjon ikke sendt: ${error.message}`));
-      }
+      });
     }, error => {
       setLocationStatus(error.code === 1 ? 'Posisjon ble ikke tillatt på denne enheten.' : 'Kunne ikke hente posisjon.');
     }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+  }
+
+  function stopBackgroundLocationWatch() {
+    const backgroundGeolocation = nativePlugin('BackgroundGeolocation');
+    if (!backgroundGeolocation || !backgroundLocationWatchId) return;
+    backgroundGeolocation.removeWatcher({ id: backgroundLocationWatchId }).catch(() => {});
+    backgroundLocationWatchId = null;
+  }
+
+  function handleLocationUpdate(coords) {
+    currentCoords = coords;
+    updateStudentPosition(coords.lat, coords.lng);
+    const previousGateKey = lastGateKey;
+    const gateKey = currentGateKey();
+    const taskInfo = currentTaskInfo();
+    const enteredGeofence = taskInfo && gateKey !== previousGateKey && gateKey.endsWith(':inside');
+    if (gateKey !== lastGateKey) {
+      lastGateKey = gateKey;
+      renderSession();
+    } else {
+      renderStudentMapState([...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)));
+    }
+    if (enteredGeofence) handleGeofenceEntry(taskInfo.task);
+    sendLocation(coords);
+  }
+
+  function handleGeofenceEntry(task) {
+    if (!task || geofenceAlertedTaskIds.has(task.id)) return;
+    geofenceAlertedTaskIds.add(task.id);
+    switchStudentTab('task');
+    focusCurrentTask();
+    showGeofenceAlert(task);
+    showNotification('Dere er fremme!', `${locationTitle(task)} er åpnet. Løs oppgaven nå.`);
+    playGeofenceSound();
+    vibrateDevice();
+    sendNativeGeofenceNotification(task).catch(() => {});
+  }
+
+  function focusCurrentTask() {
+    requestAnimationFrame(() => {
+      switchStudentTab('task');
+      const taskPanel = $('student-tab-task');
+      taskPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const action = taskPanel?.querySelector('input:not([type="hidden"]), button[data-submit-task], button[data-upload-task], button[data-confirm-upload-task]');
+      action?.focus?.({ preventScroll: true });
+    });
+  }
+
+  function sendLocation(coords) {
+    if (mode === 'supabase') {
+      supabase.rpc('student_record_location', {
+        raw_token: session.token,
+        latitude_value: coords.lat,
+        longitude_value: coords.lng,
+        accuracy_value: coords.accuracy
+      }).then(({ error }) => {
+        if (error) setLocationStatus(`Posisjon ikke sendt: ${error.message}`);
+        else setLocationStatus(`Posisjon sendt ${new Date().toLocaleTimeString('no-NO')}.`);
+      }).catch(error => setLocationStatus(`Posisjon ikke sendt: ${error.message}`));
+    } else {
+      api('/api/student/location', {
+        method: 'POST',
+        body: JSON.stringify(coords)
+      }).then(() => setLocationStatus(`Posisjon sendt ${new Date().toLocaleTimeString('no-NO')}.`))
+        .catch(error => setLocationStatus(`Posisjon ikke sendt: ${error.message}`));
+    }
   }
 
   async function initStudentMap() {
@@ -860,12 +983,18 @@
 
   function currentGateKey() {
     if (!session) return '';
+    const taskInfo = currentTaskInfo();
+    if (!taskInfo) return 'done';
+    const state = taskLocationState(taskInfo.task);
+    return `${taskInfo.task.id}:${state.inside ? 'inside' : 'outside'}`;
+  }
+
+  function currentTaskInfo() {
+    if (!session) return null;
     const tasks = [...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
     const progressByTaskId = new Map((session.progress || []).map(item => [item.taskId, item]));
     const currentIndex = tasks.findIndex(task => !isTaskComplete(progressByTaskId.get(task.id)));
-    if (currentIndex === -1) return 'done';
-    const state = taskLocationState(tasks[currentIndex]);
-    return `${tasks[currentIndex].id}:${state.inside ? 'inside' : 'outside'}`;
+    return currentIndex === -1 ? null : { task: tasks[currentIndex], index: currentIndex, tasks };
   }
 
   function taskTargetLocation(task) {
@@ -963,6 +1092,24 @@
     setTimeout(() => item.remove(), 9000);
   }
 
+  function showGeofenceAlert(task) {
+    document.querySelectorAll('.geofence-alert').forEach(item => item.remove());
+    const alertBox = document.createElement('div');
+    alertBox.className = 'geofence-alert';
+    alertBox.setAttribute('role', 'alert');
+    alertBox.innerHTML = `
+      <strong>Dere er fremme!</strong>
+      <p>${escapeHtml(locationTitle(task))} er åpnet. Gå til oppgaven og lever svaret.</p>
+      <button type="button">Gå til oppgaven</button>
+    `;
+    alertBox.querySelector('button')?.addEventListener('click', () => {
+      alertBox.remove();
+      focusCurrentTask();
+    });
+    document.body.appendChild(alertBox);
+    setTimeout(() => alertBox.remove(), 18000);
+  }
+
   function showScoreNotification(points, reason) {
     const stack = $('notification-stack');
     const positive = Number(points) > 0;
@@ -977,9 +1124,9 @@
 
   function playNotificationSound() {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const audio = new AudioContext();
+      const audio = getAlertAudioContext();
+      if (!audio) return;
+      audio.resume?.();
       const oscillator = audio.createOscillator();
       const gain = audio.createGain();
       oscillator.type = 'sine';
@@ -994,6 +1141,134 @@
       oscillator.stop(audio.currentTime + 0.36);
     } catch (_error) {
       // Browsers may block sound until the page has had a user gesture.
+    }
+  }
+
+  function playGeofenceSound() {
+    try {
+      const audio = getAlertAudioContext();
+      if (!audio) return;
+      audio.resume?.();
+      [0, 0.18, 0.36, 0.72].forEach((offset, index) => {
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(index === 3 ? 1040 : 820, audio.currentTime + offset);
+        gain.gain.setValueAtTime(0.0001, audio.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.26, audio.currentTime + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + offset + 0.14);
+        oscillator.connect(gain);
+        gain.connect(audio.destination);
+        oscillator.start(audio.currentTime + offset);
+        oscillator.stop(audio.currentTime + offset + 0.16);
+      });
+    } catch (_error) {
+      // Browsers may block sound until the page has had a user gesture.
+    }
+  }
+
+  function playUploadSuccessSound() {
+    try {
+      const audio = getAlertAudioContext();
+      if (!audio) return;
+      audio.resume?.();
+      [660, 880].forEach((frequency, index) => {
+        const offset = index * 0.12;
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+        oscillator.frequency.setValueAtTime(frequency, audio.currentTime + offset);
+        gain.gain.setValueAtTime(0.0001, audio.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.18, audio.currentTime + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + offset + 0.16);
+        oscillator.connect(gain);
+        gain.connect(audio.destination);
+        oscillator.start(audio.currentTime + offset);
+        oscillator.stop(audio.currentTime + offset + 0.18);
+      });
+    } catch (_error) {
+      // Browsers may block sound until the page has had a user gesture.
+    }
+  }
+
+  async function armStudentAlerts() {
+    unlockAlertAudio();
+    await requestBrowserNotificationPermission();
+    await requestWakeLock();
+  }
+
+  function getAlertAudioContext() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    if (!alertAudioContext) alertAudioContext = new AudioContext();
+    return alertAudioContext;
+  }
+
+  function unlockAlertAudio() {
+    try {
+      const audio = getAlertAudioContext();
+      audio?.resume?.();
+    } catch (_error) {
+      // Browsers may still block sound until the next direct tap.
+    }
+  }
+
+  async function requestBrowserNotificationPermission() {
+    if (!('Notification' in window) || Notification.permission !== 'default') return;
+    try {
+      await Notification.requestPermission();
+    } catch (_error) {
+      // Notification permission is optional; the in-page alert still works.
+    }
+  }
+
+  async function requestWakeLock() {
+    if (!navigator.wakeLock || wakeLockSentinel || document.visibilityState !== 'visible') return;
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request('screen');
+      wakeLockSentinel.addEventListener('release', () => {
+        wakeLockSentinel = null;
+      });
+    } catch (_error) {
+      // Wake Lock is not available in every browser or battery mode.
+    }
+  }
+
+  function releaseWakeLock() {
+    wakeLockSentinel?.release?.().catch(() => {});
+    wakeLockSentinel = null;
+  }
+
+  function vibrateDevice() {
+    if (navigator.vibrate) navigator.vibrate([700, 180, 700, 180, 1000]);
+  }
+
+  function nativePlugin(name) {
+    return window.Capacitor?.Plugins?.[name] || null;
+  }
+
+  async function requestNativeNotificationPermission() {
+    const localNotifications = nativePlugin('LocalNotifications');
+    if (!localNotifications) return;
+    const permissions = await localNotifications.checkPermissions();
+    if (permissions.display !== 'granted') await localNotifications.requestPermissions();
+  }
+
+  async function sendNativeGeofenceNotification(task) {
+    const localNotifications = nativePlugin('LocalNotifications');
+    if (localNotifications) {
+      await requestNativeNotificationPermission();
+      await localNotifications.schedule({
+        notifications: [{
+          id: Math.floor(Date.now() % 2147483647),
+          title: 'Dere er fremme!',
+          body: `${locationTitle(task)} er åpnet. Løs oppgaven nå.`
+        }]
+      });
+      return;
+    }
+    if ('Notification' in window) {
+      const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+      if (permission === 'granted') new Notification('Dere er fremme!', { body: `${locationTitle(task)} er åpnet. Løs oppgaven nå.` });
     }
   }
 
@@ -1037,6 +1312,9 @@
       await loadStudentOrganizations();
     }
     $('login-button').addEventListener('click', () => login().catch(error => alert(error.message)));
+    document.addEventListener('visibilitychange', () => {
+      if (session && document.visibilityState === 'visible') requestWakeLock().catch(() => {});
+    });
     restoreSession().catch(() => {});
   }
 
