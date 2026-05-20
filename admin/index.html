@@ -154,14 +154,17 @@
             <div class="form-grid">
               <label><span>Navn</span><input id="edit-rebus-title" placeholder="Navn på rebusen"></label>
               <label><span>Beskrivelse</span><input id="edit-rebus-description" placeholder="Kort beskrivelse"></label>
+              <label><span>Rebuskode</span><input id="edit-rebus-code" autocomplete="off" placeholder="BJORN-NATUR"></label>
+              <label><span>Status</span><select id="edit-rebus-status"><option value="draft">Pauset / ikke aktiv</option><option value="published">Aktiv for elever</option><option value="archived">Arkivert</option></select></label>
             </div>
             <label class="check-label"><input id="edit-rebus-show-score" type="checkbox" checked> Elevene ser foreløpig poengsum underveis</label>
-            <button id="save-rebus-button" type="button">Lagre navn og beskrivelse</button>
+            <p class="muted">Elevene må velge organisasjon og skrive rebuskoden før de kan logge inn med gruppebruker og gruppekode.</p>
+            <button id="save-rebus-button" type="button">Lagre rebusinnstillinger</button>
             <div class="compact-settings">
-              <h3>Inviter admin til denne rebusen</h3>
+              <h3>Inviter til denne rebusen</h3>
               <div class="form-grid">
                 <label><span>E-post</span><input id="rebus-invite-email" type="email" placeholder="kollega@skole.no"></label>
-                <label><span>Tilgang</span><input value="Admin bare i denne rebusen" disabled></label>
+                <label><span>Rolle</span><select id="rebus-invite-role"><option value="teacher">Lærer</option><option value="admin">Admin</option></select></label>
               </div>
               <button id="invite-rebus-admin-button" class="ghost compact" type="button">Inviter til rebus</button>
               <p class="muted">Personen får tilgang når hen logger inn med Google med samme e-post.</p>

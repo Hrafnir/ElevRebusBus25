@@ -501,14 +501,15 @@
     if (state.mode !== 'supabase' || !state.selectedRebus) return alert('Velg en rebus først.');
     const email = $('rebus-invite-email').value.trim().toLowerCase();
     if (!email) return alert('Skriv inn e-post først.');
-    const { error } = await state.supabase
-      .from('rebus_invitations')
-      .upsert({
-        rebus_id: state.selectedRebus.id,
-        email,
-        invited_by: state.user.id,
-        accepted_at: null
-      }, { onConflict: 'rebus_id,email' });
+      const { error } = await state.supabase
+        .from('rebus_invitations')
+        .upsert({
+          rebus_id: state.selectedRebus.id,
+          email,
+          role: $('rebus-invite-role').value,
+          invited_by: state.user.id,
+          accepted_at: null
+        }, { onConflict: 'rebus_id,email' });
     if (error) throw error;
     $('rebus-invite-email').value = '';
     showNotification('Rebus-invitasjon lagret', `${email} får admin-tilgang bare til denne rebusen.`);
@@ -721,7 +722,7 @@
     $('rebus-list').innerHTML = state.rebuses.length
       ? state.rebuses.map(rebus => `
         <button class="ghost" data-rebus-id="${escapeHtml(rebus.id)}">
-          ${escapeHtml(rebus.title)} (${rebus.taskCount || 0} oppgaver, ${rebus.studentCount || 0} elever)
+          ${rebus.status === 'published' ? 'Aktiv' : 'Pauset'} · ${escapeHtml(rebus.title)} · ${escapeHtml(rebus.rebus_code || 'ingen kode')} (${rebus.taskCount || 0} oppgaver, ${rebus.studentCount || 0} elever)
         </button>
       `).join('')
       : '<p class="muted">Ingen rebuser ennå.</p>';
@@ -739,6 +740,8 @@
     $('rebus-settings').hidden = false;
     $('edit-rebus-title').value = rebus.title || '';
     $('edit-rebus-description').value = rebus.description || '';
+    $('edit-rebus-code').value = rebus.rebus_code || suggestedRebusCode(rebus.title);
+    $('edit-rebus-status').value = rebus.status || 'draft';
     $('edit-rebus-show-score').checked = rebus.show_live_score !== false && rebus.showLiveScore !== false;
     $('task-list').innerHTML = rebus.tasks.length
       ? renderTasksGroupedByStop(rebus)
@@ -1461,6 +1464,7 @@
         organization_id: state.selectedOrganization.id,
         title: $('rebus-title').value.trim() || 'Ny rebus',
         description: $('rebus-description').value.trim(),
+        rebus_code: suggestedRebusCode($('rebus-title').value.trim() || 'Ny rebus'),
         created_by: state.user.id
       });
       if (error) throw error;
@@ -1482,18 +1486,20 @@
     if (!state.selectedRebus) return alert('Velg en rebus først.');
     const title = $('edit-rebus-title').value.trim() || 'Ny rebus';
     const description = $('edit-rebus-description').value.trim();
+    const rebusCode = normalizeRebusCode($('edit-rebus-code').value || suggestedRebusCode(title));
+    const status = $('edit-rebus-status').value;
     const showLiveScore = $('edit-rebus-show-score').checked;
 
     if (state.mode === 'supabase') {
       const { error } = await state.supabase
         .from('rebuses')
-        .update({ title, description, show_live_score: showLiveScore })
+        .update({ title, description, rebus_code: rebusCode, status, show_live_score: showLiveScore })
         .eq('id', state.selectedRebus.id);
       if (error) throw error;
     } else {
       await localApi(`/api/admin/rebuses/${state.selectedRebus.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ title, description, showLiveScore })
+        body: JSON.stringify({ title, description, rebusCode, status, showLiveScore })
       });
     }
 
@@ -2675,6 +2681,27 @@
       .replace(/å/g, 'a')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  }
+
+  function normalizeRebusCode(value) {
+    return String(value || '')
+      .trim()
+      .toUpperCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/Æ/g, 'AE')
+      .replace(/Ø/g, 'O')
+      .replace(/Å/g, 'A')
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 32);
+  }
+
+  function suggestedRebusCode(title) {
+    const orgPart = normalizeRebusCode(state.selectedOrganization?.name || 'ORG').split('-').filter(Boolean)[0] || 'ORG';
+    const titleParts = normalizeRebusCode(title || 'REBUS').split('-').filter(Boolean);
+    const titlePart = titleParts.slice(0, 2).join('-') || 'REBUS';
+    return `${orgPart}-${titlePart}`.slice(0, 32);
   }
 
   function cssEscape(value) {

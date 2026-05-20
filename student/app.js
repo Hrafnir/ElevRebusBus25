@@ -13,6 +13,7 @@
   let activeStudentTab = 'task';
   let locationWatchId = null;
   let messagePollId = null;
+  let organizations = [];
   const seenAdminMessageIds = new Set();
   const seenScoreAdjustmentIds = new Set();
 
@@ -36,11 +37,13 @@
   async function login() {
     if (mode === 'supabase') {
       const { data, error } = await supabase.rpc('student_login', {
+        target_organization_id: $('organization-select').value || null,
+        rebus_code_value: $('rebus-code').value.trim(),
         student_username: $('username').value.trim(),
         student_password: $('password').value
       });
       if (error) throw error;
-      if (!data) throw new Error('Feil brukernavn eller kode.');
+      if (!data) throw new Error('Feil organisasjon, rebuskode, brukernavn eller kode. Rebusen må også være aktiv.');
       session = data;
     } else {
       session = await api('/api/student/login', {
@@ -63,7 +66,10 @@
     if (!token) return;
     if (mode === 'supabase') {
       const { data, error } = await supabase.rpc('student_get_session', { raw_token: token });
-      if (error || !data) return;
+      if (error || !data) {
+        localStorage.removeItem('studentSessionToken');
+        return;
+      }
       session = data;
     } else {
       const response = await fetch(`/api/student/session/${token}`);
@@ -1012,6 +1018,10 @@
     return escapeHtml(url);
   }
 
+  function escapeAttributeValue(value) {
+    return escapeHtml(String(value || ''));
+  }
+
   async function boot() {
     config = await loadConfig();
     mode = config.supabaseUrl && config.supabaseAnonKey ? 'supabase' : 'local';
@@ -1022,9 +1032,22 @@
       $('password').value = '';
       $('username').placeholder = 'gruppe-1';
       $('password').placeholder = 'Kode fra læreren';
+      $('organization-select-label').hidden = false;
+      $('rebus-code-label').hidden = false;
+      await loadStudentOrganizations();
     }
     $('login-button').addEventListener('click', () => login().catch(error => alert(error.message)));
     restoreSession().catch(() => {});
+  }
+
+  async function loadStudentOrganizations() {
+    const select = $('organization-select');
+    const { data, error } = await supabase.rpc('student_public_organizations');
+    if (error) throw error;
+    organizations = data || [];
+    select.innerHTML = organizations.length
+      ? organizations.map(org => `<option value="${escapeAttributeValue(org.id)}">${escapeHtml(org.name)}</option>`).join('')
+      : '<option value="">Ingen aktive organisasjoner</option>';
   }
 
   async function loadConfig() {
