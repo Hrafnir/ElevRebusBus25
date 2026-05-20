@@ -21,6 +21,7 @@
     marker: null,
     liveMap: null,
     liveMarkers: new Map(),
+    liveMapInitialViewKey: '',
     autocomplete: null,
     loadedMapsKey: '',
     optionRows: [],
@@ -2539,6 +2540,10 @@
         state.liveMarkers.delete(id);
       }
     });
+    const liveViewKey = state.selectedRebus?.id || 'local-live';
+    if (state.liveMapInitialViewKey === liveViewKey) return;
+    state.liveMapInitialViewKey = liveViewKey;
+
     if (positioned.length === 1) {
       state.liveMap.setCenter(positioned[0].latestLocation);
       state.liveMap.setZoom(16);
