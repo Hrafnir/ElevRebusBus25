@@ -1,4 +1,6 @@
 (function () {
+  const SELECTED_ORG_STORAGE_KEY = 'selectedOrganizationId';
+
   const state = {
     config: null,
     mode: 'local',
@@ -54,6 +56,7 @@
     if (state.mode === 'supabase') {
       await bootSupabase();
     } else {
+      setWorkspaceVisible(true);
       configureMapsUi();
       await devLogin();
     }
@@ -208,11 +211,13 @@
     state.projectSettings = null;
     state.rebuses = [];
     state.selectedRebus = null;
+    localStorage.removeItem(SELECTED_ORG_STORAGE_KEY);
     $('logout-button').hidden = true;
     $('supabase-login-button').hidden = false;
     updateAuthStatus();
     renderProfile();
     state.organizationPickerOpen = false;
+    setWorkspaceVisible(false);
     renderOrganizations();
     renderRebusList();
     renderEmptyRebus();
@@ -287,6 +292,13 @@
     }
   }
 
+  function setWorkspaceVisible(visible) {
+    const onboarding = $('organization-onboarding');
+    const workspace = $('admin-workspace');
+    if (onboarding) onboarding.hidden = state.mode !== 'supabase' || visible || !state.user;
+    if (workspace) workspace.hidden = state.mode === 'supabase' ? !visible : false;
+  }
+
   async function acceptInvitations() {
     if (state.mode !== 'supabase' || !state.supabase) return;
     const { data, error } = await state.supabase.rpc('accept_my_invitations');
@@ -350,10 +362,20 @@
       .order('created_at', { ascending: true });
     if (error) throw error;
     state.organizations = data || [];
-    if (!state.selectedOrganization && state.organizations.length) {
-      await selectOrganization(state.organizations[0].id);
+    const rememberedId = localStorage.getItem(SELECTED_ORG_STORAGE_KEY);
+    const rememberedOrganization = state.organizations.find(org => org.id === rememberedId);
+    if (rememberedOrganization) {
+      await selectOrganization(rememberedOrganization.id);
     } else {
+      state.selectedOrganization = null;
+      state.projectSettings = null;
+      state.rebuses = [];
+      state.selectedRebus = null;
+      state.organizationPickerOpen = false;
+      setWorkspaceVisible(false);
       renderOrganizations();
+      renderRebusList();
+      renderEmptyRebus();
     }
   }
 
@@ -361,19 +383,24 @@
     if (state.mode !== 'supabase') return alert('Organisasjoner krever Supabase-modus.');
     const name = $('organization-name').value.trim();
     if (!name) return;
-    const { error } = await state.supabase
+    const { data, error } = await state.supabase
       .from('organizations')
-      .insert({ name, created_by: state.user.id });
+      .insert({ name, created_by: state.user.id })
+      .select('id')
+      .single();
     if (error) throw error;
     $('organization-name').value = '';
-    state.selectedOrganization = null;
     state.organizationPickerOpen = false;
     await loadOrganizations();
+    if (data?.id) await selectOrganization(data.id);
   }
 
   async function selectOrganization(id) {
     state.selectedOrganization = state.organizations.find(org => org.id === id) || null;
+    if (!state.selectedOrganization) return;
+    localStorage.setItem(SELECTED_ORG_STORAGE_KEY, state.selectedOrganization.id);
     state.organizationPickerOpen = false;
+    setWorkspaceVisible(true);
     await loadProjectSettings();
     await loadRebuses();
     renderOrganizations();
@@ -381,19 +408,26 @@
   }
 
   function renderOrganizations() {
-    $('selected-organization-card').innerHTML = state.selectedOrganization
+    setWorkspaceVisible(Boolean(state.selectedOrganization));
+    const activeOrgMarkup = state.selectedOrganization
       ? `<strong>${escapeHtml(state.selectedOrganization.name)}</strong><p class="muted">Aktiv organisasjon</p>`
       : '<p class="muted">Ingen organisasjon valgt.</p>';
-    $('organization-invite-card').hidden = state.mode !== 'supabase' || !state.selectedOrganization;
-    $('toggle-organization-picker-button').textContent = state.selectedOrganization ? 'Bytt org' : 'Velg eller lag org';
-    $('organization-picker').hidden = !state.organizationPickerOpen;
-    $('organization-list').innerHTML = state.organizations.length
+    if ($('selected-organization-card')) $('selected-organization-card').innerHTML = activeOrgMarkup;
+    if ($('organization-settings-card')) $('organization-settings-card').hidden = state.mode !== 'supabase' || !state.selectedOrganization;
+    if ($('organization-invite-card')) $('organization-invite-card').hidden = state.mode !== 'supabase' || !state.selectedOrganization;
+    if ($('project-settings-card')) $('project-settings-card').hidden = state.mode !== 'supabase' || !state.selectedOrganization;
+    if ($('toggle-organization-picker-button')) $('toggle-organization-picker-button').textContent = state.organizationPickerOpen ? 'Lukk orgvalg' : 'Bytt org';
+    if ($('organization-picker')) $('organization-picker').hidden = !state.organizationPickerOpen;
+
+    const organizationButtons = state.organizations.length
       ? state.organizations.map(org => `
         <button class="ghost" data-org-id="${escapeHtml(org.id)}">
           ${state.selectedOrganization?.id === org.id ? '✓ ' : ''}${escapeHtml(org.name)}
         </button>
       `).join('')
-      : '<p class="muted">Ingen organisasjoner ennå.</p>';
+      : '<p class="muted">Du har ingen organisasjoner ennå. Be en admin invitere deg, eller opprett en egen organisasjon.</p>';
+    if ($('organization-list')) $('organization-list').innerHTML = organizationButtons;
+    if ($('organization-choice-list')) $('organization-choice-list').innerHTML = organizationButtons;
 
     document.querySelectorAll('[data-org-id]').forEach(button => {
       button.addEventListener('click', () => selectOrganization(button.dataset.orgId).catch(error => alert(error.message)));
@@ -403,6 +437,18 @@
   function toggleOrganizationPicker() {
     state.organizationPickerOpen = !state.organizationPickerOpen;
     renderOrganizations();
+  }
+
+  function returnToOrganizationChoice() {
+    localStorage.removeItem(SELECTED_ORG_STORAGE_KEY);
+    state.selectedOrganization = null;
+    state.projectSettings = null;
+    state.rebuses = [];
+    state.selectedRebus = null;
+    state.organizationPickerOpen = false;
+    renderOrganizations();
+    renderRebusList();
+    renderEmptyRebus();
   }
 
   async function loadProjectSettings() {
@@ -469,6 +515,7 @@
   }
 
   function currentMapsKey() {
+    if (state.mode === 'supabase') return state.projectSettings?.google_maps_api_key || '';
     return state.projectSettings?.google_maps_api_key || state.config.googleMapsApiKey || '';
   }
 
@@ -2680,8 +2727,9 @@
 
   $('supabase-login-button').addEventListener('click', () => signInWithSupabaseGoogle().catch(error => alert(error.message)));
   $('logout-button').addEventListener('click', () => logout().catch(error => alert(error.message)));
+  $('settings-logout-button').addEventListener('click', () => logout().catch(error => alert(error.message)));
   $('login-button').addEventListener('click', () => devLogin().catch(error => alert(error.message)));
-  $('toggle-organization-picker-button').addEventListener('click', toggleOrganizationPicker);
+  $('toggle-organization-picker-button').addEventListener('click', returnToOrganizationChoice);
   $('create-organization-button').addEventListener('click', () => createOrganization().catch(error => alert(error.message)));
   $('save-nickname-button').addEventListener('click', () => saveNickname().catch(error => alert(error.message)));
   $('invite-org-admin-button').addEventListener('click', () => inviteOrganizationAdmin().catch(error => alert(error.message)));

@@ -737,10 +737,11 @@
   }
 
   async function initStudentMap() {
-    if (!config.googleMapsApiKey || studentMap || !window.google?.maps) {
-      if (config.googleMapsApiKey && !window.google?.maps) {
-        await loadScript(`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(config.googleMapsApiKey)}`);
-      } else if (!config.googleMapsApiKey) {
+    const mapsKey = currentStudentMapsKey();
+    if (!mapsKey || studentMap || !window.google?.maps) {
+      if (mapsKey && !window.google?.maps) {
+        await loadScript(`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}`);
+      } else if (!mapsKey) {
         return;
       }
     }
@@ -754,6 +755,13 @@
       streetViewControl: false
     });
     renderStudentMapState([...(session.tasks || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)));
+  }
+
+  function currentStudentMapsKey() {
+    if (mode === 'supabase') {
+      return session?.rebus?.googleMapsApiKey || session?.rebus?.google_maps_api_key || '';
+    }
+    return config.googleMapsApiKey || '';
   }
 
   function updateStudentPosition(lat, lng) {

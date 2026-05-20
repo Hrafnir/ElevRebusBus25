@@ -35,6 +35,28 @@
       </div>
     </header>
 
+    <section id="organization-onboarding" class="panel stack org-onboarding" hidden>
+      <div>
+        <p class="eyebrow">Organisasjon</p>
+        <h2>Velg hvordan du vil starte</h2>
+        <p>Bruk en organisasjon du allerede er invitert til, eller opprett en ny for din skole eller gruppe.</p>
+      </div>
+      <div class="onboarding-grid">
+        <article class="builder-section stack">
+          <h3>Bli med i eksisterende organisasjon</h3>
+          <p class="muted">Hvis en kollega har invitert deg, dukker organisasjonen opp her etter Google-innlogging med samme e-post.</p>
+          <div id="organization-choice-list" class="list"></div>
+        </article>
+        <article class="builder-section stack">
+          <h3>Opprett egen organisasjon</h3>
+          <label><span>Organisasjonsnavn</span><input id="organization-name" placeholder="Bjørnsveen skole"></label>
+          <button id="create-organization-button" type="button">Opprett organisasjon</button>
+          <p class="muted">Nye organisasjoner må legge inn egen Google Maps API-nøkkel før kartvelgeren kan brukes.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="admin-workspace" hidden>
     <section class="stats">
       <div class="stat"><span>Rebuser</span><strong id="rebus-count">0</strong></div>
       <div class="stat"><span>Aktive grupper</span><strong id="participant-count">0</strong></div>
@@ -44,35 +66,9 @@
     <div class="grid admin-grid" id="admin-grid">
       <aside class="panel stack org-sidebar" id="org-sidebar">
         <div class="sidebar-compact-header">
-          <h2>Organisasjon</h2>
+          <h2>Rebuser</h2>
           <button id="toggle-org-sidebar-button" class="ghost compact" type="button">Skjul</button>
         </div>
-        <div id="selected-organization-card" class="selected-org-card">
-          <p class="muted">Ingen organisasjon valgt.</p>
-        </div>
-        <button id="toggle-organization-picker-button" class="ghost" type="button">Bytt org</button>
-        <section id="profile-card" class="compact-settings" hidden>
-          <h3>Min lærerprofil</h3>
-          <label><span>Nick i elevchat</span><input id="teacher-nickname" placeholder="Eirik"></label>
-          <button id="save-nickname-button" class="ghost compact" type="button">Lagre nick</button>
-        </section>
-        <section id="organization-picker" class="stack" hidden>
-          <label><span>Ny organisasjon</span><input id="organization-name" placeholder="Gjøvik skole"></label>
-          <button id="create-organization-button" type="button">Opprett organisasjon</button>
-          <div id="organization-list" class="list"></div>
-        </section>
-
-        <section id="organization-invite-card" class="compact-settings" hidden>
-          <h3>Inviter til organisasjonen</h3>
-          <label><span>E-post</span><input id="org-invite-email" type="email" placeholder="kollega@skole.no"></label>
-          <label><span>Rolle</span><select id="org-invite-role"><option value="teacher">Lærer</option><option value="admin">Admin</option><option value="viewer">Lesetilgang</option></select></label>
-          <button id="invite-org-admin-button" class="ghost compact" type="button">Inviter</button>
-        </section>
-
-        <h2>Prosjektinnstillinger</h2>
-        <label><span>Google Maps API key</span><input id="org-maps-key" placeholder="AIza..."></label>
-        <button id="save-settings-button">Lagre innstillinger</button>
-
         <h2>Opprett rebus</h2>
         <label><span>Tittel</span><input id="rebus-title" placeholder="Byvandring i naturfag"></label>
         <label><span>Beskrivelse</span><textarea id="rebus-description" placeholder="Hva skal elevene gjøre?"></textarea></label>
@@ -99,6 +95,57 @@
         </nav>
 
         <section id="tab-settings" class="admin-tab stack">
+          <section id="organization-settings-card" class="builder-section stack" hidden>
+            <div class="builder-heading">
+              <div>
+                <h3>Organisasjon</h3>
+                <div id="selected-organization-card" class="selected-org-card">
+                  <p class="muted">Ingen organisasjon valgt.</p>
+                </div>
+              </div>
+              <div class="actions">
+                <button id="toggle-organization-picker-button" class="ghost compact" type="button">Bytt org</button>
+                <button id="settings-logout-button" class="ghost compact" type="button">Logg ut</button>
+              </div>
+            </div>
+            <section id="organization-picker" class="stack" hidden>
+              <h3>Velg organisasjon</h3>
+              <div id="organization-list" class="list"></div>
+            </section>
+          </section>
+
+          <section id="profile-card" class="builder-section stack" hidden>
+            <h3>Min lærerprofil</h3>
+            <label><span>Nick i elevchat</span><input id="teacher-nickname" placeholder="Eirik"></label>
+            <button id="save-nickname-button" class="ghost compact" type="button">Lagre nick</button>
+          </section>
+
+          <section id="organization-invite-card" class="builder-section stack" hidden>
+            <h3>Inviter til organisasjonen</h3>
+            <div class="form-grid">
+              <label><span>E-post</span><input id="org-invite-email" type="email" placeholder="kollega@skole.no"></label>
+              <label><span>Rolle</span><select id="org-invite-role"><option value="teacher">Lærer</option><option value="admin">Admin</option><option value="viewer">Lesetilgang</option></select></label>
+            </div>
+            <button id="invite-org-admin-button" class="ghost compact" type="button">Inviter</button>
+          </section>
+
+          <section id="project-settings-card" class="builder-section stack" hidden>
+            <h3>Google Maps for organisasjonen</h3>
+            <label><span>Google Maps API key</span><input id="org-maps-key" placeholder="AIza..."></label>
+            <button id="save-settings-button" type="button">Lagre innstillinger</button>
+            <details class="hint-box">
+              <summary>Hvordan lager jeg en Google Maps API-nøkkel?</summary>
+              <ol>
+                <li>Gå til Google Cloud Console og opprett eller velg et prosjekt.</li>
+                <li>Aktiver Maps JavaScript API og Places API.</li>
+                <li>Opprett en API-nøkkel under APIs & Services -> Credentials.</li>
+                <li>Begrens nøkkelen til nettstedet ditt under Website restrictions, for eksempel GitHub Pages-domenet.</li>
+                <li>Lim nøkkelen inn her og lagre.</li>
+              </ol>
+            </details>
+            <p class="muted">Bjørnsveen kan bruke Bjørnsveen sin nøkkel. Andre organisasjoner må legge inn sin egen nøkkel.</p>
+          </section>
+
           <section id="rebus-settings" class="builder-section stack" hidden>
             <div class="builder-heading">
               <h3>Rebusinnstillinger</h3>
@@ -272,6 +319,7 @@
         <div id="chat-sidebar-reply" class="chat-sidebar-reply"></div>
       </aside>
     </div>
+    </section>
   </main>
   <script src="../config.js"></script>
   <script src="app.js"></script>
